@@ -581,7 +581,12 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
           ceiling, so it swelled to nearly the full screen as fields filled in
           and shoved the footer off the bottom edge. A fixed height keeps the
           header and the Publish button in place and lets the middle scroll. */}
-      <div className="flex h-[60dvh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#141814] text-white sm:h-[min(620px,78dvh)] sm:rounded-xl">
+      {/* Near-full width. The 520px cap left a wide, empty gutter on anything
+          bigger than a phone, so the sheet looked like a narrow card floating in
+          the middle of the screen rather than a sheet. It now spans the screen
+          on phones, keeps a small gutter from sm up, and still caps out on a
+          large desktop so the fields do not become absurdly wide. */}
+      <div className="flex h-[60dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#141814] text-white sm:h-[min(620px,78dvh)] sm:w-[calc(100%-2rem)] sm:rounded-xl lg:max-w-[1100px] xl:max-w-[1240px]">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-4 py-3.5">
           <div>
             <p className="text-[13px] font-semibold text-white">
@@ -683,6 +688,9 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
               {A}
             </p>
           ) : null}
+          {/* Caption takes the room, Place sits beside it once the sheet is
+              actually wide, so a broad sheet is not one long column of inputs. */}
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
           <label className="block space-y-1">
             <span className="text-[10.5px] font-medium text-white/70">
               Caption
@@ -706,6 +714,7 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
               className="h-8 w-full rounded-lg border border-white/15 bg-white/5 px-2.5 text-[11.5px] text-white focus:border-white/40 focus:outline-none"
             />
           </label>
+          </div>
           {v ? (
             <p className="rounded-md border border-[#d59679]/30 bg-[#d59679]/10 px-2 py-1.5 text-[10.5px] text-[#f0b49a]">
               {v}
