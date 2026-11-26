@@ -136,6 +136,8 @@ function SwipeableMessage({ message, onReply, onReact, children }: any) {
 }
 export function InboxView({
   me: c,
+  meId = "me",
+  onlineIds = [],
   people,
   conversations,
   followingIds,
@@ -143,6 +145,8 @@ export function InboxView({
   initialPersonId,
   onSend,
   onReact,
+  onTyping,
+  onCallSignal,
   onMarkRead,
   onTogglePin,
   onToggleMute,
@@ -543,7 +547,11 @@ export function InboxView({
               onClick={() => onOpenPerson(Ae.id)}
               className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
             >
-              <Avatar person={Ae} size="md" online={fe.online} />
+              <Avatar
+                person={Ae}
+                size="md"
+                online={onlineIds.includes(Ae.id)}
+              />
               <span className="min-w-0">
                 <span className="flex items-center gap-1">
                   <span className="truncate text-[13px] font-semibold text-ink">
@@ -554,8 +562,8 @@ export function InboxView({
                 <span className="block truncate text-[10px] text-muted">
                   {fe.typing
                     ? "typing…"
-                    : fe.online
-                      ? "Active now"
+                    : onlineIds.includes(Ae.id)
+                      ? "Active now · live"
                       : (fe.lastActive ?? `@${Ae.handle}`)}
                 </span>
               </span>
@@ -563,7 +571,7 @@ export function InboxView({
             <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   setActiveCall({
                     mode: "voice",
                     person: Ae,
@@ -571,8 +579,17 @@ export function InboxView({
                     status: "ringing",
                     seconds: 0,
                     muted: false,
-                  })
-                }
+                  });
+                  onCallSignal?.({
+                    callId: `call_${Date.now()}`,
+                    type: "ring",
+                    kind: "audio",
+                    fromUserId: meId,
+                    targetUserId: Ae.id,
+                    conversationId: fe.id,
+                  });
+                  onToast?.("Calling", `Ringing ${Ae.name.split(" ")[0]}…`);
+                }}
                 aria-label="Call"
                 className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-ink sm:inline-flex"
               >
@@ -580,7 +597,7 @@ export function InboxView({
               </button>
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   setActiveCall({
                     mode: "video",
                     person: Ae,
@@ -588,8 +605,17 @@ export function InboxView({
                     status: "ringing",
                     seconds: 0,
                     muted: false,
-                  })
-                }
+                  });
+                  onCallSignal?.({
+                    callId: `call_${Date.now()}`,
+                    type: "ring",
+                    kind: "video",
+                    fromUserId: meId,
+                    targetUserId: Ae.id,
+                    conversationId: fe.id,
+                  });
+                  onToast?.("Video call", `Ringing ${Ae.name.split(" ")[0]}…`);
+                }}
                 aria-label="Video call"
                 className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-ink sm:inline-flex"
               >
@@ -1191,7 +1217,19 @@ export function InboxView({
                       </button>
                       <input
                         value={ye}
-                        onChange={(E?: any) => Ve(E.target.value)}
+                        onChange={(E?: any) => {
+                          Ve(E.target.value);
+                          if (fe && onTyping) {
+                            onTyping(fe.id, true);
+                            window.clearTimeout(
+                              (window as any).__thursdayTypingTimer,
+                            );
+                            (window as any).__thursdayTypingTimer =
+                              window.setTimeout(() => {
+                                onTyping(fe.id, false);
+                              }, 1600);
+                          }
+                        }}
                         placeholder={
                           pe
                             ? "Write your reply…"
