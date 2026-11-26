@@ -53,6 +53,32 @@ export function ProfileView({
   onAddHighlight,
   onToast,
 }: any) {
+  // A profile must never render a blank screen. If the person record is
+  // missing (deleted, still syncing, or a stale id in the URL) we show a
+  // recoverable state instead of throwing and unmounting the whole app.
+  if (!person || !person.id) {
+    return (
+      <div className="mx-auto w-full max-w-[720px] px-4 py-16 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-canvas-deep text-faint">
+          <UserPlus size={22} />
+        </div>
+        <h2 className="text-[17px] font-semibold text-ink">
+          This profile isn’t available
+        </h2>
+        <p className="mx-auto mt-1.5 max-w-[36ch] text-[13px] leading-relaxed text-muted">
+          The person may have left Thursday, or the page is still catching up.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 inline-flex h-9 items-center rounded-lg bg-forest px-4 text-[13px] font-semibold text-white transition-colors hover:bg-forest-hover"
+        >
+          Refresh
+        </button>
+      </div>
+    );
+  }
+
   const [te, Ne] = useState<any>("posts"),
     [menuOpen, setMenuOpen] = useState<boolean>(false),
     isOnline = onlineIds.includes(person.id),

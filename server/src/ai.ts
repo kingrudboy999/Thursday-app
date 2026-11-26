@@ -142,7 +142,7 @@ const modelMeta = new Map(MODEL_CATALOG.map((m) => [m.id, m]));
 
 const KEY_COOLDOWN_MS = 60_000;
 const MODEL_COOLDOWN_MS = 45_000;
-const MAX_ATTEMPTS = 7;
+const MAX_ATTEMPTS = 9;
 
 let keyCursor = 0;
 let modelCursor = 0;
@@ -548,8 +548,15 @@ export async function aiGenerate(options: {
           model.cooldownUntil = Date.now() + MODEL_COOLDOWN_MS;
         }
         excludedModels.add(model.id);
+        // Never surface raw provider JSON to the reader — a 429 blob is not a
+        // useful error message. Keep it for the diagnostics panel instead.
         lastError =
-          body.slice(0, 200) || `AI provider returned ${response.status}.`;
+          response.status === 429 || response.status === 402
+            ? "That model hit its free-tier limit — trying another."
+            : response.status >= 500
+              ? "The AI provider wobbled — trying another model."
+              : `AI request was rejected (${response.status}). Trying another model.`;
+        console.warn("[ai] provider error", response.status, body.slice(0, 160));
         continue;
       }
 

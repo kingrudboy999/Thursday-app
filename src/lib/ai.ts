@@ -106,15 +106,22 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal) {
   return { status: res.status, json: json as T | null };
 }
 
-/** Ask the AI once. Returns a normalised reply; never throws. */
-export async function aiAsk(opts: {
-  task?: AiTask;
-  prompt?: string;
-  messages?: Array<{ role: "user" | "assistant" | "system"; content: string }>;
-  maxTokens?: number;
-  temperature?: number;
-  signal?: AbortSignal;
-}): Promise<AiReply> {
+/**
+ * Ask the AI. The server already rotates keys and models, so a single failed
+ * request usually means the whole free tier is briefly saturated — one quiet
+ * retry after a short pause clears almost all of those.
+ */
+export async function aiAsk(
+  opts: {
+    task?: AiTask;
+    prompt?: string;
+    messages?: Array<{ role: "user" | "assistant" | "system"; content: string }>;
+    maxTokens?: number;
+    temperature?: number;
+    signal?: AbortSignal;
+  },
+  retries = 1,
+): Promise<AiReply> {
   const task = opts.task ?? "chat";
   const tune = TASK_PARAMS[task] || {};
   try {
@@ -138,6 +145,11 @@ export async function aiAsk(opts: {
         latencyMs: json.latencyMs,
         attempts: json.attempts,
       };
+    }
+    if (retries > 0 && !opts.signal?.aborted) {
+      await new Promise((r) => window.setTimeout(r, 1400));
+      if (opts.signal?.aborted) return { ok: false, error: "aborted" };
+      return aiAsk(opts, retries - 1);
     }
     return {
       ok: false,
