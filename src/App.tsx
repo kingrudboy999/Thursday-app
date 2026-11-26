@@ -1,8 +1,47 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  apiAddComment,
+  apiCreateCircle,
+  apiCreateEvent,
+  apiCreateHighlight,
+  apiCreatePost,
+  apiCreateReel,
+  apiCreateStory,
+  apiDeleteConversation,
+  apiDeleteDraft,
+  apiDeletePost,
+  apiMarkNotificationsRead,
+  apiMarkStorySeen,
+  apiPostAction,
+  apiReactMessage,
+  apiReelAction,
+  apiReplyStory,
+  apiResetBackend,
+  apiSaveDraft,
+  apiSaveGuideProgress,
+  apiSendMessage,
+  apiStartConversation,
+  apiToggleCircle,
+  apiToggleEventRsvp,
+  apiToggleFollow,
+  apiUpdateConversation,
+  apiUpdateMe,
+  apiUpdatePreferences,
+  apiVotePoll,
+  apiVotePrompt,
+  connectRealtimeStream,
+  fetchBootstrap,
+  pushWorkspaceToRailway,
+} from "./lib/api";
 import { ArrowUp } from "./lib/icons";
 import { ColdStartSplash } from "./components/brand";
-import { StoryComposerModal } from "./components/features";
+import {
+  CreateCircleModal,
+  CreateGatheringModal,
+  CreateHighlightModal,
+  StoryComposerModal,
+} from "./components/features";
 import {
   ComposerModal,
   DesktopSidebar,
@@ -15,6 +54,12 @@ import {
   TopBar,
 } from "./components/social-shell";
 import { ToastBanner } from "./components/social";
+import {
+  CIRCLE_GUIDES,
+  INITIAL_DRAFTS,
+  STORY_HIGHLIGHTS,
+  THURSDAY_PROMPTS,
+} from "./lib/features";
 import { DEFAULT_PREFERENCES } from "./lib/settings";
 import { shareContent } from "./lib/share";
 import {
@@ -33,6 +78,7 @@ import {
   clearWorkspaceStorage,
   downloadTextFile,
   exportWorkspaceSnapshot,
+  importWorkspaceSnapshot,
   useStoredState,
 } from "./lib/storage";
 import { NotificationsView } from "./views/Connect";
@@ -46,11 +92,13 @@ import { CirclesView, GatheringsView } from "./views/Spaces";
 
 const DEFAULT_FOLLOWING_IDS = ["maya", "priya", "jonah"];
 const COMPOSER_PHOTO_PRESETS = {
+  pottery: PHOTOS.potteryWindow,
   studio: PHOTOS.potteryWindow,
   trail: PHOTOS.trail,
   coffee: PHOTOS.coffee,
   vinyl: PHOTOS.vinyl,
 };
+
 export function App() {
   const [c, u] = useStoredState("people", PEOPLE),
     [m, d] = useStoredState("posts", [...SPACE_POSTS, ...INITIAL_POSTS]),
@@ -59,9 +107,19 @@ export function App() {
     [y, g] = useStoredState("following", DEFAULT_FOLLOWING_IDS),
     [R, z] = useStoredState("conversations", INITIAL_CONVERSATIONS),
     [v, q] = useStoredState("notices", INITIAL_NOTICES),
-    [_, j] = useState<any>(INITIAL_STORIES),
+    [_, j] = useStoredState("stories", INITIAL_STORIES),
     [C, U] = useStoredState("seenStories", []),
     [J, te] = useStoredState("reels", INITIAL_REELS),
+    [highlights, setHighlights] = useStoredState("highlights", STORY_HIGHLIGHTS),
+    [drafts, setDrafts] = useStoredState("drafts", INITIAL_DRAFTS),
+    [prompts, setPrompts] = useStoredState("prompts", THURSDAY_PROMPTS),
+    [guides, setGuides] = useStoredState("guides", CIRCLE_GUIDES),
+    [promptVotes, setPromptVotes] = useStoredState("promptVotes", {}),
+    [savedGuideIds, setSavedGuideIds] = useStoredState(
+      "savedGuideIds",
+      CIRCLE_GUIDES.map((gItem: any) => gItem.id),
+    ),
+    [guideSteps, setGuideSteps] = useStoredState("guideSteps", {}),
     [Ne, he] = useStoredState("preferences", DEFAULT_PREFERENCES),
     [K, ae] = useState<any>(() => ({
       ...DEFAULT_PREFERENCES,
@@ -77,9 +135,14 @@ export function App() {
     [k, D] = useState<any>(null),
     [I, me] = useState<any>(undefined),
     [ve, de] = useState<any>(null),
+    [highlightViewerStories, setHighlightViewerStories] = useState<any[] | null>(null),
+    [createCircleOpen, setCreateCircleOpen] = useState<boolean>(false),
+    [createGatheringOpen, setCreateGatheringOpen] = useState<boolean>(false),
+    [createHighlightOpen, setCreateHighlightOpen] = useState<boolean>(false),
     [qe, De] = useState<any>(null),
     [pt, St] = useState<any>(true),
     [Mt, u0] = useState<any>(false),
+    gKeyTimerRef = useRef<number | null>(null),
     fe = c.find((H?: any) => H.id === ME_ID) ?? c[0],
     Ae = m.find((H?: any) => H.id === k) ?? null,
     d0 = Ae ? (c.find((H?: any) => H.id === Ae.authorId) ?? null) : null,
@@ -96,11 +159,217 @@ export function App() {
         description: Y,
       });
     }, []);
+
   useEffect(() => {
     if (!qe) return;
     const H = window.setTimeout(() => De(null), 4200);
     return () => window.clearTimeout(H);
   }, [qe]);
+
+  // Hydrate & merge live state from Railway PostgreSQL backend + subscribe to SSE
+  useEffect(() => {
+    let active = true;
+    fetchBootstrap().then((data) => {
+      if (!active || !data?.ok) return;
+      if (Array.isArray(data.posts) && data.posts.length) {
+        d((localPosts: any[]) => {
+          const map = new Map<string, any>();
+          for (const p of [...data.posts, ...SPACE_POSTS, ...localPosts]) {
+            if (p?.id && !map.has(p.id)) map.set(p.id, p);
+          }
+          // Prefer server version for shared posts
+          for (const p of data.posts) {
+            if (p?.id) map.set(p.id, p);
+          }
+          return Array.from(map.values());
+        });
+      }
+      if (Array.isArray(data.people) && data.people.length) {
+        u((localPeople: any[]) => {
+          const map = new Map<string, any>();
+          for (const p of [...localPeople, ...data.people]) {
+            if (p?.id) map.set(p.id, p);
+          }
+          return Array.from(map.values());
+        });
+      }
+      if (Array.isArray(data.stories) && data.stories.length) {
+        j((localStories: any[]) => {
+          const map = new Map<string, any>();
+          for (const s of [...data.stories, ...localStories]) {
+            if (s?.id && !map.has(s.id)) map.set(s.id, s);
+          }
+          return Array.from(map.values());
+        });
+      }
+      if (Array.isArray(data.highlights) && data.highlights.length) {
+        setHighlights(data.highlights);
+      }
+      if (Array.isArray(data.reels) && data.reels.length) {
+        te((localReels: any[]) => {
+          const map = new Map<string, any>();
+          for (const r of [...data.reels, ...localReels]) {
+            if (r?.id && !map.has(r.id)) map.set(r.id, r);
+          }
+          for (const r of data.reels) {
+            if (r?.id) map.set(r.id, r);
+          }
+          return Array.from(map.values());
+        });
+      }
+      if (Array.isArray(data.circles) && data.circles.length) {
+        w(data.circles);
+      }
+      if (Array.isArray(data.events) && data.events.length) {
+        T(data.events);
+      }
+      if (Array.isArray(data.prompts) && data.prompts.length) {
+        setPrompts(data.prompts);
+      }
+      if (Array.isArray(data.guides) && data.guides.length) {
+        setGuides(data.guides);
+      }
+      if (data.promptVotes && Object.keys(data.promptVotes).length) {
+        setPromptVotes((prev: any) => ({ ...prev, ...data.promptVotes }));
+      }
+      if (data.guideSteps && Object.keys(data.guideSteps).length) {
+        setGuideSteps((prev: any) => ({ ...prev, ...data.guideSteps }));
+      }
+    });
+
+    const disconnect = connectRealtimeStream({
+      onPostCreated: ({ post, author }) => {
+        if (author?.id) {
+          u((prev: any[]) =>
+            prev.some((p) => p.id === author.id)
+              ? prev.map((p) => (p.id === author.id ? { ...p, ...author } : p))
+              : [author, ...prev],
+          );
+        }
+        if (post?.id) {
+          d((prev: any[]) =>
+            prev.some((p) => p.id === post.id) ? prev : [post, ...prev],
+          );
+        }
+      },
+      onPostUpdated: ({ post }) => {
+        if (post?.id) {
+          d((prev: any[]) => prev.map((p) => (p.id === post.id ? { ...p, ...post } : p)));
+        }
+      },
+      onPostDeleted: ({ postId }) => {
+        if (postId) {
+          d((prev: any[]) => prev.filter((p) => p.id !== postId));
+        }
+      },
+      onStoryCreated: ({ story }) => {
+        if (story?.id) {
+          j((prev: any[]) =>
+            prev.some((s) => s.id === story.id) ? prev : [story, ...prev],
+          );
+        }
+      },
+      onHighlightCreated: ({ highlight }) => {
+        if (highlight?.id) {
+          setHighlights((prev: any[]) =>
+            prev.some((hl) => hl.id === highlight.id) ? prev : [...prev, highlight],
+          );
+        }
+      },
+      onReelCreated: ({ reel }) => {
+        if (reel?.id) {
+          te((prev: any[]) =>
+            prev.some((r) => r.id === reel.id) ? prev : [reel, ...prev],
+          );
+        }
+      },
+      onReelUpdated: ({ reel }) => {
+        if (reel?.id) {
+          te((prev: any[]) => prev.map((r) => (r.id === reel.id ? { ...r, ...reel } : r)));
+        }
+      },
+      onCircleCreated: ({ circle }) => {
+        if (circle?.id) {
+          w((prev: any[]) =>
+            prev.some((ci) => ci.id === circle.id) ? prev : [circle, ...prev],
+          );
+        }
+      },
+      onCircleUpdated: ({ circle }) => {
+        if (circle?.id) {
+          w((prev: any[]) =>
+            prev.map((ci) => (ci.id === circle.id ? { ...ci, ...circle } : ci)),
+          );
+        }
+      },
+      onEventCreated: ({ event }) => {
+        if (event?.id) {
+          T((prev: any[]) =>
+            prev.some((ev) => ev.id === event.id) ? prev : [event, ...prev],
+          );
+        }
+      },
+      onEventUpdated: ({ event }) => {
+        if (event?.id) {
+          T((prev: any[]) =>
+            prev.map((ev) => (ev.id === event.id ? { ...ev, ...event } : ev)),
+          );
+        }
+      },
+      onDmTyping: ({ conversationId, typing }) => {
+        z((prev: any[]) =>
+          prev.map((conv) =>
+            conv.id === conversationId ? { ...conv, typing } : conv,
+          ),
+        );
+      },
+      onDmMessage: ({ conversationId, message }) => {
+        if (!message?.id) return;
+        z((prev: any[]) =>
+          prev.map((conv) => {
+            if (conv.id !== conversationId) return conv;
+            if ((conv.messages || []).some((msg: any) => msg.id === message.id)) {
+              return { ...conv, typing: false };
+            }
+            return {
+              ...conv,
+              typing: false,
+              messages: [...(conv.messages || []), message],
+            };
+          }),
+        );
+      },
+      onPromptUpdated: ({ prompt }) => {
+        if (prompt?.id) {
+          setPrompts((prev: any[]) =>
+            prev.map((pr) => (pr.id === prompt.id ? { ...pr, ...prompt } : pr)),
+          );
+        }
+      },
+    });
+
+    return () => {
+      active = false;
+      disconnect();
+    };
+  }, []);
+
+  // Debounced background workspace backup to Railway
+  useEffect(() => {
+    let timer = 0;
+    const onWorkspaceUpdated = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        pushWorkspaceToRailway().catch(() => {});
+      }, 3000);
+    };
+    window.addEventListener("thursday:workspace-updated", onWorkspaceUpdated);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("thursday:workspace-updated", onWorkspaceUpdated);
+    };
+  }, []);
+
   const $t = () =>
       window.scrollTo({
         top: 0,
@@ -120,13 +389,90 @@ export function App() {
       He(false);
       $t();
     }, []);
+
+  // Deep-link hash support (#reel=..., #@handle, #post=..., #circle=...) & keyboard shortcuts
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash) return;
+      if (hash.startsWith("reel=")) {
+        ye("reels");
+      } else if (hash.startsWith("@")) {
+        const handle = hash.slice(1).toLowerCase();
+        const person = c.find((p: any) => p.handle?.toLowerCase() === handle);
+        if (person) {
+          pe(person.id);
+          ye("profile");
+        }
+      } else if (hash.startsWith("post=")) {
+        const postId = hash.slice(5);
+        if (postId) D(postId);
+      } else if (hash.startsWith("circle=")) {
+        const cid = hash.slice(7);
+        if (cid) {
+          me(cid);
+          ye("circles");
+        }
+      }
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [c]);
+
+  useEffect(() => {
+    const onKeyDown = (ev: KeyboardEvent) => {
+      const target = ev.target as HTMLElement | null;
+      const inInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k") {
+        ev.preventDefault();
+        X_local((prev: boolean) => !prev);
+        return;
+      }
+      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "n" && !inInput) {
+        ev.preventDefault();
+        W(true);
+        return;
+      }
+      if (inInput || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+
+      const key = ev.key.toLowerCase();
+      if (key === "g" && !gKeyTimerRef.current) {
+        gKeyTimerRef.current = window.setTimeout(() => {
+          gKeyTimerRef.current = null;
+        }, 1100);
+        return;
+      }
+      if (gKeyTimerRef.current) {
+        window.clearTimeout(gKeyTimerRef.current);
+        gKeyTimerRef.current = null;
+        if (key === "s") E("settings");
+        else if (key === "h") E("home");
+        else if (key === "e") E("explore");
+        else if (key === "r") E("reels");
+        else if (key === "m") E("messages");
+        else if (key === "c") E("circles");
+        else if (key === "p") E("profile");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [E]);
+
   useEffect(() => {
     const H = document.documentElement;
     H.dataset.theme = K.theme;
     H.dataset.motion = K.reduceMotion ? "reduced" : "full";
   }, [K.theme, K.reduceMotion]);
+
   useEffect(() => {
-    const H = {
+    const H: Record<string, string> = {
       home: "Home",
       explore: "Explore",
       reels: "Reels",
@@ -138,8 +484,9 @@ export function App() {
       profile: Ft.name,
       settings: "Settings",
     };
-    document.title = `${H[$]} · Thursday`;
+    document.title = `${H[$] || "Home"} · Thursday`;
   }, [$, Ft.name]);
+
   useEffect(() => {
     const H = (Y?: any) => {
       const Q = Y.target?.closest("button, [role='button'], a");
@@ -170,6 +517,7 @@ export function App() {
     });
     return () => window.removeEventListener("pointerdown", H);
   }, []);
+
   const je = (H?: any) => {
       g((Y?: any) => {
         const Q = Y.includes(H),
@@ -182,6 +530,7 @@ export function App() {
           );
         return Q ? Y.filter((et?: any) => et !== H) : [...Y, H];
       });
+      apiToggleFollow(H);
     },
     m0 = (H?: any) => {
       const Y = {
@@ -190,10 +539,12 @@ export function App() {
       };
       ae(Y);
       he(Y);
+      apiUpdatePreferences(Y);
     },
     I0 = (H?: any) => {
       ae(H);
       he(H);
+      apiUpdatePreferences(H);
     },
     tt = (H?: any, Y?: any) => {
       d((Q?: any) => Q.map((oe?: any) => (oe.id === H ? Y(oe) : oe)));
@@ -204,6 +555,7 @@ export function App() {
         liked: !Y.liked,
         likes: Math.max(0, Y.likes + (Y.liked ? -1 : 1)),
       }));
+      apiPostAction(H, "like");
     },
     V1 = (H?: any) => {
       let Y = false;
@@ -217,6 +569,7 @@ export function App() {
           }
         ),
       );
+      apiPostAction(H, "save");
       Y
         ? Te("Saved to your collection", "Find this post later under Saved.")
         : Te("Removed from saved");
@@ -226,6 +579,7 @@ export function App() {
         ...Y,
         reposts: Y.reposts + 1,
       }));
+      apiPostAction(H, "repost");
       Te("Reposted to your circle", "Your circle will see this in their feed.");
     },
     C1 = (H?: any, Y?: any) => {
@@ -250,24 +604,24 @@ export function App() {
               },
         ),
       );
+      apiVotePoll(H, Y);
       Te("Vote counted", "You can see how the circle is leaning.");
     },
     Hs = (H?: any, Y?: any) => {
+      const comment = {
+        id: `comment_${Date.now()}`,
+        authorId: ME_ID,
+        text: Y,
+        time: "now",
+        likes: 0,
+      };
       tt(H, (Q?: any) => ({
         ...Q,
-        comments: [
-          ...Q.comments,
-          {
-            id: `comment_${Date.now()}`,
-            authorId: ME_ID,
-            text: Y,
-            time: "now",
-            likes: 0,
-          },
-        ],
+        comments: [...Q.comments, comment],
       }));
+      apiAddComment(H, comment);
     },
-    z1 = (H?: any, Y?: any) => {
+    z1 = (H?: any, Y?: any, extras?: any) => {
       const Q = {
         id: `post_${Date.now()}`,
         authorId: ME_ID,
@@ -281,9 +635,14 @@ export function App() {
         liked: false,
         saved: false,
         topic: "Circle",
-        place: fe.location,
+        place: extras?.place || fe.location,
+        circleId: extras?.circleId || undefined,
+        taggedIds: extras?.taggedIds || undefined,
+        poll: extras?.poll || undefined,
+        music: extras?.music || undefined,
       };
       d((oe?: any) => [Q, ...oe]);
+      apiCreatePost(Q, fe);
       W(false);
       ye("home");
       $t();
@@ -292,28 +651,78 @@ export function App() {
         "Your moment is now part of the conversation.",
       );
     },
+    handleSaveDraft = (text?: string, image?: string, extras?: any) => {
+      const draft = {
+        id: `draft_${Date.now()}`,
+        text: text || "",
+        image,
+        place: extras?.place,
+        circleId: extras?.circleId,
+        savedAt: `Today, ${new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })}`,
+      };
+      setDrafts((prev: any[]) => [draft, ...prev]);
+      apiSaveDraft(draft);
+      Te("Draft saved", "Find it any time in your composer drafts.");
+    },
+    handleDeleteDraft = (draftId?: string) => {
+      if (!draftId) return;
+      setDrafts((prev: any[]) => prev.filter((dr) => dr.id !== draftId));
+      apiDeleteDraft(draftId);
+    },
     At_local = (H?: any) => {
+      setHighlightViewerStories(null);
       const Y = _.findIndex((Q?: any) => Q.id === H);
       Y >= 0 && de(Y);
+    },
+    handleOpenHighlight = (hl: any) => {
+      const slideStory = {
+        id: `hl_story_${hl.id}`,
+        authorId: Ft.id,
+        image: hl.image,
+        caption: hl.caption || `${hl.title} · ${hl.count || 1} saved moments`,
+      };
+      setHighlightViewerStories([slideStory]);
+      de(0);
+    },
+    handleCreateHighlight = (payload: any) => {
+      const hl = {
+        id: `h_${Date.now()}`,
+        title: payload.title,
+        image: payload.image,
+        caption: payload.caption,
+        count: 1,
+      };
+      setHighlights((prev: any[]) => [...prev, hl]);
+      apiCreateHighlight(hl);
+      Te("Highlight added", `“${hl.title}” is now pinned to your profile.`);
     },
     f0 = (H?: any) => {
       d((Y?: any) => Y.filter((Q?: any) => Q.id !== H));
       D(null);
+      apiDeletePost(H);
       Te("Post deleted", "It has been removed from your profile and feeds.");
     },
     Zt = (H?: any, Y?: any) => {
       let Q = R.find((et?: any) => et.personId === H);
-      Q ||
-        ((Q = {
+      if (!Q) {
+        Q = {
           id: `conv_${H}_${Date.now()}`,
           personId: H,
           messages: [],
           unread: 0,
           online: false,
           lastActive: "Active recently",
-        }),
-        z((et?: any) => [Q, ...et]));
+        };
+        z((et?: any) => [Q, ...et]);
+      }
       const oe = Q;
+      const storyTarget = _.find((s: any) => s.authorId === H);
+      if (storyTarget) {
+        apiReplyStory(storyTarget.id, H, Y);
+      }
       setTimeout(
         () =>
           L1(oe.id, {
@@ -327,6 +736,7 @@ export function App() {
         0,
       );
       de(null);
+      setHighlightViewerStories(null);
       Ee(H);
       ye("messages");
       Te("Reply sent", "Your story reply is waiting in Messages.");
@@ -342,47 +752,51 @@ export function App() {
             : Q,
         ),
       );
+      apiPostAction(H, "pin");
       Te("Profile updated", "Pinned posts appear first on your profile.");
     },
-    Vs = (H?: any, Y?: any) => {
-      j((Q?: any) => [
-        {
-          id: `story_${Date.now()}`,
-          authorId: ME_ID,
-          image: Y,
-          caption: H,
-        },
-        ...Q,
-      ]);
+    Vs = (H?: any, Y?: any, closeFriends?: boolean) => {
+      const story = {
+        id: `story_${Date.now()}`,
+        authorId: ME_ID,
+        image: Y,
+        caption: H,
+        closeFriends: Boolean(closeFriends),
+      };
+      j((Q?: any) => [story, ...Q]);
+      apiCreateStory(story);
       Te(
         "Added to your story",
-        "Your circle can see it for the next 24 hours.",
+        closeFriends
+          ? "Shared privately with your close friends."
+          : "Your circle can see it for the next 24 hours.",
       );
     },
     Cs = useCallback(
       (H?: any) => {
         U((Y?: any) => (Y.includes(H) ? Y : [...Y, H]));
+        apiMarkStorySeen(H);
       },
       [U],
     ),
     L1 = (H?: any, Y?: any) => {
+      const msg = {
+        ...Y,
+        id: `msg_${Date.now()}`,
+      };
+      let personId = "";
       z((Q?: any) =>
-        Q.map((oe?: any) =>
-          oe.id === H
-            ? {
-                ...oe,
-                messages: [
-                  ...oe.messages,
-                  {
-                    ...Y,
-                    id: `msg_${Date.now()}`,
-                  },
-                ],
-                unread: 0,
-              }
-            : oe,
-        ),
+        Q.map((oe?: any) => {
+          if (oe.id !== H) return oe;
+          personId = oe.personId;
+          return {
+            ...oe,
+            messages: [...oe.messages, msg],
+            unread: 0,
+          };
+        }),
       );
+      apiSendMessage(H, msg, personId);
     },
     la = (H?: any, Y?: any, Q?: any) => {
       z((oe?: any) =>
@@ -404,6 +818,7 @@ export function App() {
             : et,
         ),
       );
+      apiReactMessage(H, Y, Q);
     },
     na = (H?: any) => {
       z((Y?: any) =>
@@ -416,46 +831,49 @@ export function App() {
             : Q,
         ),
       );
+      apiUpdateConversation(H, { unread: 0 });
     },
     N0 = (H?: any) => {
+      let nextPinned = false;
       z((Y?: any) =>
-        Y.map((Q?: any) =>
-          Q.id === H
-            ? {
-                ...Q,
-                pinned: !Q.pinned,
-              }
-            : Q,
-        ),
+        Y.map((Q?: any) => {
+          if (Q.id !== H) return Q;
+          nextPinned = !Q.pinned;
+          return { ...Q, pinned: nextPinned };
+        }),
       );
+      apiUpdateConversation(H, { pinned: nextPinned });
     },
     sa = (H?: any) => {
+      let nextMuted = false;
       z((Y?: any) =>
-        Y.map((Q?: any) =>
-          Q.id === H
-            ? {
-                ...Q,
-                muted: !Q.muted,
-              }
-            : Q,
-        ),
+        Y.map((Q?: any) => {
+          if (Q.id !== H) return Q;
+          nextMuted = !Q.muted;
+          return { ...Q, muted: nextMuted };
+        }),
       );
+      apiUpdateConversation(H, { muted: nextMuted });
     },
     T1 = (H?: any) => {
+      let nextArchived = true;
       z((Y?: any) =>
-        Y.map((Q?: any) =>
-          Q.id === H
-            ? {
-                ...Q,
-                archived: true,
-                unread: 0,
-              }
-            : Q,
-        ),
+        Y.map((Q?: any) => {
+          if (Q.id !== H) return Q;
+          nextArchived = !Q.archived;
+          return {
+            ...Q,
+            archived: nextArchived,
+            unread: 0,
+          };
+        }),
       );
+      apiUpdateConversation(H, { archived: nextArchived, unread: 0 });
       Te(
-        "Conversation archived",
-        "Find it again under Archived in your inbox.",
+        nextArchived ? "Conversation archived" : "Conversation restored",
+        nextArchived
+          ? "Find it again under Archived in your inbox."
+          : "Moved back to your main inbox.",
       );
     },
     zs = (H?: any) => {
@@ -470,10 +888,12 @@ export function App() {
             : Q,
         ),
       );
+      apiUpdateConversation(H, { request: false, unread: 0 });
       Te("Request accepted", "You can reply now.");
     },
     Wl = (H?: any) => {
       z((Y?: any) => Y.filter((Q?: any) => Q.id !== H));
+      apiDeleteConversation(H);
       Te(
         "Request removed",
         "The conversation was deleted without notifying them.",
@@ -493,12 +913,14 @@ export function App() {
               : oe,
           ),
         );
+        apiUpdateConversation(Y.id, { request: false, archived: false });
         Ee(H);
         return;
       }
+      const newConvId = `conv_${H}_${Date.now()}`;
       z((Q?: any) => [
         {
-          id: `conv_${H}_${Date.now()}`,
+          id: newConvId,
           personId: H,
           messages: [],
           unread: 0,
@@ -507,6 +929,7 @@ export function App() {
         },
         ...Q,
       ]);
+      apiStartConversation(H, newConvId);
       Ee(H);
     },
     w0 = (H?: any) => {
@@ -526,6 +949,7 @@ export function App() {
             : oe,
         ),
       );
+      apiToggleCircle(H);
       const Y = x.find((Q?: any) => Q.id === H);
       Y &&
         Te(
@@ -534,6 +958,27 @@ export function App() {
             ? "You can rejoin any time."
             : "Say hello, or just read for a while.",
         );
+    },
+    handleCreateCircle = (payload: any) => {
+      const newCircle = {
+        id: `circle_${Date.now()}`,
+        name: payload.name,
+        tagline: payload.tagline,
+        description: payload.description,
+        category: payload.category,
+        image: payload.image,
+        members: 1,
+        posts: 0,
+        accent: "forest",
+        joined: true,
+        moderatorIds: [ME_ID],
+        activity: "Started just now",
+        spots: "Open to everyone",
+      };
+      w((prev: any[]) => [newCircle, ...prev]);
+      apiCreateCircle(newCircle);
+      me(newCircle.id);
+      Te(`Started ${newCircle.name}`, "Your new circle is open and ready.");
     },
     Il = (H?: any) => {
       T((Q?: any) =>
@@ -548,6 +993,7 @@ export function App() {
             : oe,
         ),
       );
+      apiToggleEventRsvp(H);
       const Y = A.find((Q?: any) => Q.id === H);
       Y &&
         Te(
@@ -556,6 +1002,33 @@ export function App() {
             ? "Your spot has been released."
             : `${Y.weekday} ${Y.day}, ${Y.time}`,
         );
+    },
+    handleCreateGathering = (payload: any) => {
+      const parsed = new Date(`${payload.date}T12:00:00`);
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const newEvent = {
+        id: `event_${Date.now()}`,
+        title: payload.title,
+        description: payload.description,
+        date: payload.date,
+        day: String(parsed.getDate() || 28).padStart(2, "0"),
+        weekday: weekdays[parsed.getDay() || 6],
+        time: payload.time,
+        place: payload.place,
+        hostId: ME_ID,
+        circleId: payload.circleId,
+        attendees: 1,
+        image: payload.image,
+        cost: payload.cost,
+        spotsLeft: payload.spotsLeft,
+        joined: true,
+      };
+      T((prev: any[]) => [newEvent, ...prev]);
+      apiCreateEvent(newEvent);
+      Te(
+        "Gathering published",
+        `${newEvent.title} is now listed in Gatherings.`,
+      );
     },
     _1 = useCallback((H?: any) => {
       me(H);
@@ -575,6 +1048,7 @@ export function App() {
             : Q,
         ),
       );
+      apiReelAction(H, "like");
     },
     Wa = (H?: any) => {
       let Y = false;
@@ -589,6 +1063,7 @@ export function App() {
               }),
         ),
       );
+      apiReelAction(H, "save");
       Te(
         Y ? "Reel saved" : "Reel removed",
         Y ? "Find it in Saved." : undefined,
@@ -620,28 +1095,55 @@ export function App() {
     },
     en = (H?: any) => {
       te((Y?: any) => [H, ...Y]);
+      apiCreateReel(H);
       Te("Your reel is live", "It is at the front of your Reels feed.");
     },
     tn = (H?: any, Y?: any) => {
+      const comment = {
+        id: `reel_c_${Date.now()}`,
+        authorId: ME_ID,
+        text: Y,
+        time: "now",
+        likes: 0,
+      };
       te((Q?: any) =>
         Q.map((oe?: any) =>
           oe.id === H
             ? {
                 ...oe,
-                comments: [
-                  ...oe.comments,
-                  {
-                    id: `reel_c_${Date.now()}`,
-                    authorId: ME_ID,
-                    text: Y,
-                    time: "now",
-                    likes: 0,
-                  },
-                ],
+                comments: [...oe.comments, comment],
               }
             : oe,
         ),
       );
+      apiReelAction(H, "comments", comment);
+    },
+    handleVotePrompt = (promptId: string, option: string) => {
+      setPromptVotes((prev: any) => ({ ...prev, [promptId]: option }));
+      setPrompts((prev: any[]) =>
+        prev.map((p) =>
+          p.id === promptId ? { ...p, votes: Number(p.votes || 0) + 1 } : p,
+        ),
+      );
+      apiVotePrompt(promptId, option);
+    },
+    handleToggleSaveGuide = (guideId: string) => {
+      let nextSaved = false;
+      setSavedGuideIds((prev: string[]) => {
+        nextSaved = !prev.includes(guideId);
+        return nextSaved ? [...prev, guideId] : prev.filter((xId) => xId !== guideId);
+      });
+      apiSaveGuideProgress(guideId, { saved: nextSaved });
+    },
+    handleToggleGuideStep = (guideId: string, stepIdx: number) => {
+      setGuideSteps((prev: Record<string, number[]>) => {
+        const curr = prev[guideId] || [];
+        const next = curr.includes(stepIdx)
+          ? curr.filter((idx) => idx !== stepIdx)
+          : [...curr, stepIdx];
+        apiSaveGuideProgress(guideId, { completedSteps: next });
+        return { ...prev, [guideId]: next };
+      });
     },
     h0 = () => {
       downloadTextFile(
@@ -650,7 +1152,20 @@ export function App() {
       );
       Te("Workspace exported", "A JSON copy of your workspace is downloading.");
     },
+    handleImportWorkspace = (rawJson: string) => {
+      try {
+        const count = importWorkspaceSnapshot(rawJson);
+        Te("Backup imported", `Restored ${count} workspace collections. Reloading…`);
+        window.setTimeout(() => window.location.reload(), 650);
+      } catch (err) {
+        Te(
+          "Could not import file",
+          err instanceof Error ? err.message : "Choose a valid Thursday JSON backup.",
+        );
+      }
+    },
     ut = () => {
+      apiResetBackend();
       clearWorkspaceStorage();
       window.location.reload();
     },
@@ -693,9 +1208,7 @@ export function App() {
               posts={m}
               initialSelectedId={I}
               onToggleCircle={Ls}
-              onCreate={() =>
-                Te("Circles open monthly", "The next round opens on 1 July.")
-              }
+              onCreate={() => setCreateCircleOpen(true)}
               onOpenPerson={ge}
               onLike={Vt}
               onSave={V1}
@@ -712,9 +1225,7 @@ export function App() {
               people={c}
               onToggleEvent={Il}
               onOpenPerson={ge}
-              onSuggest={() =>
-                Te("Suggest a gathering", "Tell us the place and the people.")
-              }
+              onSuggest={() => setCreateGatheringOpen(true)}
               onOpenCircle={_1}
               onMessage={w0}
             />
@@ -731,6 +1242,7 @@ export function App() {
                     unread: false,
                   })),
                 );
+                apiMarkNotificationsRead();
                 Te("All caught up", "Notifications marked as read.");
               }}
               onOpenPerson={ge}
@@ -785,7 +1297,11 @@ export function App() {
               posts={m}
               people={c}
               stories={_}
+              highlights={highlights}
               onOpenStory={At_local}
+              onOpenHighlight={handleOpenHighlight}
+              onAddHighlight={() => setCreateHighlightOpen(true)}
+              onToast={Te}
               followingIds={y}
               onToggleFollow={je}
               onOpenPost={(H?: any) => D(H.id)}
@@ -819,6 +1335,8 @@ export function App() {
             <SettingsView
               me={fe}
               preferences={K}
+              draftsCount={drafts.length}
+              savedGuidesCount={savedGuideIds.length}
               stats={{
                 circles: x.filter((H?: any) => H.joined).length,
                 saved:
@@ -830,6 +1348,8 @@ export function App() {
               onUpdate={I0}
               onEditProfile={() => h(true)}
               onExport={h0}
+              onImportWorkspace={handleImportWorkspace}
+              onReloadFromStorage={() => window.location.reload()}
               onReset={ut}
               onToast={Te}
               onOpenPerson={ge}
@@ -846,6 +1366,14 @@ export function App() {
               circles={x}
               events={A}
               reels={J}
+              prompts={prompts}
+              guides={guides}
+              promptVotes={promptVotes}
+              onVotePrompt={handleVotePrompt}
+              savedGuideIds={savedGuideIds}
+              guideSteps={guideSteps}
+              onToggleSaveGuide={handleToggleSaveGuide}
+              onToggleGuideStep={handleToggleGuideStep}
               followingIds={y}
               seenStories={C}
               onToggleFollow={je}
@@ -867,6 +1395,9 @@ export function App() {
           );
       }
     };
+
+  const activeViewerStories = highlightViewerStories ?? _;
+
   return (
     <div className="min-h-screen bg-canvas">
       {pt ? <ColdStartSplash onDone={() => St(false)} /> : null}
@@ -926,7 +1457,12 @@ export function App() {
         open={V}
         onClose={() => W(false)}
         me={fe}
+        people={c}
+        circles={x}
+        drafts={drafts}
         onSubmit={z1}
+        onSaveDraft={handleSaveDraft}
+        onDeleteDraft={handleDeleteDraft}
         photoOptions={COMPOSER_PHOTO_PRESETS}
       />
       <PostDetailModal
@@ -953,12 +1489,31 @@ export function App() {
         onShare={Vs}
         me={fe}
       />
+      <CreateHighlightModal
+        open={createHighlightOpen}
+        onClose={() => setCreateHighlightOpen(false)}
+        onCreate={handleCreateHighlight}
+      />
+      <CreateCircleModal
+        open={createCircleOpen}
+        onClose={() => setCreateCircleOpen(false)}
+        onCreate={handleCreateCircle}
+      />
+      <CreateGatheringModal
+        open={createGatheringOpen}
+        onClose={() => setCreateGatheringOpen(false)}
+        circles={x}
+        onCreate={handleCreateGathering}
+      />
       {ve !== null ? (
         <StoryViewerModal
-          stories={_}
+          stories={activeViewerStories}
           people={c}
           index={ve}
-          onClose={() => de(null)}
+          onClose={() => {
+            de(null);
+            setHighlightViewerStories(null);
+          }}
           onChange={de}
           onSeen={Cs}
           onReply={Zt}
@@ -981,16 +1536,11 @@ export function App() {
         onClose={() => h(false)}
         me={fe}
         onSave={(H?: any) => {
+          const updatedMe = { ...fe, ...H };
           u((Y?: any) =>
-            Y.map((Q?: any) =>
-              Q.id === ME_ID
-                ? {
-                    ...Q,
-                    ...H,
-                  }
-                : Q,
-            ),
+            Y.map((Q?: any) => (Q.id === ME_ID ? updatedMe : Q)),
           );
+          apiUpdateMe(updatedMe);
           Te(
             "Profile updated",
             "Your circle will see the new details right away.",
@@ -1009,6 +1559,7 @@ export function App() {
     </div>
   );
 }
+
 function ScrollProgressBar() {
   const [c, u] = useState<any>(0);
   useEffect(() => {
@@ -1038,6 +1589,7 @@ function ScrollProgressBar() {
     </div>
   );
 }
+
 function BackToTopButton() {
   const [c, u] = useState<any>(false);
   useEffect(() => {
