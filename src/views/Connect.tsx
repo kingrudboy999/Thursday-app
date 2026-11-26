@@ -15,6 +15,10 @@ import { Avatar, EmptyState } from "../components/social";
 export function NotificationsView({
   notices,
   people,
+  posts = [],
+  followingIds = [],
+  onToggleFollow,
+  onOpenPost,
   onMarkAllRead,
   onOpenPerson,
 }: any) {
@@ -44,11 +48,28 @@ export function NotificationsView({
           .filter((C?: any) => !!C),
         j = _[0];
       return (
-        <button
+        <div
           key={v.id}
-          type="button"
-          onClick={() => j && onOpenPerson(j.id)}
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            if (v.type === "follow" || !v.postId) {
+              if (j) onOpenPerson(j.id);
+              return;
+            }
+            const target = posts.find((po: any) => po.id === v.postId);
+            if (target) onOpenPost?.(target);
+            else if (j) onOpenPerson(j.id);
+          }}
+          onKeyDown={(e?: any) => {
+            if (e?.key === "Enter" || e?.key === " ") {
+              e.preventDefault();
+              j && onOpenPerson(j.id);
+            }
+          }}
           className={cn(
+            "cursor-pointer",
+
             "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors sm:px-5",
             v.unread
               ? "bg-forest-wash/60 hover:bg-forest-wash"
@@ -94,14 +115,27 @@ export function NotificationsView({
               loading="lazy"
             />
           ) : v.type === "follow" ? (
-            <span className="h-7 shrink-0 rounded-[7px] border border-line px-2.5 text-[11px] font-semibold leading-7 text-muted">
-              Follow back
-            </span>
+            <button
+              type="button"
+              onClick={(e?: any) => {
+                e?.stopPropagation?.();
+                if (j) onToggleFollow?.(j.id);
+              }}
+              aria-pressed={j ? followingIds.includes(j.id) : false}
+              className={cn(
+                "h-7 shrink-0 rounded-[7px] border px-2.5 text-[11px] font-semibold leading-7 transition-colors",
+                j && followingIds.includes(j.id)
+                  ? "border-line-strong bg-surface text-muted"
+                  : "border-forest bg-forest text-white hover:bg-forest-hover",
+              )}
+            >
+              {j && followingIds.includes(j.id) ? "Following" : "Follow back"}
+            </button>
           ) : null}
           {v.unread ? (
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-forest" />
           ) : null}
-        </button>
+        </div>
       );
     };
   return (
