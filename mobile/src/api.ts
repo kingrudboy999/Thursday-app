@@ -3,6 +3,24 @@ export const MOBILE_API_BASE_URL =
 
 const CLIENT_ID = "thursday-mobile-client";
 
+let authToken: string | null = null;
+let authUser: any = null;
+
+export function getMobileAuthToken() {
+  return authToken;
+}
+export function getMobileAuthUser() {
+  return authUser;
+}
+export function setMobileAuthSession(token: string, user: any) {
+  authToken = token;
+  authUser = user;
+}
+export function clearMobileAuthSession() {
+  authToken = null;
+  authUser = null;
+}
+
 async function mobileFetch<T = any>(path: string, options: RequestInit = {}): Promise<T | null> {
   try {
     const res = await fetch(`${MOBILE_API_BASE_URL}${path}`, {
@@ -10,6 +28,7 @@ async function mobileFetch<T = any>(path: string, options: RequestInit = {}): Pr
       headers: {
         "Content-Type": "application/json",
         "X-Thursday-Client-Id": CLIENT_ID,
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         ...(options.headers || {}),
       },
     });
@@ -21,6 +40,66 @@ async function mobileFetch<T = any>(path: string, options: RequestInit = {}): Pr
 }
 
 export const mobileApi = {
+  // ==================== LIVE ACCOUNTS (PostgreSQL) ====================
+  login: async (identifier: string, password: string) => {
+    const res = await mobileFetch<any>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ identifier, password }),
+    });
+    if (res?.ok && res?.token && res?.user) setMobileAuthSession(res.token, res.user);
+    return res;
+  },
+  signup: async (payload: {
+    name: string;
+    handle: string;
+    email: string;
+    password: string;
+    bio?: string;
+    location?: string;
+    avatar?: string;
+  }) => {
+    const res = await mobileFetch<any>("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (res?.ok && res?.token && res?.user) setMobileAuthSession(res.token, res.user);
+    return res;
+  },
+  demoLogin: async (accountId = "me") => {
+    const res = await mobileFetch<any>("/api/auth/demo", {
+      method: "POST",
+      body: JSON.stringify({ accountId }),
+    });
+    if (res?.ok && res?.token && res?.user) setMobileAuthSession(res.token, res.user);
+    return res;
+  },
+  me: () => mobileFetch("/api/auth/me"),
+  logout: async () => {
+    await mobileFetch("/api/auth/logout", { method: "POST" });
+    clearMobileAuthSession();
+  },
+  checkHandle: (handle: string) =>
+    mobileFetch(`/api/auth/check-handle?handle=${encodeURIComponent(handle)}`),
+  sendTyping: (convId: string, typing: boolean) =>
+    mobileFetch(`/api/conversations/${encodeURIComponent(convId)}/typing`, {
+      method: "POST",
+      body: JSON.stringify({ typing }),
+    }),
+  markThreadRead: (convId: string) =>
+    mobileFetch(`/api/conversations/${encodeURIComponent(convId)}/read`, { method: "POST" }),
+  recordReelView: (reelId: string) =>
+    mobileFetch(`/api/reels/${encodeURIComponent(reelId)}/view`, { method: "POST" }),
+  recordProfileVisit: (personId: string) =>
+    mobileFetch(`/api/people/${encodeURIComponent(personId)}/visit`, { method: "POST" }),
+  sendCallSignal: (payload: any) =>
+    mobileFetch("/api/calls/signal", { method: "POST", body: JSON.stringify(payload) }),
+  editPost: (postId: string, patch: any) =>
+    mobileFetch(`/api/posts/${encodeURIComponent(postId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+  deletePost: (postId: string) =>
+    mobileFetch(`/api/posts/${encodeURIComponent(postId)}`, { method: "DELETE" }),
   bootstrap: () => mobileFetch("/api/bootstrap"),
   createPost: (post: any, author?: any) =>
     mobileFetch("/api/posts", { method: "POST", body: JSON.stringify({ ...post, author }) }),
