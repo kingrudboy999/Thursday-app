@@ -409,7 +409,7 @@ export function ProfileView({
               description={
                 isMe
                   ? "Photos from your posts will live here."
-                  : `${person.name.split(" ")[0]} hasn't shared any photos yet.`
+                  : `${String(person.name || "They").split(" ")[0]} hasn't shared any photos yet.`
               }
             />
           )
@@ -438,7 +438,7 @@ export function ProfileView({
             description={
               isMe
                 ? "Share a first moment with your circle. It doesn't need to be polished."
-                : `${person.name.split(" ")[0]} is still finding the words. Check back soon.`
+                : `${String(person.name || "They").split(" ")[0]} is still finding the words. Check back soon.`
             }
           />
         )}

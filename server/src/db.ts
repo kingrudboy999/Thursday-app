@@ -314,6 +314,46 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
     );
   }
 
+  // Backfill a join date on profiles created before signup started setting one.
+  // The people directory is what the profile page renders, so that is the copy
+  // that has to carry "Joined"; patching user state alone left new accounts
+  // looking broken.
+  try {
+    const stamp = new Date().toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    const joinedLabel = `Joined ${stamp}`;
+
+    await updateCollection("people", (people: any[]) => {
+      let patched = 0;
+      const next = people.map((person: any) => {
+        if (!person?.id || person.joined) return person;
+        patched += 1;
+        return { ...person, joined: joinedLabel };
+      });
+      if (patched) console.log(`[db] backfilled join date on ${patched} profile(s)`);
+      return next;
+    });
+
+    // Keep per-account state in step with the directory.
+    const { rows } = await pool.query(
+      `SELECT client_id, state->'me' AS me FROM thursday_user_state`,
+    );
+    for (const row of rows) {
+      const me = row.me || {};
+      if (!me.id || me.joined) continue;
+      await pool.query(
+        `UPDATE thursday_user_state
+            SET state = jsonb_set(state, '{me,joined}', to_jsonb($2::text))
+          WHERE client_id = $1`,
+        [row.client_id, joinedLabel],
+      );
+    }
+  } catch (err) {
+    console.warn("[db] joined backfill skipped:", (err as Error)?.message);
+  }
+
   // One-time cleanup: earlier builds inserted demo conversations as if they
   // were real threads. Real messages have no createdAt either, so the only
   // safe marker is the seed's own conversation ids (conv_maya, conv_priya, …).

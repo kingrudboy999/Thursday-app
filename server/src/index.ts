@@ -332,11 +332,20 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 
     const userId = `u_${handle}_${Date.now().toString(36).slice(-4)}`;
+    // Every profile needs a join date. Signup used to omit it, and the profile
+    // view read it unconditionally — so every new account crashed on their own
+    // profile page.
+    const joinedLabel = (() => {
+      const now = new Date();
+      const month = now.toLocaleString("en-US", { month: "long" });
+      return `Joined ${month} ${now.getFullYear()}`;
+    })();
     const profile = {
       id: userId,
       name,
       handle,
       avatar,
+      joined: joinedLabel,
       cover:
         "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1400&h=480&fit=crop",
       bio,
