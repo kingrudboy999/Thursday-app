@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  VoiceRecorderSession,
+  playGentleCallTone,
+  playVoiceNote,
+  readFileAsDataUrl,
+  stopVoiceNotePlayback,
+} from "../lib/audio";
 import { cn } from "../lib/cn";
 import {
   Archive,
@@ -15,7 +22,9 @@ import {
   MapPin,
   Microphone,
   PaperPlaneTilt,
+  Pause,
   Phone,
+  Play,
   Plus,
   PushPin,
   ShieldCheck,
@@ -161,6 +170,16 @@ export function InboxView({
     [de, qe] = useState<any>(false),
     [De, pt] = useState<any>(0),
     [St, Mt] = useState<any>(null),
+    [playingVoice, setPlayingVoice] = useState<{ id: string; progress: number } | null>(null),
+    [activeCall, setActiveCall] = useState<{
+      mode: "voice" | "video";
+      person: any;
+      convId: string;
+      status: "ringing" | "connected";
+      seconds: number;
+      muted: boolean;
+    } | null>(null),
+    recorderRef = useRef<VoiceRecorderSession | null>(null),
     u0 = useRef<any>(null),
     fe = conversations.find((E?: any) => E.id === te) ?? null,
     Ae = fe ? (people.find((E?: any) => E.id === fe.personId) ?? null) : null,
@@ -207,6 +226,31 @@ export function InboxView({
     const E = window.setInterval(() => pt((ge?: any) => ge + 1), 1e3);
     return () => window.clearInterval(E);
   }, [de]);
+  useEffect(() => () => stopVoiceNotePlayback(), []);
+  useEffect(() => {
+    if (!activeCall) return;
+    let stopTone: (() => void) | null = null;
+    let connectTimer = 0;
+    let secTimer = 0;
+    if (activeCall.status === "ringing") {
+      stopTone = playGentleCallTone();
+      connectTimer = window.setTimeout(() => {
+        stopTone?.();
+        setActiveCall((curr) => (curr ? { ...curr, status: "connected" } : null));
+      }, 2100);
+    } else {
+      secTimer = window.setInterval(() => {
+        setActiveCall((curr) =>
+          curr ? { ...curr, seconds: curr.seconds + 1 } : null,
+        );
+      }, 1000);
+    }
+    return () => {
+      stopTone?.();
+      if (connectTimer) window.clearTimeout(connectTimer);
+      if (secTimer) window.clearInterval(secTimer);
+    };
+  }, [activeCall?.status, !!activeCall]);
   const A0 = (E?: any) => {
       Ne(E.id);
       I(false);
@@ -520,10 +564,14 @@ export function InboxView({
               <button
                 type="button"
                 onClick={() =>
-                  onToast(
-                    "Voice calls are coming soon",
-                    "For now, send a voice note — it is quicker anyway.",
-                  )
+                  setActiveCall({
+                    mode: "voice",
+                    person: Ae,
+                    convId: fe.id,
+                    status: "ringing",
+                    seconds: 0,
+                    muted: false,
+                  })
                 }
                 aria-label="Call"
                 className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-ink sm:inline-flex"
@@ -533,10 +581,14 @@ export function InboxView({
               <button
                 type="button"
                 onClick={() =>
-                  onToast(
-                    "Video calls are coming soon",
-                    "We will not fake a ringtone.",
-                  )
+                  setActiveCall({
+                    mode: "video",
+                    person: Ae,
+                    convId: fe.id,
+                    status: "ringing",
+                    seconds: 0,
+                    muted: false,
+                  })
                 }
                 aria-label="Video call"
                 className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-ink sm:inline-flex"
@@ -592,11 +644,13 @@ export function InboxView({
                           action: () => Ce(true),
                         },
                         {
-                          label: "Archive conversation",
+                          label: fe.archived
+                            ? "Unarchive conversation"
+                            : "Archive conversation",
                           icon: Archive,
                           action: () => {
                             onArchive(fe.id);
-                            s0();
+                            fe.archived || s0();
                           },
                         },
                       ].map((E?: any) => {
@@ -782,32 +836,63 @@ export function InboxView({
                                 ) : null}
                               </button>
                             ) : E.attachment?.type === "voice" ? (
-                              <span className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  playVoiceNote(
+                                    E.id,
+                                    E.attachment.audioUrl,
+                                    E.attachment.duration,
+                                    (progress, playing) => {
+                                      setPlayingVoice(
+                                        playing ? { id: E.id, progress } : null,
+                                      );
+                                    },
+                                  );
+                                }}
+                                aria-label="Play voice note"
+                                className="flex items-center gap-2 text-left"
+                              >
                                 <span
                                   className={cn(
-                                    "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                                    "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105",
                                     je
-                                      ? "bg-white/20"
+                                      ? "bg-white/20 text-white"
                                       : "bg-forest-soft text-forest",
                                   )}
                                 >
-                                  <Microphone size={11} strokeWidth={2.2} />
+                                  {playingVoice?.id === E.id ? (
+                                    <Pause size={10} weight="fill" />
+                                  ) : (
+                                    <Play size={10} weight="fill" />
+                                  )}
                                 </span>
                                 <span className="flex items-center gap-[2px]">
                                   {[
                                     6, 10, 5, 12, 8, 14, 7, 10, 6, 12, 9, 5,
-                                  ].map((tt?: any, Vt?: any) => (
-                                    <span
-                                      key={Vt}
-                                      className={cn(
-                                        "w-[2px] rounded-full",
-                                        je ? "bg-white/60" : "bg-forest/50",
-                                      )}
-                                      style={{
-                                        height: tt,
-                                      }}
-                                    />
-                                  ))}
+                                  ].map((tt?: any, Vt?: any) => {
+                                    const lit =
+                                      playingVoice?.id === E.id &&
+                                      Vt / 12 <= playingVoice.progress;
+                                    return (
+                                      <span
+                                        key={Vt}
+                                        className={cn(
+                                          "w-[2px] rounded-full transition-colors",
+                                          je
+                                            ? lit
+                                              ? "bg-white"
+                                              : "bg-white/50"
+                                            : lit
+                                              ? "bg-forest"
+                                              : "bg-forest/45",
+                                        )}
+                                        style={{
+                                          height: tt,
+                                        }}
+                                      />
+                                    );
+                                  })}
                                 </span>
                                 <span
                                   className={cn(
@@ -817,7 +902,7 @@ export function InboxView({
                                 >
                                   {E.attachment.duration}
                                 </span>
-                              </span>
+                              </button>
                             ) : null}
                             {E.text && E.attachment?.type !== "image"
                               ? E.text
@@ -978,7 +1063,7 @@ export function InboxView({
                   ) : null}
                   {h ? (
                     <div className="mb-1.5 rounded-[7px] border border-line bg-surface p-1.5">
-                      <div className="grid grid-cols-6 gap-1">
+                      <div className="grid grid-cols-7 gap-1">
                         {CHAT_PHOTO_PRESETS.map((E?: any) => (
                           <button
                             key={E.label}
@@ -1000,6 +1085,30 @@ export function InboxView({
                             />
                           </button>
                         ))}
+                        <label
+                          aria-label="Upload photo from device"
+                          className="flex h-10 cursor-pointer items-center justify-center rounded-[5px] border border-dashed border-line-strong text-muted hover:border-forest hover:text-forest"
+                        >
+                          <Plus size={13} strokeWidth={2.2} />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const dataUrl = await readFileAsDataUrl(file, 1080);
+                                if (dataUrl) {
+                                  Te({
+                                    type: "image",
+                                    url: dataUrl,
+                                    caption: file.name.replace(/\.[^.]+$/, ""),
+                                  });
+                                }
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
                   ) : null}
@@ -1011,10 +1120,14 @@ export function InboxView({
                       </p>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
+                          const durationSec = Math.max(De, 2);
+                          const audioUrl = await recorderRef.current?.stop();
+                          recorderRef.current = null;
                           Te({
                             type: "voice",
-                            duration: `0:${String(Math.max(De, 3)).padStart(2, "0")}`,
+                            duration: `0:${String(durationSec).padStart(2, "0")}`,
+                            ...(audioUrl ? { audioUrl } : {}),
                           });
                           qe(false);
                           pt(0);
@@ -1027,6 +1140,8 @@ export function InboxView({
                       <button
                         type="button"
                         onClick={() => {
+                          recorderRef.current?.cancel();
+                          recorderRef.current = null;
                           qe(false);
                           pt(0);
                         }}
@@ -1096,7 +1211,10 @@ export function InboxView({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
+                            const session = new VoiceRecorderSession();
+                            recorderRef.current = session;
+                            await session.start();
                             qe(true);
                             pt(0);
                           }}
@@ -1326,6 +1444,79 @@ export function InboxView({
             >
               <X size={15} strokeWidth={2.2} />
             </button>
+          </div>
+        ) : null}
+      </Modal>
+      <Modal
+        open={!!activeCall}
+        onClose={() => setActiveCall(null)}
+        width="sm"
+        bare
+      >
+        {activeCall ? (
+          <div className="flex flex-col items-center bg-[#121713] px-6 py-7 text-center text-white">
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.08em] text-white/75 uppercase">
+              {activeCall.mode === "video" ? "Video call" : "Voice call"}
+            </span>
+            <div className="mt-4">
+              <Avatar person={activeCall.person} size="xl" ring />
+            </div>
+            <p className="mt-3 text-[16px] font-semibold text-white">
+              {activeCall.person.name}
+            </p>
+            <p className="mt-0.5 text-[12px] text-white/65 tabular-nums">
+              {activeCall.status === "ringing"
+                ? "Ringing…"
+                : `${Math.floor(activeCall.seconds / 60)}:${String(
+                    activeCall.seconds % 60,
+                  ).padStart(2, "0")}`}
+            </p>
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveCall((curr) =>
+                    curr ? { ...curr, muted: !curr.muted } : null,
+                  )
+                }
+                aria-pressed={activeCall.muted}
+                className={cn(
+                  "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors",
+                  activeCall.muted
+                    ? "border-white bg-white text-[#121713]"
+                    : "border-white/20 bg-white/10 text-white hover:bg-white/20",
+                )}
+                aria-label="Toggle microphone"
+              >
+                <Microphone size={17} strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const callSnap = activeCall;
+                  setActiveCall(null);
+                  if (callSnap.seconds > 0) {
+                    const dur = `${Math.floor(callSnap.seconds / 60)}:${String(
+                      callSnap.seconds % 60,
+                    ).padStart(2, "0")}`;
+                    onSend(callSnap.convId, {
+                      from: "me",
+                      text: `${
+                        callSnap.mode === "video" ? "Video" : "Voice"
+                      } call · ${dur}`,
+                      time: new Date().toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      }),
+                    });
+                  }
+                }}
+                aria-label="End call"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-clay px-5 text-[12px] font-semibold text-white hover:opacity-90"
+              >
+                End call
+              </button>
+            </div>
           </div>
         ) : null}
       </Modal>
