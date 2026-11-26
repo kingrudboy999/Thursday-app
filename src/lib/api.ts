@@ -6,9 +6,17 @@ import {
 
 export const DEFAULT_RAILWAY_API_URL = "https://thursday-api-production.up.railway.app";
 
+const env = (import.meta as unknown as { env?: Record<string, string> })
+  .env || {};
+
+/**
+ * In `npm run dev` we talk to the local API through Vite's /api proxy, so the
+ * app and server share an origin (and SSE/relative URLs behave like prod).
+ * Production builds keep pointing at Railway.
+ */
 export const API_BASE_URL = (
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL ||
-  DEFAULT_RAILWAY_API_URL
+  env.VITE_API_URL ||
+  (env.DEV ? "" : DEFAULT_RAILWAY_API_URL)
 ).replace(/\/+$/, "");
 
 const CLIENT_ID_KEY = `${STORAGE_PREFIX}sync_key`;

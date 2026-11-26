@@ -15,6 +15,14 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     allowedHosts: true,
+    // Local API (server/src) for development. In production the app talks to
+    // Railway directly via VITE_API_URL / DEFAULT_RAILWAY_API_URL.
+    proxy: {
+      "/api": {
+        target: process.env.THURSDAY_API_DEV || "http://localhost:8787",
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: "0.0.0.0",
