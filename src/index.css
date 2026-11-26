@@ -99,10 +99,18 @@
   .animate-toast {
     animation: 0.3s cubic-bezier(0.22, 1, 0.36, 1) both toast;
   }
+  /* Page transitions move the *paint*, not the box.
+     A transform — even one left behind by a finished animation — makes an
+     element a containing block for `position: fixed` descendants, which
+     clipped every modal and full-screen view to the page wrapper instead of
+     the viewport. Translating through a custom property keeps the geometry
+     untouched, so fixed children stay fixed to the screen. */
   .animate-page {
+    --page-shift: 6px;
     animation: 0.42s cubic-bezier(0.22, 1, 0.36, 1) both page-in;
   }
   .animate-page > * {
+    --page-shift: 8px;
     animation: 0.45s cubic-bezier(0.22, 1, 0.36, 1) both rise;
   }
   .animate-page > :nth-child(2) {
@@ -158,11 +166,11 @@
 @keyframes rise {
   0% {
     opacity: 0;
-    transform: translateY(8px);
+    translate: 0 var(--page-shift, 8px);
   }
   to {
     opacity: 1;
-    transform: none;
+    translate: 0 0;
   }
 }
 
@@ -276,11 +284,11 @@ html[data-motion="reduced"] :after {
 @keyframes page-in {
   0% {
     opacity: 0;
-    transform: translateY(6px);
+    translate: 0 var(--page-shift, 6px);
   }
   to {
     opacity: 1;
-    transform: none;
+    translate: 0 0;
   }
 }
 

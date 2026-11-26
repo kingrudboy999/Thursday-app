@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useAmbientAudio } from "../lib/audio";
 import { cn } from "../lib/cn";
 import {
@@ -1187,28 +1188,36 @@ export function Modal({
   )
     return null;
   const y = {
-    sm: "max-w-[420px]",
-    md: "max-w-[550px]",
-    lg: "max-w-[860px]",
+    sm: "sm:max-w-[420px]",
+    md: "sm:max-w-[550px]",
+    lg: "sm:max-w-[860px]",
   };
-  return (
+  // Render into <body>. Any ancestor with a transform, filter or `translate`
+  // becomes the containing block for `position: fixed`, which is what made
+  // these sheets stop short of the screen edges inside animated pages.
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/30 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
+      className="fixed inset-0 z-[60] flex items-stretch justify-center bg-ink/30 backdrop-blur-[2px] sm:items-center sm:p-6"
       onMouseDown={(g?: any) => {
         g.target === g.currentTarget && onClose();
       }}
     >
+      {/* Dialogs are full screen on phones. A floating card on a phone wastes
+          the little room there is and gets clipped at the edges; from `sm` up
+          this returns to the centred card it has always been. */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={typeof title == "string" ? title : "Dialog"}
         className={cn(
-          "animate-pop flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-[0_24px_80px_rgba(29,33,28,0.2)] sm:rounded-xl",
+          "animate-pop flex w-full flex-col overflow-hidden bg-surface",
+          "h-full max-h-full rounded-none border-0",
+          "sm:h-auto sm:max-h-[92vh] sm:rounded-xl sm:border sm:border-line sm:shadow-[0_24px_80px_rgba(29,33,28,0.2)]",
           y[width],
         )}
       >
         {bare ? null : (
-          <div className="flex items-start justify-between gap-4 border-b border-line px-4 py-3.5 sm:px-5">
+          <div className="flex items-start justify-between gap-4 border-b border-line px-4 py-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-5 sm:pt-3.5">
             <div className="min-w-0">
               <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink">
                 {title}
@@ -1229,9 +1238,12 @@ export function Modal({
         )}
         <div className="thin-scrollbar flex-1 overflow-y-auto">{children}</div>
         {footer ? (
-          <div className="border-t border-line px-4 py-3 sm:px-5">{footer}</div>
+          <div className="border-t border-line px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-3">
+            {footer}
+          </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
