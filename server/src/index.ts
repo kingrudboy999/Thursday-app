@@ -20,6 +20,7 @@ import {
   getAllCollections,
   getCollection,
   getDbMode,
+  setCollection,
   getThreadById,
   getThreadsForUser,
   getUserState,
@@ -1508,6 +1509,60 @@ app.delete("/api/reels/:id", async (req, res) => {
     if (!found) return res.status(404).json({ ok: false, error: "Reel not found" });
     broadcast("reel:updated", { id, deleted: true });
     res.json({ ok: true, id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+/**
+ * Sweep content whose author no longer exists.
+ *
+ * Deleting an account removes what it authored, but content created before
+ * that guarantee (or seeded directly into a collection) can survive with a
+ * dangling authorId. Those orphans are what kept the seeded circles and
+ * gatherings on screen after their hosts were deleted.
+ */
+app.post("/api/maintenance/orphans", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    if (!actor.account) {
+      return res.status(401).json({ ok: false, error: "Sign in first." });
+    }
+    const collections = await getAllCollections();
+    const liveIds = new Set<string>();
+    for (const p of (collections as any).people || []) liveIds.add(p.id);
+    for (const key of Object.keys((collections as any).accounts || {})) liveIds.add(key);
+
+    const removed: Record<string, string[]> = {};
+    const authorKey: Record<string, string> = {
+      circles: "ownerId",
+      events: "hostId",
+      stories: "authorId",
+      reels: "authorId",
+      posts: "authorId",
+      highlights: "authorId",
+    };
+
+    for (const [coll, field] of Object.entries(authorKey)) {
+      const items = (collections as any)[coll] || [];
+      const keep: any[] = [];
+      const drop: string[] = [];
+      for (const item of items) {
+        const author = item[field] ?? item.authorId ?? item.hostId;
+        // Circles also list moderators; if any moderator still exists keep it.
+        const modsAlive = Array.isArray(item.moderatorIds)
+          ? item.moderatorIds.some((m: string) => liveIds.has(m))
+          : false;
+        const orphan = author ? !liveIds.has(author) : true;
+        if (orphan && !modsAlive) drop.push(item.id);
+        else keep.push(item);
+      }
+      if (drop.length) {
+        await setCollection(coll as any, keep);
+        removed[coll] = drop;
+      }
+    }
+    res.json({ ok: true, removed });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err?.message });
   }
