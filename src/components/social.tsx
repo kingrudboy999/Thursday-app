@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useAmbientAudio } from "../lib/audio";
 import { cn } from "../lib/cn";
 import {
   BookmarkSimple,
@@ -162,7 +163,9 @@ export function PostCard({
 }: any) {
   const [v, q] = useState<any>(false),
     [_, j] = useState<any>(0),
-    [C, U] = useState<any>(false),
+    ambient = useAmbientAudio(),
+    musicKey = `post_${post.id}`,
+    C = ambient.activeKey === musicKey,
     [J, te] = useState<any>(false),
     Ne = post.text.length > 220,
     he = Ne && !v ? `${post.text.slice(0, 215).trimEnd()}…` : post.text,
@@ -242,11 +245,27 @@ export function PostCard({
             </button>
           ) : null}
         </p>
-        {post.place ? (
-          <p className="mt-2 flex items-center gap-1 text-[11px] text-faint">
-            <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
-            {post.place}
-          </p>
+        {post.place || post.taggedIds?.length ? (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
+            {post.place ? (
+              <span className="inline-flex items-center gap-1">
+                <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
+                {post.place}
+              </span>
+            ) : null}
+            {post.taggedIds?.length ? (
+              <span className="inline-flex flex-wrap items-center gap-1 text-forest">
+                {post.taggedIds.map((tid: string) => {
+                  const personObj = people?.find((p: any) => p.id === tid);
+                  return personObj ? (
+                    <span key={tid} className="font-medium">
+                      @{personObj.handle}
+                    </span>
+                  ) : null;
+                })}
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
       {post.poll ? (
@@ -325,7 +344,7 @@ export function PostCard({
             />
             <button
               type="button"
-              onClick={() => U((pe?: any) => !pe)}
+              onClick={() => ambient.toggle(musicKey, post.music?.title)}
               aria-label={C ? "Pause preview" : "Play preview"}
               className="absolute inset-0 flex items-center justify-center bg-black/35 text-white transition-colors hover:bg-black/50"
             >
