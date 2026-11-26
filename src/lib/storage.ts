@@ -1,8 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 
 export const STORAGE_PREFIX = "thursday.v2.";
+function currentScopedKey(c?: any) {
+  let scope = "";
+  try {
+    scope = window.localStorage.getItem(`${STORAGE_PREFIX}auth_user_id`) || "";
+  } catch {}
+  const base = `${STORAGE_PREFIX}${c}`;
+  return scope ? `${base}@${scope}` : base;
+}
+export function resetStoredWorkspaceState() {
+  try {
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(STORAGE_PREFIX))
+      .filter(
+        (key) =>
+          !key.endsWith("auth_token") &&
+          !key.endsWith("auth_user") &&
+          !key.endsWith("auth_user_id") &&
+          !key.endsWith("preferences") &&
+          !key.endsWith("sync_key"),
+      )
+      .forEach((key) => window.localStorage.removeItem(key));
+  } catch {}
+}
 export function useStoredState(c?: any, u?: any) {
-  const m = `${STORAGE_PREFIX}${c}`,
+  const m = currentScopedKey(c),
     [d, x] = useState<any>(() => {
       try {
         const A = window.localStorage.getItem(m);
