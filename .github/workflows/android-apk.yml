@@ -39,26 +39,38 @@ jobs:
       # whole job dies before a single line of our code runs. The runner
       # already has a usable SDK, so we just point at it and install the one
       # platform Expo SDK 52 needs.
+      # `yes | sdkmanager` leaves `yes` killed by SIGPIPE when sdkmanager
+      # exits; with `set -o pipefail` that 141 becomes the step's exit code and
+      # fails the build even though the install worked. So: no pipefail here,
+      # and the licence loop is silenced rather than chained.
       - name: Accept Android SDK licenses
         run: |
-          set -o pipefail
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          set -euo pipefail
+          SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
           echo "using $SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          ( yes || true ) | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
           "$SDKMANAGER" --version
 
       - name: Install Android platform
         run: |
-          set -o pipefail
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
-          yes | "$SDKMANAGER" --install \
+          set -eu
+          SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          ( yes || true ) | "$SDKMANAGER" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
-            > /tmp/sdk-install.log 2>&1 || { tail -40 /tmp/sdk-install.log; exit 1; }
-          tail -5 /tmp/sdk-install.log
+            > /tmp/sdk-install.log 2>&1 || true
+          echo "--- last lines of the sdkmanager log ---"
+          tail -6 /tmp/sdk-install.log
+          # verify rather than trust the exit code, which is unreliable above
+          for pkg in "platforms/android-35" "build-tools/35.0.0"; do
+            if [ ! -d "$ANDROID_HOME/$pkg" ]; then
+              echo "::error::missing $pkg after sdkmanager run"
+              exit 1
+            fi
+            echo "ok: $ANDROID_HOME/$pkg"
+          done
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
 
       - name: Install mobile dependencies
         run: npm install --legacy-peer-deps
