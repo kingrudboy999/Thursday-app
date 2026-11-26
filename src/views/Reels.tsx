@@ -577,8 +577,12 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
   }, [open, me.location]);
   return open ? (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="flex max-h-[92dvh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#141814] text-white sm:rounded-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-4 py-3.5">
+      {/* A steady half-screen sheet. It used to be content-sized with a 92dvh
+          ceiling, so it swelled to nearly the full screen as fields filled in
+          and shoved the footer off the bottom edge. A fixed height keeps the
+          header and the Publish button in place and lets the middle scroll. */}
+      <div className="flex h-[60dvh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#141814] text-white sm:h-[min(620px,78dvh)] sm:rounded-xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-4 py-3.5">
           <div>
             <p className="text-[13px] font-semibold text-white">
               Create a reel
@@ -616,7 +620,7 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
                 src={x}
                 controls
                 playsInline
-                className="block max-h-[52vh] w-full object-contain"
+                className="block max-h-[26dvh] w-full bg-black object-contain"
               />
               <button
                 type="button"
@@ -708,7 +712,7 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
             </p>
           ) : null}
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-white/10 px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-3">
           <span className="text-[10px] text-white/35">
             Stored on this device in this build.
           </span>
