@@ -1045,13 +1045,9 @@ export function SuggestedPeopleList({ people, onOpen }: any) {
             </span>
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => onOpen("maya")}
-          className="-ml-1 inline-flex h-8 items-center rounded-full bg-canvas-deep px-2 text-[10.5px] font-semibold text-muted ring-2 ring-surface hover:text-ink"
-        >
+        <span className="-ml-1 inline-flex h-8 items-center rounded-full bg-canvas-deep px-2 text-[10.5px] font-semibold text-muted ring-2 ring-surface">
           +{people.length - 5}
-        </button>
+        </span>
       </div>
       <p className="px-1.5 pb-2 text-[11px] leading-[1.5] text-muted">
         Five friends are sharing something new today. Join the conversation.

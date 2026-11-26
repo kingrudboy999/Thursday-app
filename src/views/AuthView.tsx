@@ -35,41 +35,8 @@ const PORTRAIT_PRESETS = [
   "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=320&h=320&fit=crop&crop=faces",
 ];
 
-const QUICK_ACCOUNTS = [
-  {
-    id: "me",
-    name: "Nora Bennett",
-    handle: "norabennett",
-    role: "Studio notes · San Francisco",
-    avatar:
-      "https://images.pexels.com/photos/31530222/pexels-photo-31530222.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=240&h=240",
-  },
-  {
-    id: "maya",
-    name: "Maya Chen",
-    handle: "mayachen",
-    role: "Clay Club · Oakland",
-    avatar:
-      "https://images.pexels.com/photos/3754430/pexels-photo-3754430.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=240&h=240",
-  },
-  {
-    id: "priya",
-    name: "Priya Raman",
-    handle: "priyaclay",
-    role: "Slow Table · Berkeley",
-    avatar:
-      "https://images.pexels.com/photos/5253959/pexels-photo-5253959.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=240&h=240",
-  },
-  {
-    id: "theo",
-    name: "Theo Martins",
-    handle: "theomakes",
-    role: "Film & darkroom · Lisbon",
-    avatar:
-      "https://images.pexels.com/photos/21550592/pexels-photo-21550592.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=240&h=240",
-  },
-];
-
+// Signing in as an invented person is gone with the rest of the fake
+// accounts. Real accounts only.
 export function AuthView({
   theme,
   onToggleTheme,
@@ -270,11 +237,11 @@ export function AuthView({
                 </div>
                 <div className="absolute right-4 bottom-3.5 left-4 text-white">
                   <p className="text-[13.5px] font-medium leading-snug">
-                    “Pulled the stoneware mugs from the reduction firing this
-                    morning — saving four for Thursday’s studio supper.”
+                    “A quieter place to share the unfinished version. No
+                    metrics, no noise — just the people you actually know.”
                   </p>
                   <p className="mt-1 text-[11.5px] text-white/75">
-                    Maya Chen · @mayachen · Oakland, CA
+                    The idea behind Thursday
                   </p>
                 </div>
               </div>
@@ -561,7 +528,7 @@ export function AuthView({
                         required
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder="nora@thursday.app or @norabennett"
+                        placeholder="you@example.com or @yourhandle"
                         className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-9 text-[13.5px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                       />
                     </div>
@@ -642,50 +609,6 @@ export function AuthView({
                 </button>
               </form>
 
-              {/* Instant Circle Account Switcher for Frictionless Multi-User Testing */}
-              <div className="mt-6 border-t border-line pt-4">
-                <div className="mb-2.5 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold tracking-[0.08em] text-faint uppercase">
-                    Instant circle sign-in
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-                    <CheckCircle size={12} className="text-forest" />
-                    Real-time multi-user ready
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {QUICK_ACCOUNTS.map((acc) => {
-                    const busy = quickLoadingId === acc.id;
-                    return (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        disabled={Boolean(quickLoadingId) || submitting}
-                        onClick={() => handleQuickDemo(acc.id)}
-                        className="flex items-center gap-2.5 rounded-xl border border-line bg-canvas/70 p-2 text-left transition-all hover:border-forest/40 hover:bg-forest-wash/40 disabled:opacity-50"
-                      >
-                        <img
-                          src={acc.avatar}
-                          alt={acc.name}
-                          className="h-8 w-8 shrink-0 rounded-full object-cover"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[12px] font-semibold text-ink">
-                            {busy ? "Entering…" : acc.name.split(" ")[0]}
-                          </span>
-                          <span className="block truncate text-[10.5px] text-muted">
-                            @{acc.handle}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2.5 text-center text-[11px] leading-relaxed text-faint">
-                  Tip: Open Thursday in two tabs with two different accounts to
-                  chat, react, and post together in real time.
-                </p>
-              </div>
             </div>
           </section>
         </div>

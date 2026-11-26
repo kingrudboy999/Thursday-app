@@ -266,6 +266,93 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// ==================== MEDIA: never ship base64 in bootstrap ====================
+/**
+ * Reels, posters and avatars arrive from the composer as base64 data URIs.
+ * Storing them that way is fine — but *sending* them inline made /api/bootstrap
+ * 17 MB, nearly all of it a single reel video. A phone on a slow link had to
+ * pull every byte before the app would render, which is why messages looked
+ * like they took minutes to deliver: realtime was already instant, the screen
+ * simply had not arrived yet.
+ *
+ * So the collections keep the bytes, and bootstrap hands out a URL instead.
+ * Size matters here: `inline` stays for small avatars, while photo- and
+ * video-class media always become a streamed `/api/media/:id` URL.
+ */
+const MEDIA_INLINE_LIMIT = 24 * 1024; // ~24 KB of base64 stays inline
+
+function externalizeMedia<T>(value: T, mediaId: string): T {
+  if (Array.isArray(value)) {
+    return value.map((v, i) => externalizeMedia(v, `${mediaId}_${i}`)) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const out: any = {};
+    for (const [k, v] of Object.entries(value as any)) {
+      out[k] = externalizeMedia(v, `${mediaId}_${k}`);
+    }
+    return out;
+  }
+  if (typeof value === "string" && value.startsWith("data:") && value.length > MEDIA_INLINE_LIMIT) {
+    return `/api/media/${mediaId}` as unknown as T;
+  }
+  return value;
+}
+
+app.get("/api/media/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    // Ids look like `reel_1730..._video` — collection prefix first.
+    const key = id.split("_")[0] === "reel" || id.startsWith("reel_")
+      ? "reels"
+      : id.startsWith("people") || id.startsWith("person")
+        ? "people"
+        : id.startsWith("story")
+          ? "stories"
+          : id.startsWith("post")
+            ? "posts"
+            : id.startsWith("highlight")
+              ? "highlights"
+              : "";
+    const [recordId, ...rest] = id.split("_").slice(1);
+    void recordId; void rest;
+
+    // Each top-level collection is small in record count, so scan it one field
+    // at a time. The id encodes the field path, e.g. reel_123_video.
+    const collections = await getAllCollections();
+    const ordered = key ? [key] : Object.keys(collections);
+    for (const coll of ordered) {
+      for (const record of (collections as any)[coll] || []) {
+        const idx = id.indexOf(String(record.id));
+        if (idx < 0) continue;
+        const fieldPath = id.slice(idx + String(record.id).length + 1);
+        if (!fieldPath) continue;
+        let v: any = record;
+        for (const part of fieldPath.split("_")) {
+          if (v == null) break;
+          v = Array.isArray(v) && /^\d+$/.test(part) ? v[Number(part)] : v[part];
+        }
+        if (typeof v === "string" && v.startsWith("data:")) {
+          const comma = v.indexOf(",");
+          const meta = v.slice(5, comma);
+          const isB64 = meta.includes(";base64");
+          const mime = meta.replace(";base64", "") || "application/octet-stream";
+          const buf = Buffer.from(v.slice(comma + 1), isB64 ? "base64" : "utf8");
+          res.writeHead(200, {
+            "Content-Type": mime,
+            "Content-Length": String(buf.length),
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Accept-Ranges": "none",
+          });
+          return res.end(buf);
+        }
+      }
+    }
+    res.status(404).json({ ok: false, error: "Media not found" });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Media failed" });
+  }
+});
+
 app.get("/api/stream", async (req, res) => {
   const actor = await resolveRequestActor(req);
   const clientId = actor.clientId;
@@ -398,21 +485,9 @@ app.post("/api/auth/signup", async (req, res) => {
       return [profile, ...list];
     });
 
-    // Seed initial user state + warm welcome DM thread from Maya
+    // Start with a genuinely empty state. Signing up used to create a thread
+    // from "Maya" and leave an unread message from someone who does not exist.
     await getUserState(userId, profile);
-    const welcomeThread = await findOrCreateThread(userId, "maya");
-    if (welcomeThread.messages.length === 0) {
-      welcomeThread.messages.push({
-        id: `msg_welcome_${Date.now()}`,
-        from: "them",
-        senderId: "maya",
-        text: `Welcome to Thursday, ${name.split(" ")[0]}! Pull up a chair — this is our quieter corner for studios, recipes, walks, and small circles.`,
-        time: nowClockLabel(),
-        seen: false,
-      });
-      welcomeThread.meta[userId] = { ...(welcomeThread.meta[userId] || {}), unread: 1 };
-      await saveThread(welcomeThread);
-    }
 
     const token = generateSessionToken();
     await createSession(token, userId);
@@ -536,7 +611,7 @@ app.get("/api/bootstrap", async (req, res) => {
       authenticated: Boolean(actor.account),
       userId,
       onlineUserIds: Array.from(onlineSet),
-      people,
+      people: people.map((p: any) => externalizeMedia(p, `people_${p.id}`)),
       posts: collections.posts
         .filter((p: any) => !blockedSet.has(p.authorId))
         .map((p: any) => projectPostForUser(p, userId)),
@@ -544,7 +619,7 @@ app.get("/api/bootstrap", async (req, res) => {
       highlights: collections.highlights,
       reels: collections.reels
         .filter((r: any) => !blockedSet.has(r.authorId))
-        .map((r: any) => projectReelForUser(r, userId)),
+        .map((r: any) => externalizeMedia(projectReelForUser(r, userId), `reels_${r.id}`)),
       circles: collections.circles.map((c: any) => projectCircleForUser(c, userId)),
       events: collections.events.map((e: any) => projectEventForUser(e, userId)),
       prompts: collections.prompts,
@@ -1653,25 +1728,6 @@ app.post("/api/events/:id/rsvp", async (req, res) => {
 });
 
 // ==================== REAL-TIME MULTI-USER DIRECT MESSAGES & CALL SIGNALING ====================
-const AUTO_REPLIES: Record<string, string[]> = {
-  maya: [
-    "Just pulled the last tray from the kiln — saving a warm mug for you on Thursday.",
-    "Love that. Let's bring the sketches to studio hour this week.",
-  ],
-  priya: [
-    "Simmering tamarind broth right now — bring bread if you swing by!",
-    "Adding this to the Sunday supper menu notes.",
-  ],
-  jonah: [
-    "Morning light on the trail was unreal today. Let's walk the ridge Saturday.",
-    "Count me in — bringing thermos coffee.",
-  ],
-  default: [
-    "That sounds wonderful — let's catch up properly soon.",
-    "Noted! Looking forward to seeing how it turns out.",
-  ],
-};
-
 app.post("/api/conversations", async (req, res) => {
   try {
     const actor = await resolveRequestActor(req);
@@ -1822,67 +1878,8 @@ app.post("/api/conversations/:id/messages", async (req, res) => {
     }
 
     // Check if otherId has a live human SSE connection right now; if not and it's a seeded companion, send contextual reply
-    const hasHumanRecipientConnected = Array.from(sseClients.values()).some(
-      (c) => c.userId === otherId,
-    );
-    const isSeededCompanion = ["maya", "priya", "jonah", "theo", "lin", "sara", "devon", "elena"].includes(
-      String(otherId || ""),
-    );
 
-    if (otherId && !hasHumanRecipientConnected && isSeededCompanion && body.autoReply !== false) {
-      // Emit brief typing indicator then deliver reply
-      setTimeout(() => {
-        broadcast(
-          "dm:typing",
-          { conversationId: thread!.id, userId: otherId, typing: true },
-          { targetUserIds: [userId] },
-        );
-      }, 450);
 
-      setTimeout(async () => {
-        try {
-          const fresh = await getThreadById(thread!.id);
-          if (!fresh) return;
-          const poolReplies = AUTO_REPLIES[otherId] || AUTO_REPLIES.default;
-          const replyText = poolReplies[Math.floor(Math.random() * poolReplies.length)];
-          const replyMsg = {
-            id: `msg_reply_${Date.now()}`,
-            senderId: otherId,
-            from: "them" as const,
-            text: replyText,
-            time: nowClockLabel(),
-          };
-          fresh.messages = [
-            ...(fresh.messages || []).map((m: any) =>
-              m.id === msg.id ? { ...m, seen: true } : m,
-            ),
-            replyMsg,
-          ];
-          fresh.meta[userId] = {
-            ...(fresh.meta[userId] || {}),
-            unread: Number(fresh.meta[userId]?.unread || 0) + 1,
-          };
-          await saveThread(fresh);
-
-          broadcast(
-            "dm:typing",
-            { conversationId: fresh.id, userId: otherId, typing: false },
-            { targetUserIds: [userId] },
-          );
-          const nowOnline = new Set(getOnlineUserIds());
-          broadcast(
-            "dm:message",
-            {
-              conversationId: fresh.id,
-              senderId: otherId,
-              conversation: formatThreadForUser(fresh, userId, nowOnline),
-              message: { ...replyMsg, from: "them" },
-            },
-            { targetUserIds: [userId] },
-          );
-        } catch {}
-      }, 1700);
-    }
 
     res.status(201).json({
       ok: true,
@@ -2341,9 +2338,7 @@ app.post(["/api/admin/reset", "/api/reset"], async (req, res) => {
     const actor = await resolveRequestActor(req);
     await updateUserState(actor.userId, () => ({
       me: structuredClone(actor.account?.profile || INITIAL_SEED.me),
-      followingIds: Array.isArray(INITIAL_SEED.followingIds)
-        ? [...INITIAL_SEED.followingIds]
-        : ["maya", "priya", "jonah"],
+      followingIds: [],
       // Resetting clears the inbox rather than restoring demo chats.
       conversations: [],
       notifications: structuredClone(INITIAL_SEED.notifications) as any[],

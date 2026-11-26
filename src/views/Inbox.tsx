@@ -1456,7 +1456,7 @@ export function InboxView({
                 <Avatar
                   person={E}
                   size="md"
-                  online={E.id === "maya" || E.id === "priya"}
+                  online={E.online === true}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-[12.5px] font-semibold text-ink">

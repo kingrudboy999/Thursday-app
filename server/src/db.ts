@@ -78,41 +78,27 @@ const DEFAULT_COLLECTIONS: Record<CollectionKey, any[]> = {
 
 export function createDefaultUserState(customMe?: any): UserPrivateState {
   const meProfile = customMe ? structuredClone(customMe) : structuredClone(INITIAL_SEED.me);
-  const isNora = meProfile?.id === "me";
   return {
     me: meProfile,
-    followingIds: isNora
-      ? Array.isArray(INITIAL_SEED.followingIds)
-        ? [...INITIAL_SEED.followingIds]
-        : ["maya", "priya", "jonah"]
-      : ["me", "maya", "priya"].filter((id) => id !== meProfile?.id),
+    // Nobody is followed by default, and nobody "welcomed" you. A new account
+    // starts genuinely empty: no invented friends, no canned notification
+    // claiming two people you have never met said hello.
+    followingIds: [],
     // Real DMs live in thursday_threads. Nothing is seeded here, so a new
     // account starts with a genuinely empty inbox instead of fake chats.
     conversations: [],
-    notifications: isNora
-      ? (structuredClone(INITIAL_SEED.notifications || []) as any[])
-      : [
-          {
-            id: `welcome_${Date.now()}`,
-            type: "follow",
-            personIds: ["maya", "priya"],
-            text: "welcomed you to Thursday — say hello whenever you feel ready.",
-            time: "Just now",
-            unread: true,
-          },
-        ],
-    drafts: isNora ? (structuredClone(INITIAL_SEED.drafts || []) as any[]) : [],
+    notifications: [],
+    drafts: [],
     savedGuideIds: (INITIAL_SEED.guides || []).map((g: any) => g.id),
     guideSteps: {},
     promptVotes: {},
     preferences: structuredClone(INITIAL_SEED.preferences || {}),
     blockedIds: [],
     mutedIds: [],
-    visitors: [
-      { personId: "maya", time: "2h ago" },
-      { personId: "priya", time: "5h ago" },
-      { personId: "theo", time: "Yesterday" },
-    ].filter((v) => v.personId !== meProfile?.id),
+    // Profile visitors are recorded when somebody actually opens your profile.
+    // Inventing three of them made an empty app feel populated at the cost of
+    // being untrue.
+    visitors: [],
   };
 }
 

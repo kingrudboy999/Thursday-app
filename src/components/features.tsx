@@ -327,10 +327,14 @@ export function ThursdayPromptCard({
   votedOptions,
   onVote,
 }: any) {
-  const list = prompts?.length ? prompts : [prompt];
+  const list = (prompts?.length ? prompts : prompt ? [prompt] : []).filter(Boolean);
   const [idx, setIdx] = useState(0);
-  const activePrompt = list[idx % list.length] || prompt;
+  const activePrompt = list.length ? list[idx % list.length] : null;
   const [localVotes, setLocalVotes] = useState<Record<string, string>>({});
+  // With no prompts on the server there is nothing to ask, so the card simply
+  // does not render. It used to assume one always existed and took the whole
+  // page down with a TypeError when the app was genuinely empty.
+  if (!activePrompt) return null;
   const selected = votedOptions?.[activePrompt.id] ?? localVotes[activePrompt.id] ?? null;
 
   return (

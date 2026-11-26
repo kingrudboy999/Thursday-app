@@ -117,7 +117,7 @@ import { ReelsView } from "./views/Reels";
 import { SettingsView } from "./views/SettingsView";
 import { CirclesView, GatheringsView } from "./views/Spaces";
 
-const DEFAULT_FOLLOWING_IDS = ["maya", "priya", "jonah"];
+const DEFAULT_FOLLOWING_IDS: string[] = [];
 const COMPOSER_PHOTO_PRESETS = {
   pottery: PHOTOS.potteryWindow,
   studio: PHOTOS.potteryWindow,
@@ -1470,7 +1470,7 @@ export function App() {
               onOpenPerson={ge}
               onCreateReel={en}
               onRecordView={apiRecordReelView}
-              onOpenMessages={() => w0("maya")}
+              onOpenMessages={() => E("inbox")}
               onClose={() => E("home")}
             />,
             document.body,
