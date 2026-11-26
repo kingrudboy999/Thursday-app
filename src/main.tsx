@@ -2,7 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppErrorBoundary } from "./components/error-boundary";
+import { purgeDemoConversationsOnce } from "./lib/storage";
 import "./index.css";
+
+// Runs before the first paint so a cached demo inbox never flashes on screen.
+purgeDemoConversationsOnce();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

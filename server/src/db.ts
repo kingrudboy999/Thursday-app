@@ -79,7 +79,9 @@ export function createDefaultUserState(customMe?: any): UserPrivateState {
         ? [...INITIAL_SEED.followingIds]
         : ["maya", "priya", "jonah"]
       : ["me", "maya", "priya"].filter((id) => id !== meProfile?.id),
-    conversations: isNora ? (structuredClone(INITIAL_SEED.conversations || []) as any[]) : [],
+    // Real DMs live in thursday_threads. Nothing is seeded here, so a new
+    // account starts with a genuinely empty inbox instead of fake chats.
+    conversations: [],
     notifications: isNora
       ? (structuredClone(INITIAL_SEED.notifications || []) as any[])
       : [
@@ -147,37 +149,16 @@ function buildSeedAccounts(): AccountRecord[] {
   });
 }
 
+/**
+ * Threads are never seeded.
+ *
+ * Earlier builds converted INITIAL_SEED.conversations into thread records, so
+ * the inbox filled with people who could never reply — their messages had no
+ * sender and no timestamp because they were static demo copy. Real threads are
+ * created only when someone actually sends a message.
+ */
 function buildSeedThreads(): ThreadRecord[] {
-  return (INITIAL_SEED.conversations || []).map((conv: any) => {
-    const otherId = conv.personId;
-    const pair = ["me", otherId].sort();
-    const id = conv.id || `thread_${pair.join("_")}`;
-    return {
-      id,
-      participantIds: ["me", otherId],
-      messages: (conv.messages || []).map((m: any) => ({
-        ...m,
-        senderId: m.senderId || (m.from === "me" ? "me" : otherId),
-      })),
-      meta: {
-        me: {
-          unread: Number(conv.unread || 0),
-          pinned: Boolean(conv.pinned),
-          muted: Boolean(conv.muted),
-          archived: Boolean(conv.archived),
-          request: Boolean(conv.request),
-        },
-        [otherId]: {
-          unread: 0,
-          pinned: false,
-          muted: false,
-          archived: false,
-          request: false,
-        },
-      },
-      updatedAt: new Date().toISOString(),
-    };
-  });
+  return [];
 }
 
 function loadFallbackFromDisk() {
@@ -323,17 +304,36 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
     }
   }
 
-  // Seed initial shared DM threads if not yet present
-  const existingThreadCount = await pool.query("SELECT COUNT(*)::int AS cnt FROM thursday_threads");
-  if ((existingThreadCount.rows[0]?.cnt ?? 0) === 0) {
-    for (const th of buildSeedThreads()) {
-      await pool.query(
-        `INSERT INTO thursday_threads (id, participant_ids, messages, meta, updated_at)
-         VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
-         ON CONFLICT (id) DO NOTHING`,
-        [th.id, th.participantIds, JSON.stringify(th.messages), JSON.stringify(th.meta)],
+  // Threads are not seeded. See buildSeedThreads() for why.
+  for (const th of buildSeedThreads()) {
+    await pool.query(
+      `INSERT INTO thursday_threads (id, participant_ids, messages, meta, updated_at)
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+       ON CONFLICT (id) DO NOTHING`,
+      [th.id, th.participantIds, JSON.stringify(th.messages), JSON.stringify(th.meta)],
+    );
+  }
+
+  // One-time cleanup: earlier builds inserted demo conversations as if they
+  // were real threads. Real messages have no createdAt either, so the only
+  // safe marker is the seed's own conversation ids (conv_maya, conv_priya, …).
+  // Threads people actually create get ids like conv_maya_me_1795708264674,
+  // so an exact-id comparison can never touch a real conversation.
+  try {
+    const demoIds: string[] = (INITIAL_SEED.conversations || [])
+      .map((c: any) => String(c?.id || ""))
+      .filter(Boolean);
+    if (demoIds.length) {
+      const removed = await pool.query(
+        `DELETE FROM thursday_threads WHERE id = ANY($1::text[]) RETURNING id`,
+        [demoIds],
       );
+      if (removed.rowCount) {
+        console.log(`[db] removed ${removed.rowCount} demo conversation(s)`);
+      }
     }
+  } catch (err) {
+    console.warn("[db] demo thread cleanup skipped:", (err as Error)?.message);
   }
 
   return { mode: "postgres" };
@@ -671,10 +671,15 @@ export async function getUserState(clientId: string, customMe?: any): Promise<Us
     );
     return defaults;
   }
+  const stored = rows[0].state;
   return {
     ...defaults,
-    ...rows[0].state,
-    me: customMe ? { ...rows[0].state.me, ...customMe } : rows[0].state.me || defaults.me,
+    ...stored,
+    me: customMe ? { ...stored.me, ...customMe } : stored.me || defaults.me,
+    // Older rows still carry the demo conversations from previous builds.
+    // They are never merged back in, so the inbox drains itself instead of
+    // needing a manual database edit.
+    conversations: [],
   };
 }
 

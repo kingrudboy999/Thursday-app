@@ -24,6 +24,48 @@ export function resetStoredWorkspaceState() {
       .forEach((key) => window.localStorage.removeItem(key));
   } catch {}
 }
+/**
+ * Earlier builds shipped a demo inbox (conv_maya, conv_priya, …) that was
+ * cached in localStorage. Those conversations could never receive a reply,
+ * because the people in them only ever existed as static copy. This drops
+ * them once so an inbox that is genuinely empty looks empty.
+ */
+const DEMO_CONVERSATION_IDS = [
+  "conv_maya",
+  "conv_priya",
+  "conv_theo",
+  "conv_ravi",
+  "conv_amara",
+  "conv_sam",
+  "conv_joint",
+];
+let demoConversationsPurged = false;
+export function purgeDemoConversationsOnce() {
+  if (demoConversationsPurged) return;
+  demoConversationsPurged = true;
+  try {
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(STORAGE_PREFIX) && key.includes("conversations"))
+      .forEach((key) => {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return;
+        let parsed: any;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          return;
+        }
+        if (!Array.isArray(parsed)) return;
+        const kept = parsed.filter(
+          (conv: any) => !DEMO_CONVERSATION_IDS.includes(conv?.id),
+        );
+        if (kept.length !== parsed.length) {
+          window.localStorage.setItem(key, JSON.stringify(kept));
+        }
+      });
+  } catch {}
+}
+
 export function useStoredState(c?: any, u?: any) {
   const m = currentScopedKey(c),
     [d, x] = useState<any>(() => {

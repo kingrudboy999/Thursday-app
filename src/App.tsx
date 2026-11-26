@@ -125,7 +125,9 @@ export function App() {
     [x, w] = useStoredState("circles", INITIAL_CIRCLES),
     [A, T] = useStoredState("events", INITIAL_EVENTS),
     [y, g] = useStoredState("following", DEFAULT_FOLLOWING_IDS),
-    [R, z] = useStoredState("conversations", INITIAL_CONVERSATIONS),
+    // The inbox starts empty. Real threads arrive from the server and from the
+    // realtime stream — nothing is invented locally.
+    [R, z] = useStoredState("conversations", []),
     [v, q] = useStoredState("notices", INITIAL_NOTICES),
     [_, j] = useStoredState("stories", INITIAL_STORIES),
     [C, U] = useStoredState("seenStories", []),
@@ -312,6 +314,28 @@ export function App() {
       }
       if (Array.isArray(data.guides) && data.guides.length) {
         setGuides(data.guides);
+      }
+      if (Array.isArray(data.conversations)) {
+        // Server threads are the only truth for the inbox. Local conversations
+        // that the server does not know about are dropped, which also clears
+        // out demo threads cached by older builds.
+        const legacyDemoIds = new Set(
+          INITIAL_CONVERSATIONS.map((c: any) => c.id),
+        );
+        z((localConvs: any[]) => {
+          const serverConvs = data.conversations.filter(
+            (c: any) => !legacyDemoIds.has(c.id),
+          );
+          const serverIds = new Set(serverConvs.map((c: any) => c.id));
+          const pending = localConvs.filter(
+            (c: any) =>
+              c?.id &&
+              !serverIds.has(c.id) &&
+              // keep optimistic threads we just created and are still posting
+              c?.optimistic,
+          );
+          return [...serverConvs, ...pending];
+        });
       }
       if (data.promptVotes && Object.keys(data.promptVotes).length) {
         setPromptVotes((prev: any) => ({ ...prev, ...data.promptVotes }));

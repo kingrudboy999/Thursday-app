@@ -508,8 +508,10 @@ app.get("/api/bootstrap", async (req, res) => {
       guides: collections.guides,
       me: meProfile,
       followingIds: userState.followingIds,
-      conversations:
-        formattedConversations.length > 0 ? formattedConversations : userState.conversations,
+      // Only real threads are returned. Previously an empty thread table fell
+      // back to seeded demo conversations, which is why the inbox showed fake
+      // people with fake messages that could never receive a reply.
+      conversations: formattedConversations,
       notifications: userState.notifications,
       drafts: userState.drafts,
       savedGuideIds: userState.savedGuideIds,
@@ -1472,15 +1474,22 @@ app.post("/api/conversations/:id/messages", async (req, res) => {
       return res.status(404).json({ ok: false, error: "Conversation not found" });
     }
 
+    // The composer sends rich media as `attachment` (voice notes, photos,
+    // location…). It has to be persisted verbatim and echoed to the recipient,
+    // otherwise a voice note arrives as an empty bubble that cannot be played.
+    const attachment = body.attachment || (body.voice ? { type: "voice", ...body.voice } : undefined);
+
     const msg = {
       id: body.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       senderId: userId,
       from: "me" as const,
       text: String(body.text || ""),
       time: nowClockLabel(),
+      createdAt: new Date().toISOString(),
       seen: false,
       image: body.image,
       voice: body.voice,
+      attachment,
       replyTo: body.replyTo,
     };
 
@@ -2038,7 +2047,8 @@ app.post(["/api/admin/reset", "/api/reset"], async (req, res) => {
       followingIds: Array.isArray(INITIAL_SEED.followingIds)
         ? [...INITIAL_SEED.followingIds]
         : ["maya", "priya", "jonah"],
-      conversations: structuredClone(INITIAL_SEED.conversations) as any[],
+      // Resetting clears the inbox rather than restoring demo chats.
+      conversations: [],
       notifications: structuredClone(INITIAL_SEED.notifications) as any[],
       drafts: structuredClone(INITIAL_SEED.drafts) as any[],
       savedGuideIds: INITIAL_SEED.guides.map((g: any) => g.id),

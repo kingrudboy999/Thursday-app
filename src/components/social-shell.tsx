@@ -1915,10 +1915,13 @@ export function StoryViewerModal({
     T = stories[index],
     y = T ? people.find((_?: any) => _.id === T.authorId) : null,
     [g, R] = useState<any>(false),
-    z = useRef<any>(null);
+    z = useRef<any>(null),
+    holdTimer = useRef<any>(0);
   if (
     (useEffect(() => {
-      if (!T || (onSeen(T.id), g)) return;
+      if (!T) return;
+      onSeen(T.id);
+      if (g) return;
       const _ = window.setTimeout(() => {
         index < stories.length - 1 ? onChange(index + 1) : onClose();
       }, 6500);
@@ -1940,7 +1943,16 @@ export function StoryViewerModal({
     return null;
   const v = () =>
       index < stories.length - 1 ? onChange(index + 1) : onClose(),
-    q = () => (index > 0 ? onChange(index - 1) : onClose());
+    q = () => (index > 0 ? onChange(index - 1) : onClose()),
+    // Hold anywhere to pause — release resumes, matching WhatsApp.
+    holdStart = () => {
+      holdTimer.current = window.setTimeout(() => R(true), 180);
+    },
+    holdEnd = () => {
+      if (holdTimer.current) window.clearTimeout(holdTimer.current);
+      holdTimer.current = 0;
+      R(false);
+    };
   return createPortal(
     <div
       className="fixed inset-0 z-[80] flex flex-col overflow-hidden bg-[#050806]"
@@ -1969,13 +1981,30 @@ export function StoryViewerModal({
         src={T.image}
         alt={T.caption}
         className="story-image absolute inset-0 z-[1] h-full w-full object-cover"
-        onClick={() => R((_?: any) => !_)}
+        aria-hidden="true"
+      />
+      {/* WhatsApp-style tap zones: right half advances, left half goes back,
+          holding either one pauses while your finger is down. */}
+      <button
+        type="button"
+        onClick={v}
+        onPointerDown={holdStart}
+        onPointerUp={holdEnd}
+        onPointerCancel={holdEnd}
+        onPointerLeave={holdEnd}
+        aria-label="Next story"
+        className="absolute inset-y-0 right-0 z-[2] w-1/2 cursor-pointer"
+        data-no-ripple
       />
       <button
         type="button"
-        onClick={() => R((_?: any) => !_)}
-        aria-label={g ? "Resume story" : "Pause story"}
-        className="absolute inset-0 z-[2] cursor-default"
+        onClick={q}
+        onPointerDown={holdStart}
+        onPointerUp={holdEnd}
+        onPointerCancel={holdEnd}
+        onPointerLeave={holdEnd}
+        aria-label="Previous story"
+        className="absolute inset-y-0 left-0 z-[2] w-1/2 cursor-pointer"
         data-no-ripple
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[132px] bg-gradient-to-b from-black/75 via-black/35 to-transparent" />
@@ -2059,7 +2088,7 @@ export function StoryViewerModal({
             />
           </div>
           <div className="mt-2 flex items-center justify-between text-[10px] text-white/45">
-            <span>Tap to pause · arrows to navigate</span>
+            <span>Tap right for next · tap left to go back · hold to pause</span>
             <button
               type="button"
               onClick={onClose}
