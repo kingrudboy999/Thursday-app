@@ -1467,6 +1467,91 @@ app.delete("/api/highlights/:id", async (req, res) => {
   }
 });
 
+/**
+ * Removing your own content.
+ *
+ * Highlight had a delete route; stories, reels, circles and gatherings did
+ * not, so once something was posted it could never be taken down — and a
+ * story whose author was removed lingered in the rail as an orphan.
+ */
+app.delete("/api/stories/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    let found = false;
+    await updateCollection("stories", (items) =>
+      items.filter((s: any) => {
+        const mine = !s.authorId || s.authorId === actor.userId;
+        if (s.id === id && mine) { found = true; return false; }
+        return true;
+      }),
+    );
+    if (!found) return res.status(404).json({ ok: false, error: "Story not found" });
+    broadcast("story:deleted", { id });
+    res.json({ ok: true, id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.delete("/api/reels/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    let found = false;
+    await updateCollection("reels", (items) =>
+      items.filter((r: any) => {
+        if (r.id === id && r.authorId === actor.userId) { found = true; return false; }
+        return true;
+      }),
+    );
+    if (!found) return res.status(404).json({ ok: false, error: "Reel not found" });
+    broadcast("reel:updated", { id, deleted: true });
+    res.json({ ok: true, id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.delete("/api/circles/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    let found = false;
+    await updateCollection("circles", (items) =>
+      items.filter((c: any) => {
+        const owners = [...(c.moderatorIds || []), c.ownerId].filter(Boolean);
+        if (c.id === id && owners.includes(actor.userId)) { found = true; return false; }
+        return true;
+      }),
+    );
+    if (!found) return res.status(404).json({ ok: false, error: "Circle not found" });
+    broadcast("circle:updated", { id, deleted: true });
+    res.json({ ok: true, id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.delete("/api/events/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    let found = false;
+    await updateCollection("events", (items) =>
+      items.filter((e: any) => {
+        if (e.id === id && e.hostId === actor.userId) { found = true; return false; }
+        return true;
+      }),
+    );
+    if (!found) return res.status(404).json({ ok: false, error: "Gathering not found" });
+    broadcast("event:updated", { id, deleted: true });
+    res.json({ ok: true, id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
 // ==================== REELS ====================
 app.post("/api/reels", async (req, res) => {
   try {
