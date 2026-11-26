@@ -12,6 +12,7 @@ import {
 } from "../lib/icons";
 import {
   GuideCard,
+  GuideReaderModal,
   ThursdayPromptCard,
   WeeklyRecapCard,
 } from "../components/features";
@@ -55,11 +56,47 @@ export function FeedView({
   onOpenStory,
   onCreateStory,
   onExplore,
+  prompts = THURSDAY_PROMPTS,
+  guides = CIRCLE_GUIDES,
+  promptVotes = {},
+  onVotePrompt,
+  savedGuideIds = [],
+  guideSteps = {},
+  onToggleSaveGuide,
+  onToggleGuideStep,
 }: any) {
   const [$, ye] = useState<any>("for-you"),
     [Ve, pe] = useState<any>("latest"),
     [le, Ee] = useState<any>(false),
     [Ce, He] = useState<any>(null),
+    [activeGuide, setActiveGuide] = useState<any>(null),
+    todayLabel = useMemo(
+      () =>
+        new Date().toLocaleDateString("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }),
+      [],
+    ),
+    greetingLabel = useMemo(() => {
+      const hr = new Date().getHours();
+      const firstName = me?.name?.split(" ")[0] || "Nora";
+      if (hr < 12) return `Good morning, ${firstName}.`;
+      if (hr < 18) return `Good afternoon, ${firstName}.`;
+      return `Good evening, ${firstName}.`;
+    }, [me?.name]),
+    recapStats = useMemo(
+      () => ({
+        postsShared: posts.length,
+        circleReplies: posts.reduce(
+          (sum: number, p: any) => sum + (p.comments?.length || 0),
+          0,
+        ),
+        followingCount: followingIds.length,
+      }),
+      [posts, followingIds.length],
+    ),
     V = circles.filter((h?: any) => h.joined),
     W = useMemo(() => {
       let h = posts;
@@ -90,11 +127,11 @@ export function FeedView({
             <div className="mb-2 flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-forest" />
               <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
-                Thursday, 18 June
+                {todayLabel}
               </p>
             </div>
             <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
-              Good morning, Nora.
+              {greetingLabel}
             </h1>
             <p className="mt-1 text-[13px] text-muted">
               Here's what your circle is sharing today.
@@ -347,7 +384,7 @@ export function FeedView({
                 <button
                   key={h.id}
                   type="button"
-                  onClick={onOpenReels}
+                  onClick={() => onOpenReels(h.id)}
                   className="group relative aspect-[9/13] overflow-hidden rounded-[7px] border border-line text-left"
                   aria-label={`Watch reel by ${k?.name}`}
                 >
@@ -376,8 +413,13 @@ export function FeedView({
           </div>
         </RailSection>
         <ThursdayPromptCard
-          prompt={THURSDAY_PROMPTS[0]}
-          onVote={(h?: any) => He(h)}
+          prompt={prompts[0] || THURSDAY_PROMPTS[0]}
+          prompts={prompts}
+          votedOptions={promptVotes}
+          onVote={(h?: any, promptId?: string) => {
+            He(h);
+            onVotePrompt?.(promptId || prompts[0]?.id || "pr1", h);
+          }}
         />
         {Ce ? (
           <p className="px-1 text-[10px] text-forest">
@@ -397,15 +439,40 @@ export function FeedView({
               Guides
             </span>
           }
-          action={<span className="text-[9.5px] text-faint">3 saved</span>}
+          action={
+            <span className="text-[9.5px] text-faint">
+              {savedGuideIds.length || guides.length} saved
+            </span>
+          }
         >
           <div className="space-y-1.5 px-1 pt-0.5">
-            {CIRCLE_GUIDES.slice(0, 2).map((h?: any) => (
-              <GuideCard key={h.id} guide={h} onOpen={() => onExplore()} />
+            {guides.slice(0, 3).map((h?: any) => (
+              <GuideCard
+                key={h.id}
+                guide={h}
+                onOpen={() => setActiveGuide(h)}
+              />
             ))}
           </div>
         </RailSection>
-        <WeeklyRecapCard people={people} onOpen={onOpenPerson} />
+        <WeeklyRecapCard
+          people={people}
+          onOpen={onOpenPerson}
+          stats={recapStats}
+        />
+        <GuideReaderModal
+          guide={activeGuide}
+          open={!!activeGuide}
+          onClose={() => setActiveGuide(null)}
+          people={people}
+          saved={activeGuide ? savedGuideIds.includes(activeGuide.id) : false}
+          completedSteps={activeGuide ? guideSteps[activeGuide.id] || [] : []}
+          onToggleSave={() => activeGuide && onToggleSaveGuide?.(activeGuide.id)}
+          onToggleStep={(stepIdx: number) =>
+            activeGuide && onToggleGuideStep?.(activeGuide.id, stepIdx)
+          }
+          onOpenAuthor={onOpenPerson}
+        />
         <RailSection
           title="People to know"
           action={
