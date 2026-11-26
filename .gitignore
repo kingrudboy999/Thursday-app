@@ -8,6 +8,10 @@ mobile/.expo/
 mobile/dist/
 mobile/android/
 mobile/ios/
+server/node_modules/
+server/dist/
+server/.local-thursday-db.json
+.vercel/
 
 # Logs & OS files
 *.log
