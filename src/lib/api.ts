@@ -686,6 +686,8 @@ export function connectRealtimeStream(handlers: RealtimeHandlers): () => void {
   let es: EventSource | null = null;
   let closed = false;
   let reconnectTimer = 0;
+  let attempt = 0;
+  let lastEventAt = Date.now();
 
   const connect = () => {
     if (closed) return;
@@ -706,6 +708,8 @@ export function connectRealtimeStream(handlers: RealtimeHandlers): () => void {
       };
 
       bind("connected", (data) => {
+        attempt = 0;
+        lastEventAt = Date.now();
         handlers.onConnectionChange?.({
           connected: true,
           onlineUserIds: data?.onlineUserIds,
@@ -738,21 +742,47 @@ export function connectRealtimeStream(handlers: RealtimeHandlers): () => void {
       bind("prompt:updated", handlers.onPromptUpdated);
 
       es.onerror = () => {
-        handlers.onConnectionChange?.({ connected: false });
         es?.close();
         es = null;
-        if (!closed) {
-          reconnectTimer = window.setTimeout(connect, 4000);
+        if (closed) return;
+
+        // A stream that has been delivering events for a while and then drops
+        // is a blip. Only surface "reconnecting" once we are genuinely offline,
+        // so one lazy tab or a wifi handover does not paint the app as broken.
+        const healthyFor = Date.now() - lastEventAt;
+        attempt += 1;
+        if (healthyFor > 15_000 || attempt >= 2) {
+          handlers.onConnectionChange?.({ connected: false });
         }
+
+        // Exponential backoff with jitter: 1s, 2s, 4s, 8s… capped at 30s.
+        const base = Math.min(30_000, 1000 * 2 ** (attempt - 1));
+        const wait = base + Math.random() * 400;
+        reconnectTimer = window.setTimeout(connect, wait);
       };
     } catch {}
   };
+
+  // Phones suspend background tabs; when we come back we want the stream
+  // re-established immediately rather than waiting out the backoff timer.
+  const wake = () => {
+    if (closed) return;
+    if (es && es.readyState === EventSource.OPEN) return;
+    if (reconnectTimer) window.clearTimeout(reconnectTimer);
+    attempt = 0;
+    connect();
+  };
+  window.addEventListener("online", wake);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") wake();
+  });
 
   connect();
 
   return () => {
     closed = true;
     if (reconnectTimer) window.clearTimeout(reconnectTimer);
+    window.removeEventListener("online", wake);
     es?.close();
   };
 }

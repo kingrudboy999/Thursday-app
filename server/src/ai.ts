@@ -49,10 +49,25 @@ const RAW_KEYS = [
   "OPENROUTER_KEY_REMOVED_10",
 ];
 
-/** Extra keys can be injected without a redeploy via Railway env vars. */
+/**
+ * Extra keys can be injected without a redeploy via env vars.
+ * Works on Node (Railway) and Deno (Supabase Edge Functions).
+ */
+function readEnv(): Record<string, string | undefined> {
+  const g = globalThis as any;
+  if (g.Deno?.env?.toObject) {
+    try {
+      return { ...Deno.env.toObject() };
+    } catch {
+      return {};
+    }
+  }
+  return typeof process !== "undefined" && process.env ? { ...process.env } : {};
+}
+
 function collectKeys(): string[] {
   const extra: string[] = [];
-  for (const [name, value] of Object.entries(process.env)) {
+  for (const [name, value] of Object.entries(readEnv())) {
     if (!value) continue;
     if (name === "OPENROUTER_API_KEYS") {
       extra.push(
@@ -167,6 +182,8 @@ function pickModel(excluded: Set<string>): AiModelState | null {
   );
   return fallback ?? null;
 }
+
+declare const Deno: any;
 
 export type AiTask =
   | "chat"

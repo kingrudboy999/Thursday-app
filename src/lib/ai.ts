@@ -1,6 +1,16 @@
 import { API_BASE_URL, getAuthToken, getClientId } from "./api";
 
 /**
+ * The AI engine runs as a Supabase Edge Function so it stays available even
+ * while the main API host is being redeployed. Override with VITE_AI_BASE_URL.
+ */
+const AI_BASE = (
+  (import.meta as unknown as { env?: Record<string, string> }).env
+    ?.VITE_AI_BASE_URL ||
+  "https://fhnanjftdcitheyxyjth.supabase.co/functions/v1/thursday-ai"
+).replace(/\/+$/, "");
+
+/**
  * Client for Thursday's AI proxy.
  *
  * Nothing secret lives here: the browser talks to our own API, and the server
@@ -82,7 +92,7 @@ const TASK_PARAMS: Partial<
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal) {
   const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${AI_BASE}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -109,7 +119,7 @@ export async function aiAsk(opts: {
   const tune = TASK_PARAMS[task] || {};
   try {
     const { json } = await post<any>(
-      "/api/ai/chat",
+      "/chat",
       {
         task,
         ...(opts.prompt ? { prompt: opts.prompt } : {}),
@@ -158,7 +168,7 @@ export async function aiStatus(): Promise<AiStatus> {
   };
   try {
     const token = getAuthToken();
-    const res = await fetch(`${API_BASE_URL}/api/ai/status`, {
+    const res = await fetch(`${AI_BASE}/status`, {
       headers: {
         "X-Thursday-Client-Id": getClientId(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
