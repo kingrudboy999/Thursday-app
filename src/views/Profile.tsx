@@ -135,15 +135,37 @@ export function ProfileView({
     <div className="mx-auto w-full max-w-[820px] px-4 pt-5 pb-10 sm:px-6 lg:px-8">
       <section className="animate-rise overflow-hidden rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgba(16,19,24,0.04)]">
         <div className="relative">
-          {/* A cover keeps its banner proportions, but the whole image is
-              shown inside it instead of being zoomed and cropped. */}
-          <img
-            src={person.cover}
-            alt=""
-            className="h-[132px] w-full object-contain sm:h-[168px]"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/25 to-transparent" />
+          {/* A cover must fill its banner, or a portrait photo collapses into a
+              narrow strip with grey gutters either side (and a landscape one
+              shows bands above and below). So the banner is a fixed ratio and
+              the photo fills it with `cover`, centred on whatever the person
+              chose. The blurred copy underneath means the letterboxed edges,
+              when the shape differs a lot, read as part of the photo rather
+              than as a gap. */}
+          <div className="relative h-[132px] w-full overflow-hidden bg-canvas-deep sm:h-[168px]">
+            {person.cover ? (
+              <>
+                <img
+                  src={person.cover}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
+                  loading="lazy"
+                />
+                <img
+                  src={person.cover}
+                  alt={`${person.name.split(" ")[0]}'s cover photo`}
+                  className="relative h-full w-full object-cover object-center"
+                  loading="lazy"
+                />
+              </>
+            ) : (
+              // No cover chosen: a calm wash in the brand green instead of a
+              // broken image icon or an empty grey slab.
+              <div className="h-full w-full bg-gradient-to-br from-forest-soft via-forest-wash to-canvas-deep" />
+            )}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/25 to-transparent" />
+          </div>
           <div className="absolute top-3 right-3 flex items-center gap-1.5">
             <button
               type="button"
