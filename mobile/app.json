@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Thursday",
+    "slug": "thursday",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c1712"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.thursday.social"
+    },
+    "android": {
+      "package": "app.thursday.social",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1f6b52"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-video",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": false,
+            "extraProguardRules": "-keep class com.facebook.hermes.unicode.** { *; }\n-keep class com.facebook.jni.** { *; }\n-keep class expo.modules.** { *; }\n-dontwarn okhttp3.**\n-dontwarn okio.**"
+          }
+        }
+      ],
+      "./plugins/withSmallApk"
+    ]
+  }
+}
