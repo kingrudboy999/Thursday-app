@@ -10,6 +10,7 @@ import {
   Compass,
   MapPin,
   Plus,
+  PaperPlaneTilt,
   Ticket,
   UserPlus,
   UsersThree,
@@ -21,6 +22,7 @@ import {
   PostCard,
   VerifiedBadge,
 } from "../components/social";
+import { CircleNotch } from "../lib/icons";
 import { formatCount } from "../lib/social";
 import { ACCENT_BADGE_STYLES } from "../lib/spaces";
 
@@ -34,14 +36,14 @@ function SectionEyebrow({ children }: any) {
     </div>
   );
 }
-function AvatarStack({ ids, people }: any) {
+function AvatarStack({ ids, people, onlineIds = [] }: any) {
   return (
     <span className="flex -space-x-1.5">
       {ids.slice(0, 4).map((m?: any) => {
         const d = people.find((x?: any) => x.id === m);
         return d ? (
           <span key={m} className="rounded-full ring-2 ring-surface">
-            <Avatar person={d} size="xs" />
+            <Avatar person={d} size="xs" online={onlineIds.includes(d.id)} />
           </span>
         ) : null;
       })}
@@ -71,6 +73,10 @@ export function CirclesView({
   people,
   posts,
   initialSelectedId,
+  me,
+  meId = "me",
+  onlineIds = [],
+  onCreatePost,
   onToggleCircle,
   onCreate,
   onOpenPerson,
@@ -80,12 +86,14 @@ export function CirclesView({
   onOpenPost,
   onVote,
 }: any) {
-  const [q, _] = useState<any>("All"),
+  const [composerText, setComposerText] = useState<string>(""),
+    [posting, setPosting] = useState<boolean>(false),
+    [q, _] = useState<any>("All"),
     [j, C] = useState<any>(initialSelectedId ?? null),
     U = circles.filter((K?: any) => K.joined),
     J = circles.filter((K?: any) => q === "All" || K.category === q),
     te = circles.find((K?: any) => K.id === j),
-    Ne = te ? posts.filter((K?: any) => K.circleId === te.id).slice(0, 3) : [],
+    Ne = te ? posts.filter((K?: any) => K.circleId === te.id).slice(0, 8) : [],
     he = events.find((K?: any) => K.circleId === j && K.joined) ?? events[0];
   return (
     <div className="mx-auto w-full max-w-[1080px] px-4 pt-5 pb-10 sm:px-6 lg:px-8">
@@ -247,6 +255,7 @@ export function CirclesView({
                   <AvatarStack
                     ids={ye.map((Ve?: any) => Ve.id)}
                     people={people}
+                    onlineIds={onlineIds}
                   />
                   <p className="ml-0.5 truncate text-[10px] text-muted">
                     {formatCount(K.members)}
@@ -324,7 +333,11 @@ export function CirclesView({
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <AvatarStack ids={te.moderatorIds} people={people} />
+                <AvatarStack
+                  onlineIds={onlineIds}
+                  ids={te.moderatorIds}
+                  people={people}
+                />
                 <div>
                   <p className="text-[11px] font-semibold text-ink">
                     {formatCount(te.members)}
@@ -389,6 +402,48 @@ export function CirclesView({
                 </div>
               </div>
               <div className="mt-3 border-t border-line bg-surface-muted/40">
+                <div className="border-b border-line bg-surface px-4 py-3">
+                  <div className="flex items-start gap-2.5">
+                    <Avatar person={me} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <textarea
+                        value={composerText}
+                        onChange={(e?: any) => setComposerText(e.target.value)}
+                        rows={2}
+                        placeholder={`Share something with ${te.name}…`}
+                        className="w-full resize-none rounded-[9px] border border-line bg-canvas px-3 py-2 text-[12.5px] leading-[1.55] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                      />
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[10.5px] text-faint">
+                          Posts live-sync to everyone in this circle
+                        </span>
+                        <button
+                          type="button"
+                          disabled={posting || !composerText.trim()}
+                          onClick={async () => {
+                            const text = composerText.trim();
+                            if (!text) return;
+                            setPosting(true);
+                            await onCreatePost?.({
+                              text,
+                              circleId: te.id,
+                            });
+                            setComposerText("");
+                            setPosting(false);
+                          }}
+                          className="inline-flex h-7 items-center gap-1.5 rounded-[7px] bg-forest px-2.5 text-[11.5px] font-semibold text-white transition-colors hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {posting ? (
+                            <CircleNotch size={12} className="animate-spin" />
+                          ) : (
+                            <PaperPlaneTilt size={12} strokeWidth={2} />
+                          )}
+                          {posting ? "Posting…" : "Post to circle"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <p className="px-4 pt-2.5 pb-1 text-[10px] font-semibold tracking-[0.1em] text-faint uppercase">
                   From inside the circle
                 </p>
@@ -431,6 +486,7 @@ export function GatheringsView({
   events,
   circles,
   people,
+  onlineIds = [],
   onToggleEvent,
   onOpenPerson,
   onSuggest,
@@ -593,7 +649,11 @@ export function GatheringsView({
               </div>
               <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3.5">
                 <div className="flex items-center gap-2">
-                  <AvatarStack ids={ACTIVE_CIRCLE_MEMBER_IDS} people={people} />
+                  <AvatarStack
+                    onlineIds={onlineIds}
+                    ids={ACTIVE_CIRCLE_MEMBER_IDS}
+                    people={people}
+                  />
                   <p className="text-[10.5px] text-muted">
                     <span className="font-semibold text-ink-soft">
                       {q.attendees}
@@ -706,6 +766,7 @@ export function GatheringsView({
                   </button>
                   <div className="flex items-center gap-2 sm:shrink-0">
                     <AvatarStack
+                      onlineIds={onlineIds}
                       ids={ACTIVE_CIRCLE_MEMBER_IDS.slice(0, 3)}
                       people={people}
                     />
@@ -883,7 +944,8 @@ export function GatheringsView({
               ) : null}
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
                 <div className="flex items-center gap-2">
-                  <AvatarStack ids={ACTIVE_CIRCLE_MEMBER_IDS} people={people} />
+                  <AvatarStack
+                    onlineIds={onlineIds} ids={ACTIVE_CIRCLE_MEMBER_IDS} people={people} />
                   <p className="text-[10px] text-muted">
                     {_.attendees}
                     {" people going"}
