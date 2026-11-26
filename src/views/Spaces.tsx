@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { cn } from "../lib/cn";
+import { downloadIcsEvent } from "../lib/storage";
 import {
   ArrowRight,
   CalendarBlank,
@@ -888,26 +889,36 @@ export function GatheringsView({
                     {" people going"}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onToggleEvent(_.id)}
-                  aria-pressed={_.joined}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3.5 text-[11.5px] font-semibold transition-colors",
-                    _.joined
-                      ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
-                      : "border-forest bg-forest text-white hover:bg-forest-hover",
-                  )}
-                >
-                  {_.joined ? (
-                    <>
-                      <Check size={12} strokeWidth={2.4} aria-hidden="true" />
-                      {" You're going"}
-                    </>
-                  ) : (
-                    "RSVP"
-                  )}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => downloadIcsEvent(_)}
+                    className="inline-flex h-8 items-center gap-1 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11px] font-semibold text-ink-soft hover:bg-surface-muted"
+                  >
+                    <CalendarBlank size={12} strokeWidth={2} aria-hidden="true" />
+                    Calendar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onToggleEvent(_.id)}
+                    aria-pressed={_.joined}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3.5 text-[11.5px] font-semibold transition-colors",
+                      _.joined
+                        ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
+                        : "border-forest bg-forest text-white hover:bg-forest-hover",
+                    )}
+                  >
+                    {_.joined ? (
+                      <>
+                        <Check size={12} strokeWidth={2.4} aria-hidden="true" />
+                        {" You're going"}
+                      </>
+                    ) : (
+                      "RSVP"
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
