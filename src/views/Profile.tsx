@@ -304,17 +304,21 @@ export function ProfileView({
               {person.bio}
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
-                {person.location}
-              </span>
-              <span className="inline-flex items-center gap-1 text-forest">
-                <LinkSimple size={11} strokeWidth={1.8} aria-hidden="true" />
-                {person.website}
-              </span>
+              {person.location ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
+                  {person.location}
+                </span>
+              ) : null}
+              {person.website ? (
+                <span className="inline-flex items-center gap-1 text-forest">
+                  <LinkSimple size={11} strokeWidth={1.8} aria-hidden="true" />
+                  {person.website}
+                </span>
+              ) : null}
               <span className="inline-flex items-center gap-1">
                 <CalendarBlank size={11} strokeWidth={1.8} aria-hidden="true" />
-                {person.joined}
+                {person.joined || "Recently joined"}
               </span>
             </div>
             <div className="mt-3 flex items-center gap-4">
@@ -448,7 +452,7 @@ export function ProfileView({
         <div className="flex items-center gap-1.5 text-[10px] text-faint">
           <span className="h-1 w-1 rounded-full bg-forest/60" />
           {"Joined "}
-          {person.joined.replace("Joined ", "")}
+          {String(person.joined || "Recently").replace("Joined ", "")}
         </div>
       </div>
     </div>

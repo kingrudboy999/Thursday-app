@@ -155,7 +155,10 @@ export function App() {
     [visitors, setVisitors] = useState<any[]>([]),
     [incomingCall, setIncomingCall] = useState<any>(null),
     [callLog, setCallLog] = useState<any[]>([]),
-    [Ve, pe] = useState<any>(ME_ID),
+    // The profile view must default to whoever is signed in. Hard-coding ME_ID
+    // here made a fresh account open the seeded demo profile ("Nora Bennett")
+    // and offer to follow them — because demo people are keyed by id "me".
+    [Ve, pe] = useState<any>(getStoredAuthUser()?.id || ME_ID),
     [le, Ee] = useState<any>(undefined),
     [Ce, He] = useState<any>(false),
     [V, W] = useState<any>(false),
@@ -173,6 +176,9 @@ export function App() {
     [Mt, u0] = useState<any>(false),
     gKeyTimerRef = useRef<number | null>(null),
     meId: string = authUser?.id || ME_ID,
+    // A ref mirror of meId, so long-lived callbacks that must not re-subscribe
+    // (nav handlers, realtime listeners) still read the current account.
+    meIdRef = useRef<string>(meId),
     authProfile = authUser?.profile
       ? {
           ...authUser.profile,
@@ -197,6 +203,10 @@ export function App() {
       },
     Ae = m.find((H?: any) => H.id === k) ?? null,
     d0 = Ae ? (c.find((H?: any) => H.id === Ae.authorId) ?? null) : null,
+    // Always land on a real person object. Previously a missing directory
+    // entry silently rendered whichever face came first in the list — which is
+    // how a signed-in account ended up staring at a demo profile. Now the only
+    // fallback is the signed-in person, and never a stranger.
     Ft = c.find((H?: any) => H.id === Ve) ?? fe,
     A0 = v.filter((H?: any) => H.unread).length,
     s0 = R.reduce(
@@ -216,6 +226,22 @@ export function App() {
     const H = window.setTimeout(() => De(null), 4200);
     return () => window.clearTimeout(H);
   }, [qe]);
+
+  meIdRef.current = meId;
+
+  // Whenever the signed-in account changes, make sure "my profile" points at it.
+  // Without this, a reload restored the session but left the profile viewer on
+  // the previous default, so the Profile tab showed someone else entirely.
+  useEffect(() => {
+    const myId = authUser?.id;
+    if (!myId) return;
+    pe((current: any) => {
+      // Only correct the self-view. If the person is deliberately reading
+      // another profile, leave their choice alone.
+      const isSelfView = !current || current === ME_ID || current === myId;
+      return isSelfView ? myId : current;
+    });
+  }, [authUser?.id]);
 
   // Validate the persisted bearer session against PostgreSQL on load
   useEffect(() => {
@@ -550,7 +576,10 @@ export function App() {
     E = useCallback((H?: any) => {
       ye(H);
       He(false);
-      H === "profile" && pe(meId);
+      // Tapping "Profile" opens your own profile. This read meId from a
+      // closure with no dependencies, so it was frozen at the first render —
+      // before sign-in — and kept sending everyone to the seeded demo account.
+      H === "profile" && pe(meIdRef.current);
       H === "circles" && me(undefined);
       H === "messages" && Ee(undefined);
       $t();
