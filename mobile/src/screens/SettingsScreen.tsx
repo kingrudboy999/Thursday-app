@@ -10,6 +10,9 @@ export function SettingsScreen({
   onChangeTheme,
   onToggleQuietHours,
   onToggleReadReceipts,
+  accountName,
+  accountHandle,
+  onSignOut,
 }: {
   theme: ThemePalette;
   themeMode: MobileThemeMode;
@@ -18,12 +21,55 @@ export function SettingsScreen({
   onChangeTheme: (mode: MobileThemeMode) => void;
   onToggleQuietHours: (next: boolean) => void;
   onToggleReadReceipts: (next: boolean) => void;
+  accountName?: string;
+  accountHandle?: string;
+  onSignOut?: () => void;
 }) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.canvas }}
       contentContainerStyle={{ padding: 12, paddingBottom: 100, gap: 12 }}
     >
+      {accountName ? (
+        <View
+          style={{
+            backgroundColor: theme.surface,
+            borderColor: theme.line,
+            borderWidth: 1,
+            borderRadius: 14,
+            padding: 14,
+            gap: 4,
+          }}
+        >
+          <Text style={{ color: theme.faint, fontSize: 10, fontWeight: "700", letterSpacing: 1 }}>
+            LIVE ACCOUNT
+          </Text>
+          <Text style={{ color: theme.ink, fontSize: 15, fontWeight: "700" }}>
+            {accountName}
+          </Text>
+          {accountHandle ? (
+            <Text style={{ color: theme.muted, fontSize: 12 }}>@{accountHandle}</Text>
+          ) : null}
+          {onSignOut ? (
+            <Pressable
+              onPress={onSignOut}
+              style={{
+                marginTop: 8,
+                alignSelf: "flex-start",
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: theme.clay,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+              }}
+            >
+              <Text style={{ color: theme.clay, fontSize: 12, fontWeight: "700" }}>
+                Sign out
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.line }]}>
         <Text style={{ fontSize: 15, fontWeight: "700", color: theme.ink }}>Appearance</Text>
         <Text style={{ fontSize: 12.5, color: theme.muted, marginBottom: 8 }}>
