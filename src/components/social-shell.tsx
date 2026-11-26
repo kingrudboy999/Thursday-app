@@ -70,6 +70,11 @@ export const BROWSE_NAV_ITEMS = [
     icon: PlayCircle,
   },
   {
+    key: "ai",
+    label: "AI Studio",
+    icon: Sparkle,
+  },
+  {
     key: "circles",
     label: "Circles",
     icon: UsersThree,
@@ -113,6 +118,7 @@ export const VIEW_TITLES = {
   home: "Home",
   explore: "Explore",
   reels: "Reels",
+  ai: "AI Studio",
   circles: "Circles",
   events: "Gatherings",
   notifications: "Notifications",
@@ -129,6 +135,7 @@ function SidebarNavItem({
   compact = false,
 }: any) {
   const Comp_w = item.icon;
+  const isAi = item.key === "ai";
   return (
     <button
       type="button"
@@ -139,18 +146,33 @@ function SidebarNavItem({
         compact ? "h-11 px-3 text-[13.5px]" : "h-9 px-3 text-[13px]",
         active
           ? "bg-forest-soft font-semibold text-forest"
-          : "font-medium text-muted hover:bg-canvas-deep/70 hover:text-ink",
+          : isAi
+            ? "font-medium text-ink/80 hover:bg-clay-wash hover:text-ink"
+            : "font-medium text-muted hover:bg-canvas-deep/70 hover:text-ink",
       )}
     >
-      <Comp_w
-        size={19}
-        weight={active ? "fill" : "regular"}
-        className={cn(
-          "shrink-0",
-          active ? "text-forest" : "text-faint group-hover:text-muted",
-        )}
-        aria-hidden="true"
-      />
+      {isAi ? (
+        <span
+          className={cn(
+            "inline-flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[6px] transition-colors",
+            active
+              ? "bg-forest text-white"
+              : "bg-clay-wash text-clay ring-1 ring-clay/20 group-hover:bg-clay group-hover:text-white",
+          )}
+        >
+          <Comp_w size={11} weight="fill" aria-hidden="true" />
+        </span>
+      ) : (
+        <Comp_w
+          size={19}
+          weight={active ? "fill" : "regular"}
+          className={cn(
+            "shrink-0",
+            active ? "text-forest" : "text-faint group-hover:text-muted",
+          )}
+          aria-hidden="true"
+        />
+      )}
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {count ? (
         <span
@@ -696,6 +718,20 @@ export function TopBar({
           </button>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onNavigate("ai")}
+            aria-label="AI Studio"
+            aria-current={view === "ai" ? "page" : undefined}
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+              view === "ai"
+                ? "bg-clay-wash text-clay"
+                : "text-muted hover:bg-canvas-deep hover:text-ink",
+            )}
+          >
+            <Sparkle size={19} weight={view === "ai" ? "fill" : "regular"} aria-hidden="true" />
+          </button>
           <button
             type="button"
             onClick={() => onNavigate("messages")}

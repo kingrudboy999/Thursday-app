@@ -99,6 +99,7 @@ import {
   importWorkspaceSnapshot,
   useStoredState,
 } from "./lib/storage";
+import { AiView } from "./views/AiView";
 import { AuthView } from "./views/AuthView";
 import { NotificationsView } from "./views/Connect";
 import { BookmarksView, ExploreView } from "./views/Explore";
@@ -1374,6 +1375,8 @@ export function App() {
               onOpenCircle={_1}
             />
           );
+        case "ai":
+          return <AiView me={fe} onToast={Te} />;
         case "reels":
           return createPortal(
             <ReelsView
