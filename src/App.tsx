@@ -909,9 +909,20 @@ export function App() {
       apiDeleteDraft(draftId);
     },
     At_local = (H?: any) => {
-      setHighlightViewerStories(null);
-      const Y = _.findIndex((Q?: any) => Q.id === H);
-      Y >= 0 && de(Y);
+      // Opening a story opens *that person's* stories only. The viewer used to
+      // index into the flat list of everyone's stories, so finishing someone's
+      // last story slid straight into the next person's — confusing and easy
+      // to miss who you were actually watching. Scope the run to one author;
+      // when their last story ends the viewer closes.
+      const tapped = _.find((Q?: any) => Q.id === H);
+      if (!tapped) {
+        setHighlightViewerStories(null);
+        return;
+      }
+      const own = _.filter((Q?: any) => Q.authorId === tapped.authorId);
+      const start = own.findIndex((Q?: any) => Q.id === H);
+      setHighlightViewerStories(own);
+      de(start >= 0 ? start : 0);
     },
     handleOpenHighlight = (hl: any) => {
       const slideStory = {

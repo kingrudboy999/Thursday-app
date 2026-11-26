@@ -1201,15 +1201,18 @@ export function StoryComposerModal({ open, onClose, onShare, me }: any) {
     ];
   return open
     ? createPortal(
-        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-[#050806]/95 p-3 sm:p-6">
-          <div className="relative flex h-full max-h-[760px] w-full max-w-[420px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b0f0c]">
+        // Stories are a full-bleed medium, so the composer is too. On phones it
+        // fills the entire screen (respecting safe-area insets); from `sm` up it
+        // returns to a centred card.
+        <div className="fixed inset-0 z-[75] flex items-stretch justify-center bg-[#050806]/95 sm:items-center sm:p-6">
+          <div className="story-composer relative flex h-full w-full flex-col overflow-hidden bg-[#0b0f0c] sm:max-h-[760px] sm:max-w-[420px] sm:rounded-2xl sm:border sm:border-white/10">
             <img
               src={A}
               alt=""
               className="absolute inset-0 h-full w-full object-cover opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-            <div className="relative z-10 flex items-center justify-between p-3">
+            <div className="relative z-10 flex items-center justify-between p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3">
               <button
                 type="button"
                 onClick={onClose}
@@ -1233,7 +1236,7 @@ export function StoryComposerModal({ open, onClose, onShare, me }: any) {
                 {closeFriends ? " Close friends only" : " Close friends"}
               </button>
             </div>
-            <div className="relative z-10 mt-auto p-4">
+            <div className="relative z-10 mt-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="mb-3 flex items-center gap-2">
                 <Avatar person={me} size="sm" ring />
                 <span className="text-[12px] font-semibold text-white">

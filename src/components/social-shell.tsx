@@ -71,7 +71,7 @@ export const BROWSE_NAV_ITEMS = [
   },
   {
     key: "ai",
-    label: "AI Studio",
+    label: "AI",
     icon: Sparkle,
   },
   {
@@ -118,7 +118,7 @@ export const VIEW_TITLES = {
   home: "Home",
   explore: "Explore",
   reels: "Reels",
-  ai: "AI Studio",
+  ai: "AI",
   circles: "Circles",
   events: "Gatherings",
   notifications: "Notifications",
@@ -727,7 +727,7 @@ export function TopBar({
           <button
             type="button"
             onClick={() => onNavigate("ai")}
-            aria-label="AI Studio"
+            aria-label="AI"
             aria-current={view === "ai" ? "page" : undefined}
             className={cn(
               "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors",

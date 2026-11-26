@@ -51,115 +51,53 @@ const ACCENTS: Record<
   },
 };
 
-function timeOfDay() {
-  const h = new Date().getHours();
-  if (h < 5) return "Late night";
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  if (h < 21) return "Good evening";
-  return "Late evening";
-}
-
-function EnginePanel({ status }: { status: AiStatus | null }) {
-  const [open, setOpen] = useState(false);
-  const healthy =
-    status?.reachable &&
-    status.availableKeys > 0 &&
-    status.availableModels > 0;
+/**
+ * A quiet presence indicator.
+ *
+ * This used to be a diagnostics panel listing rotating API keys and their
+ * individual health. Nobody using Thursday needs to see the plumbing — and
+ * exposing it invites the question of whose keys are being spent. Now it just
+ * says whether the assistant is ready.
+ */
+function EnginePanel({ status }: any) {
+  const ready = Boolean(status?.reachable) && Boolean(status?.availableModels);
   return (
-    <div className="rounded-xl border border-line bg-surface">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
-        aria-expanded={open}
-      >
-        <span
-          className={cn(
-            "h-1.5 w-1.5 shrink-0 rounded-full",
-            healthy ? "bg-forest" : status?.reachable ? "bg-sand" : "bg-faint",
-          )}
-        />
+    <div className="rounded-xl border border-line bg-surface px-3.5 py-3">
+      <div className="flex items-center gap-2.5">
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span
+            className={cn(
+              "absolute inline-flex h-full w-full rounded-full opacity-60",
+              ready ? "animate-ping-slow bg-forest" : "bg-faint",
+            )}
+          />
+          <span
+            className={cn(
+              "relative inline-flex h-2 w-2 rounded-full",
+              ready ? "bg-forest" : "bg-faint",
+            )}
+          />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[12.5px] font-semibold text-ink">
-            {status?.reachable
-              ? `${status.availableKeys}/${status.keyCount} keys · ${status.availableModels}/${status.modelCount} models`
-              : "Engine status unavailable"}
+            {ready ? "Thursday AI is ready" : "Waking up"}
           </span>
-          <span className="block truncate text-[11px] text-faint">
-            {healthy
-              ? "Rotating free models, no cost to you"
-              : status?.reachable
-                ? "Some workers resting — requests will retry"
-                : "Retrying on next message"}
+          <span className="block text-[11px] text-faint">
+            {ready ? "Ask anything — it answers in a moment." : "Send a message and it will come online."}
           </span>
         </span>
-        <span className="text-[10.5px] font-medium text-faint">
-          {open ? "Hide" : "Details"}
-        </span>
-      </button>
-      {open ? (
-        <div className="border-t border-line px-3.5 py-3">
-          {status?.reachable ? (
-            <>
-              <p className="mb-2 text-[10.5px] font-semibold tracking-[0.08em] text-faint uppercase">
-                Model pool
-              </p>
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {status.models.map((m) => (
-                  <span
-                    key={m.label}
-                    title={
-                      m.lastError
-                        ? `Last issue: ${m.lastError}`
-                        : `${m.calls} requests`
-                    }
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-medium",
-                      m.cooling
-                        ? "border-line bg-canvas text-faint"
-                        : "border-forest/20 bg-forest-wash text-forest",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-1 w-1 rounded-full",
-                        m.cooling ? "bg-faint" : "bg-forest",
-                      )}
-                    />
-                    {m.label}
-                  </span>
-                ))}
-              </div>
-              <p className="mb-2 text-[10.5px] font-semibold tracking-[0.08em] text-faint uppercase">
-                Keys ({status.availableKeys} ready)
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {status.keys.map((k) => (
-                  <span
-                    key={k.label}
-                    title={`${k.calls} requests · ${k.failures} retries${k.lastError ? ` · ${k.lastError}` : ""}`}
-                    className={cn(
-                      "rounded border px-1.5 py-0.5 font-mono text-[9.5px]",
-                      k.cooling
-                        ? "border-line bg-canvas text-faint/70"
-                        : "border-forest/20 bg-forest-wash text-forest/80",
-                    )}
-                  >
-                    {k.label.split("…")[1] || k.label}
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-[12px] text-muted">
-              The engine panel fills in once the server answers.
-            </p>
-          )}
-        </div>
-      ) : null}
+      </div>
     </div>
   );
+}
+
+/** Greeting helper — restored after the engine-panel rewrite. */
+function timeOfDay(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 21) return "Good evening";
+  return "Still up";
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -463,11 +401,7 @@ export function AiView({ me, onToast }: any) {
 
           {busy ? (
             <TypingRow
-              label={
-                status?.availableModels
-                  ? `thinking · ${status.availableModels} models in rotation`
-                  : "thinking"
-              }
+              label="thinking"
             />
           ) : null}
 
@@ -622,13 +556,6 @@ export function AiView({ me, onToast }: any) {
 
         <EnginePanel status={status} />
 
-        <div className="rounded-xl border border-line bg-gradient-to-br from-forest-wash to-clay-wash/60 px-3.5 py-3">
-          <p className="text-[11.5px] leading-relaxed text-ink-soft">
-            <span className="font-semibold text-ink">No keys, no cost.</span>{" "}
-            Requests rotate through {status?.modelCount || 11} free models
-            across {status?.keyCount || 16} keys. If one naps, the next answers.
-          </p>
-        </div>
       </aside>
     </div>
   );
