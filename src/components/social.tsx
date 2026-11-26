@@ -67,12 +67,27 @@ export function Avatar({
               : "ring-forest ring-offset-canvas"),
         )}
       >
-        <img
-          src={person.avatar}
-          alt=""
-          className={cn("img-reveal rounded-full object-cover", A)}
-          loading="lazy"
-        />
+        {person?.avatar ? (
+          <img
+            src={person.avatar}
+            alt=""
+            className={cn("img-reveal rounded-full object-cover", A)}
+            loading="lazy"
+          />
+        ) : (
+          // A notification can reference someone who is no longer in the
+          // people list (deleted or not followed). Rendering a placeholder
+          // beats crashing the whole view on `person.avatar`.
+          <span
+            className={cn(
+              "inline-flex items-center justify-center rounded-full bg-forest-soft font-semibold text-forest",
+              A,
+            )}
+            aria-hidden="true"
+          >
+            {(person?.name || "?").trim().charAt(0).toUpperCase() || "?"}
+          </span>
+        )}
       </span>
       {online ? (
         <span className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-surface bg-forest" />

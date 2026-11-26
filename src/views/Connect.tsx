@@ -33,6 +33,14 @@ export function NotificationsView({
     T = notices.filter((v?: any) => v.unread).length,
     y = A.filter((v?: any) => !["Yesterday", "Mon", "Sun"].includes(v.time)),
     g = A.filter((v?: any) => ["Yesterday", "Mon", "Sun"].includes(v.time)),
+    // A notification whose actor is no longer in the people list has nothing
+    // to show and nowhere to go when tapped, so drop it rather than rendering
+    // a ghost row.
+    hasActor = (v?: any) =>
+      Array.isArray(v?.personIds) &&
+      v.personIds.some((C?: any) => people.some((U?: any) => U.id === C)),
+    Ay = y.filter(hasActor),
+    Ag = g.filter(hasActor),
     R = (v?: any) =>
       v === "like"
         ? Heart
@@ -212,22 +220,22 @@ export function NotificationsView({
             {" unread"}
           </span>
         </div>
-        {A.length ? (
+        {Ay.length || Ag.length ? (
           <div>
-            {y.length ? (
+            {Ay.length ? (
               <>
                 <p className="border-b border-line bg-surface-muted/60 px-4 py-1.5 text-[10px] font-semibold tracking-[0.1em] text-faint uppercase sm:px-5">
                   Today
                 </p>
-                <div className="divide-y divide-line/70">{y.map(z)}</div>
+                <div className="divide-y divide-line/70">{Ay.map(z)}</div>
               </>
             ) : null}
-            {g.length ? (
+            {Ag.length ? (
               <>
                 <p className="border-y border-line bg-surface-muted/60 px-4 py-1.5 text-[10px] font-semibold tracking-[0.1em] text-faint uppercase sm:px-5">
                   Earlier
                 </p>
-                <div className="divide-y divide-line/70">{g.map(z)}</div>
+                <div className="divide-y divide-line/70">{Ag.map(z)}</div>
               </>
             ) : null}
           </div>
