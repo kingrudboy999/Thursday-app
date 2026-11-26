@@ -212,6 +212,14 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 8_000,
   });
+  // A pool with no 'error' listener takes down the whole process when an idle
+  // Postgres connection drops -- which Railway does routinely. The server was
+  // returning 502s because of exactly this: "Connection terminated
+  // unexpectedly" thrown as an unhandled 'error' event. Log and move on; the
+  // pool discards the dead client and opens a new one on the next query.
+  pool.on("error", (err) => {
+    console.error("Postgres pool idle client error (recovering):", err?.message);
+  });
 
   for (let attempt = 1; attempt <= 8; attempt++) {
     try {
