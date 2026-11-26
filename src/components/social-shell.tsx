@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { readFileAsDataUrl } from "../lib/audio";
 import { cn } from "../lib/cn";
+import { relativeTime } from "../lib/time";
 import {
   Bell,
   BookmarkSimple,
@@ -2045,7 +2046,20 @@ export function StoryViewerModal({
               {y.verified ? <VerifiedBadge className="text-white/80" /> : null}
             </p>
             <p className="truncate text-[11px] text-white/65 drop-shadow">
-              {T.authorId === (storyViewerMeId ?? "me") ? "Your story" : "2h ago"}
+              {/* Real posting time, and how long is left before it disappears.
+                  "2h ago" was hard-coded, so every story claimed the same age. */}
+              {(() => {
+                const posted = T.createdAt || T.postedAt;
+                const ago = posted ? relativeTime(posted) : "";
+                const age = posted ? Date.now() - new Date(posted).getTime() : null;
+                const hoursLeft =
+                  age === null ? null : Math.max(0, Math.ceil((24 * 60 * 60 * 1000 - age) / (60 * 60 * 1000)));
+                const bits = [];
+                if (T.authorId === (storyViewerMeId ?? "me")) bits.push("Your story");
+                if (ago) bits.push(ago === "now" ? "just now" : `${ago} ago`);
+                if (hoursLeft !== null && hoursLeft <= 24) bits.push(`${hoursLeft}h left`);
+                return bits.length ? bits.join(" · ") : "Story";
+              })()}
             </p>
           </div>
           <button

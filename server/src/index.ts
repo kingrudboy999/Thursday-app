@@ -130,6 +130,8 @@ function extractBearerToken(req: Request): string {
  * Nothing enforced that before, so the story rail accumulated forever.
  */
 const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+/** Maximum live stories a single person can hold, as on WhatsApp. */
+const STORY_MAX_PER_AUTHOR = 50;
 
 function storyTimestamp(story: any): number | null {
   const raw = story?.createdAt || story?.postedAt;
@@ -1433,9 +1435,24 @@ app.post("/api/stories", async (req, res) => {
       sticker: body.sticker,
       filter: body.filter,
     };
-    await updateCollection("stories", (stories) => [story, ...stories]);
+    // A person may hold at most 50 live stories, the same ceiling WhatsApp
+    // uses. Adding a 51st drops the oldest rather than growing without bound.
+    let liveCount = 0;
+    await updateCollection("stories", (stories) => {
+      const mine = stories.filter((st: any) => st.authorId === actor.userId);
+      liveCount = mine.length;
+      if (mine.length >= STORY_MAX_PER_AUTHOR) {
+        // Drop the oldest of this author's stories before inserting the new one.
+        const oldest = mine.reduce((a: any, b: any) =>
+          new Date(a.createdAt || 0).getTime() <= new Date(b.createdAt || 0).getTime() ? a : b,
+        );
+        const withoutOldest = stories.filter((st: any) => st.id !== oldest.id);
+        return [story, ...withoutOldest];
+      }
+      return [story, ...stories];
+    });
     broadcast("story:created", story);
-    res.status(201).json({ ok: true, story });
+    res.status(201).json({ ok: true, story, atCap: liveCount >= STORY_MAX_PER_AUTHOR });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err?.message });
   }

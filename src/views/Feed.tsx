@@ -153,6 +153,7 @@ export function FeedView({
             onOpen={onOpenStory}
             onCreate={onCreateStory}
             seenIds={seenStories}
+            meId={me?.id || "me"}
           />
           <div className="animate-rise flex items-center gap-3 rounded-xl border border-forest/15 bg-forest-wash px-3.5 py-2.5">
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest text-white">

@@ -2,12 +2,14 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { useAmbientAudio } from "../lib/audio";
 import { cn } from "../lib/cn";
+import { fullTimestamp, relativeTime } from "../lib/time";
 import {
   BookmarkSimple,
   CaretLeft,
@@ -78,6 +80,67 @@ export function Avatar({
     </span>
   );
 }
+/**
+ * A story ring segmented like WhatsApp.
+ *
+ * One story is a complete green circle. Two stories split it into two equal
+ * arcs, three into three, and so on up to the 50-story cap. Segments are drawn
+ * with an SVG stroke and a dash pattern so they stay crisp at every size, and
+ * the gaps between them read as separation rather than decoration.
+ */
+export function StoryRing({
+  count = 1,
+  seen = false,
+  size = 52,
+  className,
+}: {
+  count?: number;
+  seen?: boolean;
+  size?: number;
+  className?: string;
+}) {
+  const segments = Math.max(1, Math.min(50, Math.round(Number(count) || 1)));
+  const stroke = 2.5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  // Leave a small gap between segments once there is more than one, so two
+  // halves do not visually merge back into a single ring.
+  const gapDeg = segments > 1 ? Math.min(10, 200 / segments) : 0;
+  const gap = (gapDeg / 360) * circumference;
+  const segLen = circumference / segments;
+  // Tailwind v4 exposes theme colours as --color-*, not bare --forest. Using
+  // the wrong name silently fell back to an approximate green and the
+  // track disc washed out the arcs.
+  const colour = seen ? "var(--color-line-strong)" : "var(--color-forest)";
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className={cn("shrink-0", className)}
+      aria-hidden="true"
+      data-story-segments={segments}
+    >
+      {Array.from({ length: segments }).map((_, i) => (
+        <circle
+          key={i}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={colour}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${Math.max(0.5, segLen - gap)} ${circumference}`}
+          strokeDashoffset={-(i * segLen)}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export function VerifiedBadge({ className }: any) {
   return (
     <SealCheck
@@ -91,16 +154,25 @@ export function VerifiedBadge({ className }: any) {
 export function AuthorChip({
   person,
   time,
+  createdAt,
   showHandle = true,
   className,
 }: any) {
+  // Posts carry both a friendly string and an ISO timestamp. When the ISO
+  // value is there it wins, because it can say "2h" or "12 Nov"; the stored
+  // string can only ever say whatever it said when the post was written.
+  const stamp = createdAt ? relativeTime(createdAt) : time;
   return (
     <p className={cn("truncate text-[12px] text-muted", className)}>
       {showHandle ? `@${person.handle}` : null}
-      {showHandle && time ? (
+      {showHandle && stamp ? (
         <span className="mx-1 text-line-strong">·</span>
       ) : null}
-      {time ? <span className="tabular-nums">{time}</span> : null}
+      {stamp ? (
+        <span className="tabular-nums" title={createdAt ? fullTimestamp(createdAt) : undefined}>
+          {stamp}
+        </span>
+      ) : null}
     </p>
   );
 }
@@ -307,7 +379,7 @@ export function PostCard({
                 </span>
                 {author.verified ? <VerifiedBadge /> : null}
               </button>
-              <AuthorChip person={author} time={post.time} className="mt-0.5" />
+              <AuthorChip person={author} time={post.time} createdAt={post.createdAt} className="mt-0.5" />
             </div>
             <div className="relative" ref={menuRef}>
               <button
@@ -850,8 +922,40 @@ export function StoriesStrip({
   onOpen,
   onCreate,
   seenIds,
+  meId = "me",
 }: any) {
   const w = useRef<any>(null);
+
+  // One tile per person, in the order their most recent story was posted —
+  // the same shape as WhatsApp. Previously every story became its own tile,
+  // so posting twice showed the same face twice.
+  const groupedStories = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    for (const story of stories || []) {
+      const key = String(story.authorId || "");
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(story);
+    }
+    return Array.from(groups.entries())
+      .map(([authorId, items]) => ({
+        authorId,
+        stories: [...items].sort(
+          (a: any, b: any) =>
+            new Date(a.createdAt || a.postedAt || 0).getTime() -
+            new Date(b.createdAt || b.postedAt || 0).getTime(),
+        ),
+      }))
+      .sort((a, b) => {
+        const la = a.stories[a.stories.length - 1];
+        const lb = b.stories[b.stories.length - 1];
+        return (
+          new Date(lb?.createdAt || lb?.postedAt || 0).getTime() -
+          new Date(la?.createdAt || la?.postedAt || 0).getTime()
+        );
+      });
+  }, [stories]);
+
   return (
     <section className="animate-rise rounded-xl border border-line bg-surface px-3 py-3">
       <div className="mb-2 flex items-center justify-between px-1.5">
@@ -860,7 +964,7 @@ export function StoriesStrip({
             Stories
           </h2>
           <span className="rounded-full bg-canvas-deep px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            {stories.length}
+            {groupedStories.length}
           </span>
         </div>
         <button
@@ -893,31 +997,43 @@ export function StoriesStrip({
             Add story
           </span>
         </button>
-        {stories.map((A?: any) => {
-          const T = people.find((g?: any) => g.id === A.authorId);
-          if (!T) return null;
-          const y = seenIds.includes(A.id);
+        {groupedStories.map((group: any) => {
+          const person = people.find((g?: any) => g.id === group.authorId);
+          if (!person) return null;
+          const allSeen = group.stories.every((st: any) => seenIds.includes(st.id));
+          const latest = group.stories[group.stories.length - 1];
           return (
             <button
-              key={A.id}
+              key={group.authorId}
               type="button"
-              onClick={() => onOpen(A.id)}
+              onClick={() => onOpen(group.stories[0].id)}
               className="flex w-[54px] shrink-0 flex-col items-center gap-1.5 text-center"
+              aria-label={`${group.authorId === meId ? "Your stories" : person.name + "'s stories"}: ${group.stories.length}`}
             >
-              <Avatar
-                person={T}
-                size="xl"
-                ring
-                seen={y}
-                className="[&_img]:h-[52px] [&_img]:w-[52px]"
-              />
+              <span className="relative inline-flex items-center justify-center">
+                <StoryRing count={group.stories.length} seen={allSeen} size={56} />
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <img
+                    src={person.avatar}
+                    alt=""
+                    loading="lazy"
+                    className="img-reveal h-[46px] w-[46px] rounded-full object-cover"
+                  />
+                </span>
+                {group.stories.length > 1 ? (
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-forest px-1 text-[9px] font-bold text-white ring-2 ring-surface tabular-nums">
+                    {group.stories.length}
+                  </span>
+                ) : null}
+                {latest ? null : null}
+              </span>
               <span
                 className={cn(
                   "w-full truncate text-[10.5px]",
-                  y ? "font-medium text-faint" : "font-semibold text-ink-soft",
+                  allSeen ? "font-medium text-faint" : "font-semibold text-ink-soft",
                 )}
               >
-                {A.authorId === "me" ? "Your story" : T.name.split(" ")[0]}
+                {group.authorId === meId ? "Your story" : person.name.split(" ")[0]}
               </span>
             </button>
           );

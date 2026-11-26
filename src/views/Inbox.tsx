@@ -7,6 +7,7 @@ import {
   stopVoiceNotePlayback,
 } from "../lib/audio";
 import { cn } from "../lib/cn";
+import { dayLabel, messageStamp } from "../lib/time";
 import {
   Archive,
   ArrowBendUpLeft,
@@ -70,8 +71,12 @@ const CHAT_PHOTO_PRESETS = [
     url: PHOTOS.picnic,
   },
 ];
-function formatMessageDay(c?: any) {
-  return /AM|PM/i.test(c) ? "Today" : c;
+function formatMessageDay(c?: any, createdAt?: any) {
+  // Prefer the stored ISO time; the legacy clock string can only tell us
+  // "today", which is why every older message used to claim it was Today.
+  const label = dayLabel(createdAt);
+  if (label) return label;
+  return /AM|PM/i.test(c || "") ? "Today" : c;
 }
 function formatDuration(c?: any) {
   return c
@@ -765,8 +770,8 @@ export function InboxView({
               const je = E.from === "me",
                 m0 =
                   ge === 0 ||
-                  formatMessageDay(fe.messages[ge - 1].time) !==
-                    formatMessageDay(E.time),
+                  formatMessageDay(fe.messages[ge - 1].time, fe.messages[ge - 1].createdAt) !==
+                    formatMessageDay(E.time, E.createdAt),
                 I0 =
                   je &&
                   !fe.messages
@@ -778,7 +783,7 @@ export function InboxView({
                     <div className="my-2 flex items-center gap-2">
                       <span className="h-px flex-1 bg-line" />
                       <span className="rounded-full bg-surface px-2 py-0.5 text-[8px] font-medium text-faint">
-                        {formatMessageDay(E.time)}
+                        {formatMessageDay(E.time, E.createdAt)}
                       </span>
                       <span className="h-px flex-1 bg-line" />
                     </div>
@@ -998,7 +1003,7 @@ export function InboxView({
                           je ? "flex-row-reverse" : "",
                         )}
                       >
-                        {E.time}
+                        {messageStamp(E.time, E.createdAt, E.time)}
                         {I0 && readReceipts && !fe.request ? (
                           <span className="inline-flex items-center gap-0.5">
                             <Checks
