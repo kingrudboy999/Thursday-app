@@ -11,6 +11,9 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     defaults:
       run:
         working-directory: mobile
@@ -29,11 +32,39 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # NOTE: android-actions/setup-android@v3 is deliberately NOT used.
+      # The ubuntu-latest image ships cmdline-tools 16.0, which that action
+      # cannot parse ("Wrong version in preinstalled sdkmanager"). It then
+      # pipes /dev/null at the licence prompts, sdkmanager exits 1, and the
+      # whole job dies before a single line of our code runs. The runner
+      # already has a usable SDK, so we just point at it and install the one
+      # platform Expo SDK 52 needs.
+      - name: Accept Android SDK licenses
+        run: |
+          set -o pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          echo "using $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --version
+
+      - name: Install Android platform
+        run: |
+          set -o pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          yes | "$SDKMANAGER" --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            > /tmp/sdk-install.log 2>&1 || { tail -40 /tmp/sdk-install.log; exit 1; }
+          tail -5 /tmp/sdk-install.log
 
       - name: Install mobile dependencies
         run: npm install --legacy-peer-deps
+
+      - name: Typecheck the app
+        run: npx tsc --noEmit
 
       - name: Prebuild Android project with ABI splits & R8 slimming
         run: npx expo prebuild --platform android --clean

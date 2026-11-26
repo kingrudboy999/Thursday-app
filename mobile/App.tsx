@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import * as ExpoSplashScreen from "expo-splash-screen";
 import {
   Image,
   Modal,
@@ -97,6 +98,19 @@ export default function App() {
   const [newPostText, setNewPostText] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(PHOTOS.potteryWindow);
   const [showSplash, setShowSplash] = useState(true);
+
+  // The native splash and the JS splash share the same #0c1712 backdrop, so
+  // hiding the native one after first paint is invisible. Without this the
+  // native splash vanishes on its own and you catch a frame of the app shell
+  // before the animation starts.
+  useEffect(() => {
+    ExpoSplashScreen.preventAutoHideAsync().catch(() => undefined);
+  }, []);
+
+  const onRootLaidOut = React.useCallback(() => {
+    ExpoSplashScreen.hideAsync().catch(() => undefined);
+  }, []);
+  const [booted, setBooted] = useState(false);
   const [account, setAccount] = useState<any>(null);
   const [onlineIds, setOnlineIds] = useState<string[]>([]);
 
@@ -112,14 +126,20 @@ export default function App() {
       }
       const demo = await mobileApi.demoLogin("me");
       if (active) setAccount(demo?.user ?? null);
-    })();
+    })()
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setBooted(true);
+      });
     return () => {
       active = false;
     };
   }, []);
 
   useEffect(() => {
-    mobileApi.bootstrap().then((data) => {
+    mobileApi
+      .bootstrap()
+      .then((data) => {
       if (!data?.ok) return;
       if (Array.isArray(data.posts) && data.posts.length) {
         setPosts((local) => {
@@ -139,7 +159,9 @@ export default function App() {
         ]);
       }
       if (Array.isArray(data.onlineUserIds)) setOnlineIds(data.onlineUserIds);
-    });
+      })
+      .catch(() => undefined)
+      .finally(() => setBooted(true));
   }, []);
 
   const meId = account?.id ?? ME_ID;
@@ -185,7 +207,7 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider onLayout={onRootLaidOut}>
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
         <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
 
@@ -684,7 +706,9 @@ export default function App() {
           }}
         />
 
-        {showSplash ? <BrandSplashOverlay onDone={() => setShowSplash(false)} /> : null}
+        {showSplash ? (
+          <BrandSplashOverlay ready={booted} onDone={() => setShowSplash(false)} />
+        ) : null}
       </SafeAreaView>
     </SafeAreaProvider>
   );

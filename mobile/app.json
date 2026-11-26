@@ -29,6 +29,19 @@
     "plugins": [
       "expo-video",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 338,
+          "resizeMode": "contain",
+          "backgroundColor": "#0c1712",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0c1712"
+          }
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
