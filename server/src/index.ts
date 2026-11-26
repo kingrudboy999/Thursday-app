@@ -1,1149 +1,1981 @@
-import http, { IncomingMessage, ServerResponse } from "node:http";
-import { URL } from "node:url";
+import cors from "cors";
+import express, { type Request, type Response } from "express";
 import {
-  createDefaultUserState,
+  generateSessionToken,
+  hashPassword,
+  normalizeEmail,
+  normalizeHandle,
+  verifyPassword,
+} from "./auth.js";
+import {
+  type AccountRecord,
+  createAccount,
+  createSession,
+  deleteSession,
+  deleteThreadForUser,
+  findAccountByIdentifier,
+  findOrCreateThread,
+  formatThreadForUser,
+  getAccountBySessionToken,
   getAllCollections,
   getCollection,
   getDbMode,
+  getThreadById,
+  getThreadsForUser,
   getUserState,
   getWorkspaceSnapshot,
   initDatabase,
+  isHandleTaken,
+  pushNotificationToUser,
+  recordProfileVisit,
+  saveThread,
   saveWorkspaceSnapshot,
+  updateAccountProfile,
   updateCollection,
   updateUserState,
 } from "./db.js";
 import { INITIAL_SEED } from "./seed.js";
 
+const app = express();
 const PORT = Number(process.env.PORT || 8080);
 
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Client-Id",
+      "X-Thursday-Client-Id",
+      "Last-Event-ID",
+    ],
+  }),
+);
+app.use(express.json({ limit: "30mb" }));
+
+// ==================== REAL-TIME SSE BUS & PRESENCE ====================
 interface SseClient {
   id: string;
   clientId: string;
-  res: ServerResponse;
+  userId: string;
+  res: Response;
+}
+const sseClients = new Map<string, SseClient>();
+let eventSeq = 1;
+
+function getOnlineUserIds(): string[] {
+  // Pure real-time presence: only accounts with a live SSE connection count.
+  const set = new Set<string>();
+  for (const c of sseClients.values()) {
+    if (c.userId) set.add(c.userId);
+  }
+  return Array.from(set);
 }
 
-const sseClients = new Set<SseClient>();
-
-function broadcast(event: string, payload: unknown, targetClientId?: string) {
-  const frame = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
-  for (const client of sseClients) {
-    if (targetClientId && client.clientId !== targetClientId) continue;
+function broadcast(
+  event: string,
+  payload: unknown,
+  opts?: { targetUserIds?: string[]; excludeClientId?: string },
+) {
+  const id = String(eventSeq++);
+  const frame = `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
+  for (const client of sseClients.values()) {
+    if (opts?.excludeClientId && client.id === opts.excludeClientId) continue;
+    if (opts?.targetUserIds && !opts.targetUserIds.includes(client.userId)) continue;
     try {
       client.res.write(frame);
     } catch {
-      sseClients.delete(client);
+      sseClients.delete(client.id);
     }
   }
 }
 
-function setCors(res: ServerResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Thursday-Client-Id",
-  );
-}
-
-function sendJson(res: ServerResponse, status: number, body: unknown) {
-  setCors(res);
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify(body));
-}
-
-async function readBody<T = any>(req: IncomingMessage): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    const maxBytes = 12 * 1024 * 1024;
-    req.on("data", (chunk: Buffer) => {
-      size += chunk.length;
-      if (size > maxBytes) {
-        reject(new Error("Payload too large"));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => {
-      if (!chunks.length) {
-        resolve({} as T);
-        return;
-      }
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")) as T);
-      } catch {
-        reject(new Error("Invalid JSON body"));
-      }
-    });
-    req.on("error", reject);
+function broadcastPresence() {
+  broadcast("presence:update", {
+    onlineUserIds: getOnlineUserIds(),
+    connectedCount: sseClients.size,
   });
 }
 
-function getClientId(req: IncomingMessage, url: URL): string {
-  const header = req.headers["x-thursday-client-id"];
-  const raw =
-    (Array.isArray(header) ? header[0] : header) ||
-    url.searchParams.get("clientId") ||
-    "default";
-  return raw.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80) || "default";
+setInterval(() => {
+  for (const client of sseClients.values()) {
+    try {
+      client.res.write(`: heartbeat ${Date.now()}\n\n`);
+    } catch {
+      sseClients.delete(client.id);
+    }
+  }
+}, 20_000);
+
+function extractBearerToken(req: Request): string {
+  const authHeader = String(req.header("authorization") || "");
+  if (authHeader.toLowerCase().startsWith("bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+  if (typeof req.query.token === "string") {
+    return req.query.token.trim();
+  }
+  return "";
 }
 
-function nowTimeString(): string {
-  return new Date().toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+async function resolveRequestActor(req: Request): Promise<{
+  userId: string;
+  account: AccountRecord | null;
+  clientId: string;
+}> {
+  const token = extractBearerToken(req);
+  const rawClientId = (
+    req.header("x-thursday-client-id") ||
+    req.header("x-client-id") ||
+    (req.query.clientId as string) ||
+    "default"
+  ).slice(0, 80);
+
+  if (token) {
+    const account = await getAccountBySessionToken(token);
+    if (account) {
+      return { userId: account.id, account, clientId: rawClientId };
+    }
+  }
+  return { userId: "me", account: null, clientId: rawClientId };
 }
 
-const CIRCLE_AUTO_REPLIES: Record<string, string[]> = {
-  maya: [
-    "Love that — save me a seat by the window if you get there first.",
-    "Bringing fresh sourdough and olive oil for the table on Saturday.",
-    "Honestly that sounds like the exact pace this week needed.",
-  ],
-  priya: [
-    "The kiln opens at ten tomorrow morning — come by whenever you're awake.",
-    "That glaze turned out warmer than we expected! Will send a photo soon.",
-    "Kettle's on in the studio all afternoon if you want a quiet hour.",
-  ],
-  theo: [
-    "Just developed the roll from Dolores — light came out really gentle.",
-    "Count me in. Bringing the 35mm and no rush at all.",
-    "Meet you at the corner café fifteen minutes before golden hour?",
-  ],
-  soren: [
-    "Queued that record up for side B — fits the evening perfectly.",
-    "Good catch. Quiet mornings always bring the best notes.",
-    "Let's spin it properly at the next listening night.",
-  ],
-  elena: [
-    "Marked the page with a cedar leaf — passing you the copy next week.",
-    "Reading that chapter on the tram right now, so good.",
-  ],
-};
-
-function pickContextualReply(
-  personId: string,
-  incomingText?: string,
-  attachmentType?: string,
-): string {
-  if (attachmentType === "voice") {
-    return "Just listened to your voice note — completely with you on that.";
-  }
-  if (attachmentType === "image") {
-    return "Look at the light in that frame. Keeping this one.";
-  }
-  const text = (incomingText || "").toLowerCase();
-  if (text.includes("coffee") || text.includes("tea") || text.includes("kettle")) {
-    return "Kettle is practically already on — say when and I'll pour two.";
-  }
-  if (text.includes("saturday") || text.includes("sunday") || text.includes("weekend")) {
-    return "This weekend works beautifully. Let's keep the afternoon unhurried.";
-  }
-  const pool = CIRCLE_AUTO_REPLIES[personId] || [
-    "Got your note — really glad you shared this.",
-    "Sounds lovely. Let's catch up properly soon.",
-  ];
-  return pool[Math.floor(Math.random() * pool.length)];
+function nowClockLabel() {
+  return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function buildIcsString(event: any): string {
-  const rawDate = String(event.date || "2026-11-28").replace(/-/g, "");
-  const timeMatch = String(event.time || "10:00 – 12:00").match(/(\d{1,2}):(\d{2})/g) || [
-    "10:00",
-    "12:00",
-  ];
-  const fmt = (hm: string) => {
-    const [h = "10", m = "00"] = hm.split(":");
-    return `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}00`;
-  };
-  const esc = (s: string) =>
-    String(s || "")
-      .replace(/\\/g, "\\\\")
-      .replace(/\n/g, "\\n")
-      .replace(/,/g, "\\,")
-      .replace(/;/g, "\\;");
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Thursday//Gatherings//EN",
-    "CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT",
-    `UID:${event.id}@thursday.app`,
-    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
-    `DTSTART:${rawDate}T${fmt(timeMatch[0] || "10:00")}`,
-    `DTEND:${rawDate}T${fmt(timeMatch[1] || "12:00")}`,
-    `SUMMARY:${esc(event.title)}`,
-    `DESCRIPTION:${esc(event.description)}`,
-    `LOCATION:${esc(event.place)}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-}
+// Project a post for a specific userId so liked/saved/poll voted are multi-user accurate
+function projectPostForUser(post: any, userId: string) {
+  const likedBy: string[] = Array.isArray(post.likedBy)
+    ? post.likedBy
+    : post.liked && userId === "me"
+      ? ["me"]
+      : [];
+  const savedBy: string[] = Array.isArray(post.savedBy)
+    ? post.savedBy
+    : post.saved && userId === "me"
+      ? ["me"]
+      : [];
+  const baseLikes =
+    typeof post.baseLikes === "number"
+      ? post.baseLikes
+      : Math.max(0, Number(post.likes || 0) - (post.liked ? 1 : 0));
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse) {
-  if (req.method === "OPTIONS") {
-    setCors(res);
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-  const pathname = url.pathname.replace(/\/+$/, "") || "/";
-  const method = req.method || "GET";
-  const clientId = getClientId(req, url);
-
-  // Root & Health
-  if ((pathname === "/" || pathname === "/api/health") && method === "GET") {
-    const collections = await getAllCollections();
-    sendJson(res, 200, {
-      ok: true,
-      service: "thursday-railway-api",
-      database: getDbMode(),
-      timestamp: new Date().toISOString(),
-      counts: {
-        people: collections.people.length,
-        posts: collections.posts.length,
-        stories: collections.stories.length,
-        highlights: collections.highlights.length,
-        reels: collections.reels.length,
-        circles: collections.circles.length,
-        events: collections.events.length,
-      },
-    });
-    return;
-  }
-
-  // Real-time Server-Sent Events stream
-  if (pathname === "/api/stream" && method === "GET") {
-    setCors(res);
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    });
-    res.write(`event: connected\ndata: ${JSON.stringify({ clientId, ts: Date.now() })}\n\n`);
-    const client: SseClient = {
-      id: `sse_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      clientId,
-      res,
+  let poll = post.poll;
+  if (poll) {
+    const votesByUser: Record<string, string> = poll.votesByUser || {};
+    const votedOptionId =
+      votesByUser[userId] || (userId === "me" ? poll.votedOptionId : undefined);
+    poll = {
+      ...poll,
+      votedOptionId,
     };
-    sseClients.add(client);
-    const keepAlive = setInterval(() => {
-      try {
-        res.write(": ping\n\n");
-      } catch {
-        clearInterval(keepAlive);
-        sseClients.delete(client);
-      }
-    }, 20_000);
-    req.on("close", () => {
-      clearInterval(keepAlive);
-      sseClients.delete(client);
-    });
-    return;
   }
 
-  // Full bootstrap state
-  if (pathname === "/api/bootstrap" && method === "GET") {
-    const [collections, userState] = await Promise.all([
-      getAllCollections(),
-      getUserState(clientId),
-    ]);
-    const people = collections.people.some((p: any) => p.id === userState.me.id)
-      ? collections.people.map((p: any) => (p.id === userState.me.id ? userState.me : p))
-      : [userState.me, ...collections.people];
+  return {
+    ...post,
+    liked: likedBy.includes(userId),
+    saved: savedBy.includes(userId),
+    likes: baseLikes + likedBy.length,
+    poll,
+  };
+}
 
-    sendJson(res, 200, {
+function projectReelForUser(reel: any, userId: string) {
+  const likedBy: string[] = Array.isArray(reel.likedBy) ? reel.likedBy : [];
+  const savedBy: string[] = Array.isArray(reel.savedBy) ? reel.savedBy : [];
+  const baseLikes = Number(reel.baseLikes ?? reel.likes ?? 0);
+  return {
+    ...reel,
+    liked: reel.liked && userId === "me" ? true : likedBy.includes(userId),
+    saved: reel.saved && userId === "me" ? true : savedBy.includes(userId),
+    likes: baseLikes + likedBy.length,
+  };
+}
+function projectCircleForUser(circle: any, userId: string) {
+  const joinedBy: string[] = Array.isArray(circle.joinedBy)
+    ? circle.joinedBy
+    : circle.joined
+      ? ["me"]
+      : [];
+  return {
+    ...circle,
+    joined: joinedBy.includes(userId),
+  };
+}
+
+function projectEventForUser(ev: any, userId: string) {
+  const attendeeIds: string[] = Array.isArray(ev.attendeeIds) ? ev.attendeeIds : [];
+  const rsvped = attendeeIds.includes(userId) || (userId === "me" && Boolean(ev.rsvped));
+  return {
+    ...ev,
+    rsvped,
+    attendeeIds,
+  };
+}
+
+function sanitizeAccountPublic(account: AccountRecord) {
+  return {
+    id: account.id,
+    email: account.email,
+    handle: account.handle,
+    profile: account.profile,
+    createdAt: account.createdAt,
+  };
+}
+
+// ==================== HEALTH & REAL-TIME STREAM ====================
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "thursday-railway-api",
+    database: getDbMode(),
+    connectedClients: sseClients.size,
+    onlineUserIds: getOnlineUserIds(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/api/stream", async (req, res) => {
+  const actor = await resolveRequestActor(req);
+  const clientId = actor.clientId;
+  const id = `${clientId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+
+  sseClients.set(id, { id, clientId, userId: actor.userId, res });
+  res.write(
+    `event: connected\ndata: ${JSON.stringify({
+      connectionId: id,
+      userId: actor.userId,
+      onlineUserIds: getOnlineUserIds(),
+      connectedClients: sseClients.size,
+      database: getDbMode(),
+    })}\n\n`,
+  );
+  broadcastPresence();
+
+  req.on("close", () => {
+    sseClients.delete(id);
+    broadcastPresence();
+  });
+});
+
+// ==================== AUTHENTICATION ====================
+app.get("/api/auth/check-handle", async (req, res) => {
+  try {
+    const raw = String(req.query.handle || "");
+    const clean = normalizeHandle(raw);
+    if (clean.length < 2) {
+      return res.json({ ok: true, available: false, handle: clean, reason: "Too short" });
+    }
+    const taken = await isHandleTaken(clean);
+    res.json({ ok: true, available: !taken, handle: clean });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Check failed" });
+  }
+});
+
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    const rawHandle = String(req.body?.handle || "");
+    const rawEmail = String(req.body?.email || "");
+    const password = String(req.body?.password || "");
+    const bio = String(
+      req.body?.bio || "Sharing unhurried notes and moments on Thursday.",
+    ).trim();
+    const location = String(req.body?.location || "Somewhere quiet").trim();
+    const avatar =
+      String(req.body?.avatar || "").trim() ||
+      `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=320&h=320&fit=crop&crop=faces`;
+
+    const handle = normalizeHandle(rawHandle || name);
+    const email = normalizeEmail(rawEmail);
+
+    if (!name || name.length < 2) {
+      return res.status(400).json({ ok: false, error: "Please enter your name." });
+    }
+    if (!handle || handle.length < 2) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Choose a handle with at least 2 characters." });
+    }
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ ok: false, error: "Please enter a valid email address." });
+    }
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Password must be at least 6 characters." });
+    }
+
+    const existingHandle = await findAccountByIdentifier(handle);
+    if (existingHandle) {
+      return res
+        .status(409)
+        .json({ ok: false, error: `@${handle} is already taken. Try another handle.` });
+    }
+    const existingEmail = await findAccountByIdentifier(email);
+    if (existingEmail) {
+      return res
+        .status(409)
+        .json({ ok: false, error: "An account with this email already exists. Sign in instead." });
+    }
+
+    const userId = `u_${handle}_${Date.now().toString(36).slice(-4)}`;
+    const profile = {
+      id: userId,
+      name,
+      handle,
+      avatar,
+      cover:
+        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1400&h=480&fit=crop",
+      bio,
+      location,
+      website: `${handle}.thursday.social`,
+      followers: 1,
+      following: 3,
+      verified: false,
+    };
+
+    const account = await createAccount({
+      id: userId,
+      email,
+      handle,
+      passwordHash: hashPassword(password),
+      profile,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Add to global people directory so all users see them live
+    await updateCollection("people", (list) => {
+      if (list.some((p: any) => p.id === userId)) return list;
+      return [profile, ...list];
+    });
+
+    // Seed initial user state + warm welcome DM thread from Maya
+    await getUserState(userId, profile);
+    const welcomeThread = await findOrCreateThread(userId, "maya");
+    if (welcomeThread.messages.length === 0) {
+      welcomeThread.messages.push({
+        id: `msg_welcome_${Date.now()}`,
+        from: "them",
+        senderId: "maya",
+        text: `Welcome to Thursday, ${name.split(" ")[0]}! Pull up a chair — this is our quieter corner for studios, recipes, walks, and small circles.`,
+        time: nowClockLabel(),
+        seen: false,
+      });
+      welcomeThread.meta[userId] = { ...(welcomeThread.meta[userId] || {}), unread: 1 };
+      await saveThread(welcomeThread);
+    }
+
+    const token = generateSessionToken();
+    await createSession(token, userId);
+
+    broadcast("person:joined", profile);
+    res.status(201).json({
       ok: true,
-      me: userState.me,
+      token,
+      user: sanitizeAccountPublic(account),
+    });
+  } catch (err: any) {
+    console.error("signup error:", err);
+    res.status(500).json({ ok: false, error: err?.message || "Sign up failed" });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const identifier = String(req.body?.identifier || req.body?.email || "").trim();
+    const password = String(req.body?.password || "");
+    if (!identifier || !password) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Enter your email or @handle and password." });
+    }
+    const account = await findAccountByIdentifier(identifier);
+    if (!account || !verifyPassword(password, account.passwordHash)) {
+      return res
+        .status(401)
+        .json({ ok: false, error: "Invalid email/@handle or password." });
+    }
+    const token = generateSessionToken();
+    await createSession(token, account.id);
+    res.json({
+      ok: true,
+      token,
+      user: sanitizeAccountPublic(account),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Login failed" });
+  }
+});
+
+app.post("/api/auth/demo", async (req, res) => {
+  try {
+    const target = String(req.body?.accountId || "me").trim();
+    const account =
+      (await findAccountByIdentifier(target)) || (await findAccountByIdentifier("me"));
+    if (!account) {
+      return res.status(404).json({ ok: false, error: "Demo account not found" });
+    }
+    const token = generateSessionToken();
+    await createSession(token, account.id);
+    res.json({
+      ok: true,
+      token,
+      user: sanitizeAccountPublic(account),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Demo sign-in failed" });
+  }
+});
+
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const token = extractBearerToken(req);
+    if (!token) {
+      return res.status(401).json({ ok: false, error: "Not signed in" });
+    }
+    const account = await getAccountBySessionToken(token);
+    if (!account) {
+      return res.status(401).json({ ok: false, error: "Session expired" });
+    }
+    res.json({ ok: true, user: sanitizeAccountPublic(account) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Auth check failed" });
+  }
+});
+
+app.post("/api/auth/logout", async (req, res) => {
+  try {
+    const token = extractBearerToken(req);
+    if (token) await deleteSession(token);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Logout failed" });
+  }
+});
+
+// ==================== BOOTSTRAP ====================
+app.get("/api/bootstrap", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const onlineSet = new Set(getOnlineUserIds());
+
+    const [collections, userState, userThreads] = await Promise.all([
+      getAllCollections(),
+      getUserState(userId, actor.account?.profile),
+      getThreadsForUser(userId),
+    ]);
+
+    const meProfile = actor.account?.profile
+      ? { ...userState.me, ...actor.account.profile, id: userId }
+      : userState.me;
+
+    const people = collections.people.some((p: any) => p.id === userId)
+      ? collections.people.map((p: any) => (p.id === userId ? { ...p, ...meProfile } : p))
+      : [meProfile, ...collections.people];
+
+    const formattedConversations = userThreads.map((t) =>
+      formatThreadForUser(t, userId, onlineSet),
+    );
+
+    res.json({
+      ok: true,
+      database: getDbMode(),
+      authenticated: Boolean(actor.account),
+      userId,
+      onlineUserIds: Array.from(onlineSet),
       people,
-      followingIds: userState.followingIds,
-      posts: collections.posts,
+      posts: collections.posts.map((p: any) => projectPostForUser(p, userId)),
       stories: collections.stories,
       highlights: collections.highlights,
-      reels: collections.reels,
-      circles: collections.circles,
-      events: collections.events,
+      reels: collections.reels.map((r: any) => projectReelForUser(r, userId)),
+      circles: collections.circles.map((c: any) => projectCircleForUser(c, userId)),
+      events: collections.events.map((e: any) => projectEventForUser(e, userId)),
       prompts: collections.prompts,
       guides: collections.guides,
-      audioTracks: INITIAL_SEED.audioTracks,
-      conversations: userState.conversations,
+      me: meProfile,
+      followingIds: userState.followingIds,
+      conversations:
+        formattedConversations.length > 0 ? formattedConversations : userState.conversations,
       notifications: userState.notifications,
       drafts: userState.drafts,
       savedGuideIds: userState.savedGuideIds,
       guideSteps: userState.guideSteps,
       promptVotes: userState.promptVotes,
       preferences: userState.preferences,
+      visitors: userState.visitors || [],
     });
-    return;
+  } catch (err: any) {
+    console.error("Bootstrap error:", err);
+    res.status(500).json({ ok: false, error: err?.message || "Bootstrap failed" });
   }
+});
 
-  if (pathname === "/api/reset" && method === "POST") {
-    const fresh = createDefaultUserState();
-    await updateUserState(clientId, () => fresh);
-    sendJson(res, 200, { ok: true, state: fresh });
-    return;
-  }
+// ==================== PROFILE & FOLLOW & VISITORS ====================
+app.put("/api/me", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const updates = req.body || {};
 
-  // ==================== POSTS ====================
-  if (pathname === "/api/posts" && method === "GET") {
-    const posts = await getCollection("posts");
-    sendJson(res, 200, { ok: true, posts });
-    return;
-  }
+    const nextState = await updateUserState(userId, (curr) => ({
+      ...curr,
+      me: { ...curr.me, ...updates, id: userId },
+    }));
 
-  if (pathname === "/api/posts" && method === "POST") {
-    const body = await readBody(req);
-    const userState = await getUserState(clientId);
-    const author = body.author || userState.me;
-    if (author?.id) {
-      await updateCollection("people", (people) =>
-        people.some((p: any) => p.id === author.id)
-          ? people.map((p: any) => (p.id === author.id ? { ...p, ...author } : p))
-          : [author, ...people],
-      );
+    if (actor.account) {
+      await updateAccountProfile(userId, nextState.me);
     }
-    const images = Array.isArray(body.images)
-      ? body.images
-      : body.image
-        ? [body.image]
-        : [];
+
+    await updateCollection("people", (people) => {
+      const exists = people.some((p: any) => p.id === userId);
+      if (!exists) return [nextState.me, ...people];
+      return people.map((p: any) => (p.id === userId ? { ...p, ...nextState.me } : p));
+    });
+
+    broadcast("profile:updated", nextState.me);
+    res.json({ ok: true, me: nextState.me });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/people/:id/follow", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const targetId = req.params.id;
+    let isNowFollowing = false;
+
+    const nextState = await updateUserState(userId, (curr) => {
+      const exists = curr.followingIds.includes(targetId);
+      isNowFollowing = !exists;
+      return {
+        ...curr,
+        followingIds: exists
+          ? curr.followingIds.filter((x) => x !== targetId)
+          : [...curr.followingIds, targetId],
+      };
+    });
+
+    const updatedPeople = await updateCollection("people", (people) =>
+      people.map((p: any) => {
+        if (p.id === targetId) {
+          return {
+            ...p,
+            followers: Math.max(0, (p.followers || 0) + (isNowFollowing ? 1 : -1)),
+          };
+        }
+        if (p.id === userId) {
+          return {
+            ...p,
+            following: Math.max(0, nextState.followingIds.length),
+          };
+        }
+        return p;
+      }),
+    );
+
+    if (isNowFollowing && targetId !== userId) {
+      const notice = await pushNotificationToUser(targetId, {
+        type: "follow",
+        actorId: userId,
+        text: "started following your notes.",
+      });
+      if (notice) {
+        broadcast("notification:created", { targetUserId: targetId, notice }, {
+          targetUserIds: [targetId],
+        });
+      }
+    }
+
+    const updatedTarget = updatedPeople.find((p: any) => p.id === targetId);
+    broadcast("person:updated", updatedTarget);
+    res.json({
+      ok: true,
+      followingIds: nextState.followingIds,
+      following: isNowFollowing,
+      person: updatedTarget,
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/people/:id/visit", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const targetId = req.params.id;
+    if (targetId && targetId !== actor.userId) {
+      const visitors = await recordProfileVisit(targetId, actor.userId);
+      broadcast(
+        "visitor:recorded",
+        { targetUserId: targetId, visitors },
+        { targetUserIds: [targetId] },
+      );
+      return res.json({ ok: true, visitors });
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== POSTS (FEED + CIRCLES + COMMENTS + POLLS) ====================
+app.get("/api/posts", async (req, res) => {
+  const actor = await resolveRequestActor(req);
+  const posts = await getCollection("posts");
+  res.json({ ok: true, posts: posts.map((p: any) => projectPostForUser(p, actor.userId)) });
+});
+
+app.post("/api/posts", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
     const newPost = {
       id: body.id || `post_${Date.now()}`,
-      authorId: author?.id || "me",
-      time: body.time || "now",
-      text: String(body.text || "").trim(),
-      images,
-      imageAlt: images.length ? "A moment shared with the Thursday circle" : undefined,
-      place: body.place || undefined,
-      topic: body.topic || "Circle",
-      circleId: body.circleId || undefined,
-      taggedIds: Array.isArray(body.taggedIds) && body.taggedIds.length ? body.taggedIds : undefined,
-      poll: body.poll || undefined,
-      music: body.music || undefined,
-      pinned: Boolean(body.pinned ?? false),
-      likes: Number(body.likes ?? 0),
-      liked: Boolean(body.liked ?? false),
-      saved: Boolean(body.saved ?? false),
-      reposts: Number(body.reposts ?? 0),
-      comments: Array.isArray(body.comments) ? body.comments : [],
+      authorId: actor.userId,
+      time: "Just now",
+      createdAt: new Date().toISOString(),
+      text: String(body.text || ""),
+      images: Array.isArray(body.images) ? body.images : undefined,
+      aspect: body.aspect,
+      location: body.location,
+      likes: 0,
+      baseLikes: 0,
+      likedBy: [],
+      savedBy: [],
+      liked: false,
+      saved: false,
+      reposts: 0,
+      comments: [],
+      tags: Array.isArray(body.tags) ? body.tags : undefined,
+      poll: body.poll ? { ...body.poll, votesByUser: {} } : undefined,
+      voice: body.voice,
+      feeling: body.feeling,
+      circleId: body.circleId,
+      pinned: Boolean(body.pinned),
+      repostOf: body.repostOf,
     };
-    await updateCollection("posts", (posts) => [
-      newPost,
-      ...posts.filter((p: any) => p.id !== newPost.id),
-    ]);
+
+    await updateCollection("posts", (posts) => [newPost, ...posts]);
+
     if (newPost.circleId) {
       await updateCollection("circles", (circles) =>
         circles.map((c: any) =>
           c.id === newPost.circleId
-            ? {
-                ...c,
-                posts: Number(c.posts || 0) + 1,
-                activity: `${author?.name?.split(" ")[0] || "Someone"} shared a new note`,
-              }
+            ? { ...c, posts: (c.posts || 0) + 1, activity: "Active just now" }
             : c,
         ),
       );
     }
-    broadcast("post:created", { post: newPost, author });
-    sendJson(res, 201, { ok: true, post: newPost });
-    return;
-  }
 
-  const postActionMatch = pathname.match(
-    /^\/api\/posts\/([^/]+)(?:\/(like|save|repost|pin|vote|comments))?$/,
-  );
-  if (postActionMatch) {
-    const postId = decodeURIComponent(postActionMatch[1]);
-    const action = postActionMatch[2];
-
-    if (!action && method === "DELETE") {
-      await updateCollection("posts", (posts) => posts.filter((p: any) => p.id !== postId));
-      broadcast("post:deleted", { postId });
-      sendJson(res, 200, { ok: true, postId });
-      return;
-    }
-
-    if (action === "like" && method === "POST") {
-      let updated: any = null;
-      await updateCollection("posts", (posts) =>
-        posts.map((p: any) => {
-          if (p.id !== postId) return p;
-          const liked = !p.liked;
-          updated = { ...p, liked, likes: Math.max(0, Number(p.likes || 0) + (liked ? 1 : -1)) };
-          return updated;
-        }),
-      );
-      if (updated) broadcast("post:updated", { post: updated });
-      sendJson(res, 200, { ok: true, post: updated });
-      return;
-    }
-
-    if (action === "save" && method === "POST") {
-      let updated: any = null;
-      await updateCollection("posts", (posts) =>
-        posts.map((p: any) => {
-          if (p.id !== postId) return p;
-          updated = { ...p, saved: !p.saved };
-          return updated;
-        }),
-      );
-      sendJson(res, 200, { ok: true, post: updated });
-      return;
-    }
-
-    if (action === "repost" && method === "POST") {
-      let updated: any = null;
-      await updateCollection("posts", (posts) =>
-        posts.map((p: any) => {
-          if (p.id !== postId) return p;
-          updated = { ...p, reposts: Number(p.reposts || 0) + 1 };
-          return updated;
-        }),
-      );
-      if (updated) broadcast("post:updated", { post: updated });
-      sendJson(res, 200, { ok: true, post: updated });
-      return;
-    }
-
-    if (action === "pin" && method === "POST") {
-      let updated: any = null;
-      await updateCollection("posts", (posts) =>
-        posts.map((p: any) => {
-          if (p.id !== postId) return p;
-          updated = { ...p, pinned: !p.pinned };
-          return updated;
-        }),
-      );
-      if (updated) broadcast("post:updated", { post: updated });
-      sendJson(res, 200, { ok: true, post: updated });
-      return;
-    }
-
-    if (action === "vote" && method === "POST") {
-      const body = await readBody(req);
-      const optionId = String(body.optionId || "");
-      let updated: any = null;
-      await updateCollection("posts", (posts) =>
-        posts.map((p: any) => {
-          if (p.id !== postId || !p.poll || p.poll.votedOptionId) return p;
-          updated = {
-            ...p,
-            poll: {
-              ...p.poll,
-              votedOptionId: optionId,
-              options: p.poll.options.map((opt: any) =>
-                opt.id === optionId ? { ...opt, votes: Number(opt.votes || 0) + 1 } : opt,
-              ),
-            },
-          };
-          return updated;
-        }),
-      );
-      if (updated) broadcast("post:updated", { post: updated });
-      sendJson(res, 200, { ok: true, post: updated });
-      return;
-    }
-
-    if (action === "comments" && method === "POST") {
-      const body = await readBody(req);
-      const comment = {
-        id: body.id || `comment_${Date.now()}`,
-        authorId: body.authorId || "me",
-        text: String(body.text || "").trim(),
-        time: body.time || "now",
-        likes: 0,
-      };
-      let updated: any = null;
-      await updateCollection("posts", (posts) =>
-        posts.map((p: any) => {
-          if (p.id !== postId) return p;
-          updated = { ...p, comments: [...(p.comments || []), comment] };
-          return updated;
-        }),
-      );
-      if (updated) broadcast("post:updated", { post: updated });
-      sendJson(res, 201, { ok: true, post: updated, comment });
-      return;
-    }
-  }
-
-  // ==================== STORIES & HIGHLIGHTS ====================
-  if (pathname === "/api/stories" && method === "GET") {
-    const stories = await getCollection("stories");
-    sendJson(res, 200, { ok: true, stories });
-    return;
-  }
-
-  if (pathname === "/api/stories" && method === "POST") {
-    const body = await readBody(req);
-    const story = {
-      id: body.id || `story_${Date.now()}`,
-      authorId: body.authorId || body.personId || "me",
-      image: body.image,
-      caption: body.caption || "",
-      closeFriends: Boolean(body.closeFriends),
-    };
-    const stories = await updateCollection("stories", (curr) => [
-      story,
-      ...curr.filter((s: any) => s.id !== story.id),
-    ]);
-    broadcast("story:created", { story });
-    sendJson(res, 201, { ok: true, story, stories });
-    return;
-  }
-
-  const storyMatch = pathname.match(/^\/api\/stories\/([^/]+)\/(seen|reply)$/);
-  if (storyMatch && method === "POST") {
-    const storyId = decodeURIComponent(storyMatch[1]);
-    const sub = storyMatch[2];
-    if (sub === "seen") {
-      sendJson(res, 200, { ok: true, storyId });
-      return;
-    }
-    if (sub === "reply") {
-      const body = await readBody(req);
-      const stories = await getCollection("stories");
-      const target = stories.find((s: any) => s.id === storyId);
-      const personId = body.personId || target?.authorId;
-      const text = String(body.text || "").trim();
-      if (personId && personId !== "me" && text) {
-        const msg = {
-          id: `msg_${Date.now()}`,
-          from: "me",
-          text,
-          time: nowTimeString(),
-        };
-        await updateUserState(clientId, (u) => {
-          const exists = u.conversations.find((c: any) => c.personId === personId);
-          const conversations = exists
-            ? u.conversations.map((c: any) =>
-                c.personId === personId
-                  ? { ...c, request: false, archived: false, messages: [...c.messages, msg] }
-                  : c,
-              )
-            : [
-                {
-                  id: `conv_${personId}_${Date.now()}`,
-                  personId,
-                  unread: 0,
-                  online: true,
-                  lastActive: "Active now",
-                  messages: [msg],
-                },
-                ...u.conversations,
-              ];
-          return { ...u, conversations };
-        });
-      }
-      sendJson(res, 200, { ok: true });
-      return;
-    }
-  }
-
-  if (pathname === "/api/highlights" && method === "GET") {
-    const highlights = await getCollection("highlights");
-    sendJson(res, 200, { ok: true, highlights });
-    return;
-  }
-
-  if (pathname === "/api/highlights" && method === "POST") {
-    const body = await readBody(req);
-    const highlight = {
-      id: body.id || `h_${Date.now()}`,
-      title: String(body.title || "Moments").trim(),
-      image: body.image || body.cover,
-      count: Number(body.count || 1),
-      caption: body.caption || String(body.title || "Moments").trim(),
-    };
-    const highlights = await updateCollection("highlights", (curr) => [
-      ...curr.filter((h: any) => h.id !== highlight.id),
-      highlight,
-    ]);
-    broadcast("highlight:created", { highlight });
-    sendJson(res, 201, { ok: true, highlight, highlights });
-    return;
-  }
-
-  // ==================== REELS ====================
-  if (pathname === "/api/reels" && method === "GET") {
-    const reels = await getCollection("reels");
-    sendJson(res, 200, { ok: true, reels });
-    return;
-  }
-
-  if (pathname === "/api/reels" && method === "POST") {
-    const body = await readBody(req);
-    const reel = {
-      id: body.id || `reel_${Date.now()}`,
-      authorId: body.authorId || "me",
-      video: body.video || body.videoUrl,
-      poster: body.poster,
-      caption: String(body.caption || "").trim(),
-      music: body.music || body.audio || "Original audio",
-      location: body.location || body.place || undefined,
-      duration: body.duration || "0:15",
-      likes: Number(body.likes ?? 0),
-      liked: Boolean(body.liked ?? false),
-      saved: Boolean(body.saved ?? false),
-      shares: Number(body.shares ?? 0),
-      views: Number(body.views ?? 1),
-      comments: Array.isArray(body.comments) ? body.comments : [],
-    };
-    await updateCollection("reels", (curr) => [reel, ...curr.filter((r: any) => r.id !== reel.id)]);
-    broadcast("reel:created", { reel });
-    sendJson(res, 201, { ok: true, reel });
-    return;
-  }
-
-  const reelMatch = pathname.match(/^\/api\/reels\/([^/]+)\/(like|save|comments)$/);
-  if (reelMatch && method === "POST") {
-    const reelId = decodeURIComponent(reelMatch[1]);
-    const action = reelMatch[2];
-    const body = action === "comments" ? await readBody(req) : {};
-    let updated: any = null;
-
-    await updateCollection("reels", (curr) =>
-      curr.map((r: any) => {
-        if (r.id !== reelId) return r;
-        if (action === "like") {
-          const liked = !r.liked;
-          updated = { ...r, liked, likes: Math.max(0, Number(r.likes || 0) + (liked ? 1 : -1)) };
-        } else if (action === "save") {
-          updated = { ...r, saved: !r.saved };
-        } else if (action === "comments") {
-          const comment = {
-            id: body.id || `rc_${Date.now()}`,
-            authorId: body.authorId || "me",
-            text: String(body.text || "").trim(),
-            time: "now",
-            likes: 0,
-          };
-          updated = { ...r, comments: [...(r.comments || []), comment] };
-        }
-        return updated || r;
-      }),
+    // Notify mentioned @handles in post text
+    const mentionMatches = Array.from(newPost.text.matchAll(/@([a-zA-Z0-9_]+)/g)).map(
+      (m) => m[1].toLowerCase(),
     );
-    if (updated) broadcast("reel:updated", { reel: updated });
-    sendJson(res, 200, { ok: true, reel: updated });
-    return;
-  }
+    if (mentionMatches.length > 0) {
+      const people = await getCollection("people");
+      for (const handle of mentionMatches) {
+        const mentioned = people.find((p: any) => String(p.handle || "").toLowerCase() === handle);
+        if (mentioned && mentioned.id !== actor.userId) {
+          const notice = await pushNotificationToUser(mentioned.id, {
+            type: "mention",
+            actorId: actor.userId,
+            text: "mentioned you in a note.",
+            postId: newPost.id,
+            postImage: newPost.images?.[0],
+          });
+          if (notice) {
+            broadcast("notification:created", { targetUserId: mentioned.id, notice }, {
+              targetUserIds: [mentioned.id],
+            });
+          }
+        }
+      }
+    }
 
-  // ==================== CIRCLES & GATHERINGS ====================
-  if (pathname === "/api/circles" && method === "GET") {
-    const circles = await getCollection("circles");
-    sendJson(res, 200, { ok: true, circles });
-    return;
+    broadcast("post:created", newPost);
+    res.status(201).json({ ok: true, post: projectPostForUser(newPost, actor.userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
+});
 
-  if (pathname === "/api/circles" && method === "POST") {
-    const body = await readBody(req);
-    const circle = {
-      id: body.id || `circle_${Date.now()}`,
-      name: String(body.name || "New Circle").trim(),
-      tagline: String(body.tagline || "Small room, good company").trim(),
-      description: String(body.description || "").trim(),
-      image: body.image,
-      members: Number(body.members ?? 1),
-      posts: Number(body.posts ?? 0),
-      category: body.category || "Making",
-      accent: body.accent || "forest",
-      joined: true,
-      moderatorIds: Array.isArray(body.moderatorIds) ? body.moderatorIds : ["me"],
-      activity: "Started just now",
-      spots: body.spots || "Open to everyone",
-    };
-    await updateCollection("circles", (curr) => [
-      circle,
-      ...curr.filter((c: any) => c.id !== circle.id),
-    ]);
-    broadcast("circle:created", { circle });
-    sendJson(res, 201, { ok: true, circle });
-    return;
-  }
-
-  const circleJoinMatch = pathname.match(/^\/api\/circles\/([^/]+)\/join$/);
-  if (circleJoinMatch && method === "POST") {
-    const circleId = decodeURIComponent(circleJoinMatch[1]);
+app.patch("/api/posts/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const postId = req.params.id;
     let updated: any = null;
-    await updateCollection("circles", (curr) =>
-      curr.map((c: any) => {
-        if (c.id !== circleId) return c;
-        const joined = !c.joined;
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId) return p;
+        if (p.authorId !== actor.userId && actor.userId !== "me") return p;
         updated = {
-          ...c,
-          joined,
-          members: Math.max(0, Number(c.members || 0) + (joined ? 1 : -1)),
+          ...p,
+          text: typeof req.body?.text === "string" ? req.body.text : p.text,
+          location:
+            typeof req.body?.location === "string" ? req.body.location : p.location,
+          editedAt: new Date().toISOString(),
         };
         return updated;
       }),
     );
-    if (updated) broadcast("circle:updated", { circle: updated });
-    sendJson(res, 200, { ok: true, circle: updated });
-    return;
+    if (!updated) return res.status(404).json({ ok: false, error: "Post not found" });
+    broadcast("post:updated", updated);
+    res.json({ ok: true, post: projectPostForUser(updated, actor.userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
+});
 
-  if (pathname === "/api/events" && method === "GET") {
-    const events = await getCollection("events");
-    sendJson(res, 200, { ok: true, events });
-    return;
+app.delete("/api/posts/:id", async (req, res) => {
+  try {
+    const postId = req.params.id;
+    await updateCollection("posts", (posts) => posts.filter((p: any) => p.id !== postId));
+    broadcast("post:deleted", { id: postId });
+    res.json({ ok: true, id: postId });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
+});
 
-  if (pathname === "/api/events" && method === "POST") {
-    const body = await readBody(req);
-    const dateStr = String(body.date || "2026-11-28");
-    const parsedDate = new Date(`${dateStr}T12:00:00`);
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const event = {
-      id: body.id || `event_${Date.now()}`,
-      title: String(body.title || "Circle Gathering").trim(),
-      description: String(body.description || "").trim(),
-      date: dateStr,
-      day: body.day || String(parsedDate.getDate() || 28).padStart(2, "0"),
-      weekday: body.weekday || weekdays[parsedDate.getDay() || 6],
-      time: String(body.time || "17:00 – 19:30").trim(),
-      place: String(body.place || "Local studio").trim(),
-      hostId: body.hostId || "me",
-      circleId: body.circleId || "circle_making",
-      attendees: Number(body.attendees ?? 1),
-      image: body.image,
-      cost: String(body.cost || "Free").trim(),
-      spotsLeft: Number(body.spotsLeft ?? 12),
-      joined: Boolean(body.joined ?? true),
-    };
-    await updateCollection("events", (curr) => [
-      event,
-      ...curr.filter((e: any) => e.id !== event.id),
-    ]);
-    broadcast("event:created", { event });
-    sendJson(res, 201, { ok: true, event });
-    return;
-  }
+app.post("/api/posts/:id/like", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const postId = req.params.id;
+    let updated: any = null;
+    let didLike = false;
 
-  const eventMatch = pathname.match(/^\/api\/events\/([^/]+)\/(rsvp|ics)$/);
-  if (eventMatch) {
-    const eventId = decodeURIComponent(eventMatch[1]);
-    const sub = eventMatch[2];
-    if (sub === "ics" && method === "GET") {
-      const events = await getCollection("events");
-      const ev = events.find((e: any) => e.id === eventId);
-      if (!ev) {
-        sendJson(res, 404, { ok: false, error: "Event not found" });
-        return;
-      }
-      setCors(res);
-      res.writeHead(200, {
-        "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${eventId}.ics"`,
-      });
-      res.end(buildIcsString(ev));
-      return;
-    }
-    if (sub === "rsvp" && method === "POST") {
-      let updated: any = null;
-      await updateCollection("events", (curr) =>
-        curr.map((e: any) => {
-          if (e.id !== eventId) return e;
-          const joined = !e.joined;
-          updated = {
-            ...e,
-            joined,
-            attendees: Math.max(0, Number(e.attendees || 0) + (joined ? 1 : -1)),
-            spotsLeft: Math.max(0, Number(e.spotsLeft || 0) + (joined ? -1 : 1)),
-          };
-          return updated;
-        }),
-      );
-      if (updated) broadcast("event:updated", { event: updated });
-      sendJson(res, 200, { ok: true, event: updated });
-      return;
-    }
-  }
-
-  // ==================== CONVERSATIONS & VOICE NOTES ====================
-  if (pathname === "/api/conversations" && method === "GET") {
-    const u = await getUserState(clientId);
-    sendJson(res, 200, { ok: true, conversations: u.conversations });
-    return;
-  }
-
-  if (pathname === "/api/conversations" && method === "POST") {
-    const body = await readBody(req);
-    const personId = String(body.personId || "");
-    let targetConv: any = null;
-    await updateUserState(clientId, (u) => {
-      const existing = u.conversations.find((c: any) => c.personId === personId);
-      if (existing) {
-        targetConv = { ...existing, archived: false, request: false };
-        return {
-          ...u,
-          conversations: u.conversations.map((c: any) =>
-            c.id === existing.id ? targetConv : c,
-          ),
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId) return p;
+        const baseLikes =
+          typeof p.baseLikes === "number"
+            ? p.baseLikes
+            : Math.max(0, Number(p.likes || 0) - (p.liked ? 1 : 0));
+        const likedBy: string[] = Array.isArray(p.likedBy)
+          ? [...p.likedBy]
+          : p.liked
+            ? ["me"]
+            : [];
+        const has = likedBy.includes(userId);
+        didLike = !has;
+        const nextLikedBy = has ? likedBy.filter((x) => x !== userId) : [...likedBy, userId];
+        updated = {
+          ...p,
+          baseLikes,
+          likedBy: nextLikedBy,
+          likes: baseLikes + nextLikedBy.length,
         };
-      }
-      targetConv = {
-        id: body.id || `conv_${personId}_${Date.now()}`,
-        personId,
-        unread: 0,
-        online: true,
-        lastActive: "Active now",
-        messages: [],
-      };
-      return { ...u, conversations: [targetConv, ...u.conversations] };
-    });
-    sendJson(res, 201, { ok: true, conversation: targetConv });
-    return;
-  }
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Post not found" });
 
-  const convMatch = pathname.match(/^\/api\/conversations\/([^/]+)(?:\/(messages|react))?$/);
-  if (convMatch) {
-    const convId = decodeURIComponent(convMatch[1]);
-    const sub = convMatch[2];
-
-    if (!sub && method === "PATCH") {
-      const body = await readBody(req);
-      let updated: any = null;
-      await updateUserState(clientId, (u) => ({
-        ...u,
-        conversations: u.conversations.map((c: any) => {
-          if (c.id !== convId) return c;
-          updated = { ...c, ...body };
-          return updated;
-        }),
-      }));
-      sendJson(res, 200, { ok: true, conversation: updated });
-      return;
-    }
-
-    if (!sub && method === "DELETE") {
-      await updateUserState(clientId, (u) => ({
-        ...u,
-        conversations: u.conversations.filter((c: any) => c.id !== convId),
-      }));
-      sendJson(res, 200, { ok: true });
-      return;
-    }
-
-    if (sub === "messages" && method === "POST") {
-      const body = await readBody(req);
-      const message = {
-        id: body.id || `msg_${Date.now()}`,
-        from: body.from || "me",
-        text: body.text ?? "",
-        time: body.time || nowTimeString(),
-        attachment: body.attachment || undefined,
-        replyTo: body.replyTo || undefined,
-        reactions: Array.isArray(body.reactions) ? body.reactions : undefined,
-      };
-
-      let personId = body.personId || "";
-      let muted = false;
-      await updateUserState(clientId, (u) => {
-        const exists = u.conversations.some((c: any) => c.id === convId);
-        const conversations = exists
-          ? u.conversations.map((c: any) => {
-              if (c.id !== convId) return c;
-              personId = c.personId;
-              muted = Boolean(c.muted);
-              return {
-                ...c,
-                request: false,
-                archived: false,
-                unread: 0,
-                messages: [...(c.messages || []), message],
-              };
-            })
-          : personId
-            ? [
-                {
-                  id: convId,
-                  personId,
-                  unread: 0,
-                  online: true,
-                  lastActive: "Active now",
-                  messages: [message],
-                },
-                ...u.conversations,
-              ]
-            : u.conversations;
-        return { ...u, conversations };
+    if (didLike && updated.authorId && updated.authorId !== userId) {
+      const notice = await pushNotificationToUser(updated.authorId, {
+        type: "like",
+        actorId: userId,
+        text: "liked your note.",
+        postId: updated.id,
+        postImage: updated.images?.[0],
       });
+      if (notice) {
+        broadcast("notification:created", { targetUserId: updated.authorId, notice }, {
+          targetUserIds: [updated.authorId],
+        });
+      }
+    }
 
-      if (message.from === "me" && personId && body.autoReply !== false && !muted) {
-        setTimeout(() => {
-          broadcast("dm:typing", { conversationId: convId, personId, typing: true }, clientId);
-        }, 900);
+    broadcast("post:updated", updated);
+    res.json({ ok: true, post: projectPostForUser(updated, userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
 
-        setTimeout(async () => {
+app.post("/api/posts/:id/save", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const postId = req.params.id;
+    let updated: any = null;
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId) return p;
+        const savedBy: string[] = Array.isArray(p.savedBy)
+          ? [...p.savedBy]
+          : p.saved
+            ? ["me"]
+            : [];
+        const has = savedBy.includes(userId);
+        const nextSavedBy = has ? savedBy.filter((x) => x !== userId) : [...savedBy, userId];
+        updated = { ...p, savedBy: nextSavedBy };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Post not found" });
+    res.json({ ok: true, post: projectPostForUser(updated, userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/posts/:id/pin", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const postId = req.params.id;
+    let updated: any = null;
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId) return p;
+        updated = { ...p, pinned: !p.pinned };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Post not found" });
+    broadcast("post:updated", updated);
+    res.json({ ok: true, post: projectPostForUser(updated, actor.userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/posts/:id/repost", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const postId = req.params.id;
+    const note = String(req.body?.note || "").trim();
+    const posts = await getCollection<any>("posts");
+    const source = posts.find((p) => p.id === postId);
+    if (!source) return res.status(404).json({ ok: false, error: "Post not found" });
+
+    const repost = {
+      id: `repost_${Date.now()}`,
+      authorId: userId,
+      time: "Just now",
+      createdAt: new Date().toISOString(),
+      text: note,
+      likes: 0,
+      baseLikes: 0,
+      likedBy: [],
+      savedBy: [],
+      liked: false,
+      saved: false,
+      reposts: 0,
+      comments: [],
+      repostOf: {
+        postId: source.id,
+        authorId: source.authorId,
+        text: source.text,
+        image: source.images?.[0],
+      },
+    };
+
+    let updatedSource: any = null;
+    await updateCollection("posts", (curr) => [
+      repost,
+      ...curr.map((p: any) => {
+        if (p.id !== postId) return p;
+        updatedSource = { ...p, reposts: (p.reposts || 0) + 1 };
+        return updatedSource;
+      }),
+    ]);
+
+    if (source.authorId && source.authorId !== userId) {
+      const notice = await pushNotificationToUser(source.authorId, {
+        type: "mention",
+        actorId: userId,
+        text: "reposted your note to their circle.",
+        postId: source.id,
+        postImage: source.images?.[0],
+      });
+      if (notice) {
+        broadcast("notification:created", { targetUserId: source.authorId, notice }, {
+          targetUserIds: [source.authorId],
+        });
+      }
+    }
+
+    broadcast("post:updated", updatedSource);
+    broadcast("post:created", repost);
+    res.status(201).json({
+      ok: true,
+      repost: projectPostForUser(repost, userId),
+      source: projectPostForUser(updatedSource, userId),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/posts/:id/comments", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const postId = req.params.id;
+    const text = String(req.body?.text || "").trim();
+    if (!text) return res.status(400).json({ ok: false, error: "Comment text required" });
+
+    const comment = {
+      id: req.body?.id || `c_${Date.now()}`,
+      authorId: userId,
+      text,
+      time: "Just now",
+      likes: 0,
+      liked: false,
+    };
+
+    let updated: any = null;
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId) return p;
+        updated = { ...p, comments: [...(p.comments || []), comment] };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Post not found" });
+
+    if (updated.authorId && updated.authorId !== userId) {
+      const snippet = text.length > 56 ? `${text.slice(0, 56)}…` : text;
+      const notice = await pushNotificationToUser(updated.authorId, {
+        type: "comment",
+        actorId: userId,
+        text: `replied: "${snippet}"`,
+        postId: updated.id,
+        postImage: updated.images?.[0],
+      });
+      if (notice) {
+        broadcast("notification:created", { targetUserId: updated.authorId, notice }, {
+          targetUserIds: [updated.authorId],
+        });
+      }
+    }
+
+    broadcast("post:updated", updated);
+    res.status(201).json({
+      ok: true,
+      comment,
+      post: projectPostForUser(updated, userId),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/posts/:id/comments/:commentId/like", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const { id: postId, commentId } = req.params;
+    let updated: any = null;
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId) return p;
+        updated = {
+          ...p,
+          comments: (p.comments || []).map((c: any) => {
+            if (c.id !== commentId) return c;
+            const liked = !c.liked;
+            return { ...c, liked, likes: Math.max(0, (c.likes || 0) + (liked ? 1 : -1)) };
+          }),
+        };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Post not found" });
+    broadcast("post:updated", updated);
+    res.json({ ok: true, post: projectPostForUser(updated, actor.userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post(["/api/posts/:id/poll/vote", "/api/posts/:id/vote"], async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const postId = req.params.id;
+    const optionId = String(req.body?.optionId || "");
+    let updated: any = null;
+    await updateCollection("posts", (posts) =>
+      posts.map((p: any) => {
+        if (p.id !== postId || !p.poll) return p;
+        const votesByUser: Record<string, string> = { ...(p.poll.votesByUser || {}) };
+        const prev = votesByUser[userId] || (userId === "me" ? p.poll.votedOptionId : undefined);
+        if (prev === optionId) return p;
+        votesByUser[userId] = optionId;
+        updated = {
+          ...p,
+          poll: {
+            ...p.poll,
+            votesByUser,
+            totalVotes: prev ? p.poll.totalVotes : (p.poll.totalVotes || 0) + 1,
+            options: (p.poll.options || []).map((opt: any) => {
+              if (opt.id === optionId) return { ...opt, votes: (opt.votes || 0) + 1 };
+              if (opt.id === prev) return { ...opt, votes: Math.max(0, (opt.votes || 0) - 1) };
+              return opt;
+            }),
+          },
+        };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Poll not found" });
+    broadcast("post:updated", updated);
+    res.json({ ok: true, post: projectPostForUser(updated, userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== STORIES & HIGHLIGHTS ====================
+app.post("/api/stories", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
+    const story = {
+      id: body.id || `story_${Date.now()}`,
+      personId: actor.userId,
+      image: body.image,
+      caption: body.caption || "",
+      time: "Just now",
+      seen: false,
+      sticker: body.sticker,
+      filter: body.filter,
+    };
+    await updateCollection("stories", (stories) => [story, ...stories]);
+    broadcast("story:created", story);
+    res.status(201).json({ ok: true, story });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/stories/:id/seen", async (req, res) => {
+  try {
+    const storyId = req.params.id;
+    let updated: any = null;
+    await updateCollection("stories", (stories) =>
+      stories.map((s: any) => {
+        if (s.id !== storyId) return s;
+        updated = { ...s, seen: true };
+        return updated;
+      }),
+    );
+    res.json({ ok: true, story: updated });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/highlights", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const highlight = {
+      id: body.id || `hl_${Date.now()}`,
+      title: String(body.title || "Moments"),
+      cover: body.cover,
+      frames: Array.isArray(body.frames) ? body.frames : [],
+    };
+    await updateCollection("highlights", (items) => [...items, highlight]);
+    broadcast("highlight:created", highlight);
+    res.status(201).json({ ok: true, highlight });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.delete("/api/highlights/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    await updateCollection("highlights", (items) => items.filter((h: any) => h.id !== id));
+    broadcast("highlight:deleted", { id });
+    res.json({ ok: true, id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== REELS ====================
+app.post("/api/reels", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
+    const reel = {
+      id: body.id || `reel_${Date.now()}`,
+      authorId: actor.userId,
+      video: body.video,
+      poster: body.poster,
+      caption: String(body.caption || ""),
+      audio: String(body.audio || "Original studio sound"),
+      location: body.location,
+      duration: body.duration || "0:15",
+      likes: 0,
+      liked: false,
+      saved: false,
+      shares: 0,
+      views: "1",
+      viewCount: 1,
+      comments: [],
+    };
+    await updateCollection("reels", (reels) => [reel, ...reels]);
+    broadcast("reel:created", reel);
+    res.status(201).json({ ok: true, reel });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/reels/:id/view", async (req, res) => {
+  try {
+    const id = req.params.id;
+    let updated: any = null;
+    await updateCollection("reels", (reels) =>
+      reels.map((r: any) => {
+        if (r.id !== id) return r;
+        const parsed =
+          typeof r.viewCount === "number"
+            ? r.viewCount
+            : Number(r.views) ||
+              (String(r.views || "").toLowerCase().endsWith("k")
+                ? Math.round(parseFloat(r.views) * 1000)
+                : Number(String(r.views || "1").replace(/[^0-9]/g, "")) || 1);
+        const nextCount = parsed + 1;
+        // Keep counts numeric so the client can format consistently live.
+        updated = { ...r, viewCount: nextCount, views: nextCount };
+        return updated;
+      }),
+    );
+    if (updated) broadcast("reel:updated", updated);
+    res.json({ ok: true, reel: updated });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/reels/:id/like", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    let updated: any = null;
+    await updateCollection("reels", (reels) =>
+      reels.map((r: any) => {
+        if (r.id !== id) return r;
+        const likedBy: string[] = Array.isArray(r.likedBy) ? r.likedBy : [];
+        const has = likedBy.includes(actor.userId);
+        const nextLikedBy = has
+          ? likedBy.filter((u) => u !== actor.userId)
+          : [...likedBy, actor.userId];
+        updated = {
+          ...r,
+          likedBy: nextLikedBy,
+          baseLikes: r.baseLikes ?? r.likes ?? 0,
+          likes: Math.max(0, (r.baseLikes ?? r.likes ?? 0) + nextLikedBy.length),
+        };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Reel not found" });
+    broadcast("reel:updated", updated);
+    res.json({ ok: true, reel: updated });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/reels/:id/save", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    let updated: any = null;
+    await updateCollection("reels", (reels) =>
+      reels.map((r: any) => {
+        if (r.id !== id) return r;
+        const savedBy: string[] = Array.isArray(r.savedBy) ? r.savedBy : [];
+        const nextSavedBy = savedBy.includes(actor.userId)
+          ? savedBy.filter((u) => u !== actor.userId)
+          : [...savedBy, actor.userId];
+        updated = { ...r, savedBy: nextSavedBy };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Reel not found" });
+    broadcast("reel:updated", updated);
+    res.json({ ok: true, reel: updated });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/reels/:id/comments", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    const text = String(req.body?.text || "").trim();
+    if (!text) return res.status(400).json({ ok: false, error: "Comment text required" });
+    const comment = {
+      id: `rc_${Date.now()}`,
+      authorId: actor.userId,
+      text,
+      time: "Just now",
+      likes: 0,
+    };
+    let updated: any = null;
+    await updateCollection("reels", (reels) =>
+      reels.map((r: any) => {
+        if (r.id !== id) return r;
+        updated = { ...r, comments: [...(r.comments || []), comment] };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Reel not found" });
+    broadcast("reel:updated", updated);
+    res.status(201).json({ ok: true, reel: updated, comment });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== CIRCLES & GATHERINGS ====================
+app.post("/api/circles", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
+    const circle = {
+      id: body.id || `circle_${Date.now()}`,
+      name: String(body.name || "Untitled Circle"),
+      tagline: String(body.tagline || ""),
+      description: String(body.description || ""),
+      category: body.category || "Craft",
+      image: body.image,
+      members: 1,
+      posts: 0,
+      joinedBy: [actor.userId],
+      joined: true,
+      moderatorIds: [actor.userId],
+      activity: "Created just now",
+    };
+    await updateCollection("circles", (items) => [circle, ...items]);
+    broadcast("circle:created", circle);
+    res.status(201).json({ ok: true, circle: projectCircleForUser(circle, actor.userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post(["/api/circles/:id/toggle", "/api/circles/:id/join"], async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const id = req.params.id;
+    let updated: any = null;
+    await updateCollection("circles", (items) =>
+      items.map((c: any) => {
+        if (c.id !== id) return c;
+        const joinedBy: string[] = Array.isArray(c.joinedBy)
+          ? [...c.joinedBy]
+          : c.joined
+            ? ["me"]
+            : [];
+        const has = joinedBy.includes(userId);
+        const nextJoinedBy = has ? joinedBy.filter((x) => x !== userId) : [...joinedBy, userId];
+        updated = {
+          ...c,
+          joinedBy: nextJoinedBy,
+          members: Math.max(0, (c.members || 0) + (has ? -1 : 1)),
+        };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Circle not found" });
+    broadcast("circle:updated", updated);
+    res.json({ ok: true, circle: projectCircleForUser(updated, userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/events", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
+    const ev = {
+      id: body.id || `event_${Date.now()}`,
+      title: String(body.title || "Gathering"),
+      hostId: actor.userId,
+      circleId: body.circleId,
+      date: body.date || "Soon",
+      day: body.day || "28",
+      month: body.month || "NOV",
+      weekday: body.weekday || "THU",
+      time: body.time || "6:30 PM",
+      location: body.location || "TBD",
+      mode: body.mode || "In person",
+      image: body.image,
+      attendees: 1,
+      spots: Number(body.spots || 16),
+      rsvped: true,
+      attendeeIds: [actor.userId],
+      description: String(body.description || ""),
+    };
+    await updateCollection("events", (items) => [ev, ...items]);
+    broadcast("event:created", ev);
+    res.status(201).json({ ok: true, event: projectEventForUser(ev, actor.userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/events/:id/rsvp", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const id = req.params.id;
+    let updated: any = null;
+    await updateCollection("events", (items) =>
+      items.map((ev: any) => {
+        if (ev.id !== id) return ev;
+        const currentIds: string[] = Array.isArray(ev.attendeeIds) ? [...ev.attendeeIds] : [];
+        const has = currentIds.includes(userId);
+        const attendeeIds = has
+          ? currentIds.filter((x) => x !== userId)
+          : [...currentIds, userId];
+        updated = {
+          ...ev,
+          attendees: Math.max(0, (ev.attendees || 0) + (has ? -1 : 1)),
+          attendeeIds,
+        };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Event not found" });
+    broadcast("event:updated", updated);
+    res.json({ ok: true, event: projectEventForUser(updated, userId) });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== REAL-TIME MULTI-USER DIRECT MESSAGES & CALL SIGNALING ====================
+const AUTO_REPLIES: Record<string, string[]> = {
+  maya: [
+    "Just pulled the last tray from the kiln — saving a warm mug for you on Thursday.",
+    "Love that. Let's bring the sketches to studio hour this week.",
+  ],
+  priya: [
+    "Simmering tamarind broth right now — bring bread if you swing by!",
+    "Adding this to the Sunday supper menu notes.",
+  ],
+  jonah: [
+    "Morning light on the trail was unreal today. Let's walk the ridge Saturday.",
+    "Count me in — bringing thermos coffee.",
+  ],
+  default: [
+    "That sounds wonderful — let's catch up properly soon.",
+    "Noted! Looking forward to seeing how it turns out.",
+  ],
+};
+
+app.post("/api/conversations", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const personId = String(req.body?.personId || "");
+    if (!personId) return res.status(400).json({ ok: false, error: "personId required" });
+
+    const thread = await findOrCreateThread(actor.userId, personId);
+    const onlineSet = new Set(getOnlineUserIds());
+    res.json({
+      ok: true,
+      conversation: formatThreadForUser(thread, actor.userId, onlineSet),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/conversations/:id/typing", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const convId = req.params.id;
+    const isTyping = Boolean(req.body?.typing ?? true);
+    const thread = await getThreadById(convId);
+    if (thread) {
+      const recipients = thread.participantIds.filter((id) => id !== actor.userId);
+      broadcast(
+        "dm:typing",
+        { conversationId: convId, userId: actor.userId, typing: isTyping },
+        { targetUserIds: recipients },
+      );
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/conversations/:id/read", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const convId = req.params.id;
+    const thread = await getThreadById(convId);
+    if (thread) {
+      thread.meta[actor.userId] = {
+        ...(thread.meta[actor.userId] || {}),
+        unread: 0,
+        lastReadAt: new Date().toISOString(),
+      };
+      thread.messages = (thread.messages || []).map((m: any) =>
+        m.senderId && m.senderId !== actor.userId ? { ...m, seen: true } : m,
+      );
+      await saveThread(thread);
+      const recipients = thread.participantIds.filter((id) => id !== actor.userId);
+      broadcast(
+        "dm:read",
+        { conversationId: convId, readerId: actor.userId, at: new Date().toISOString() },
+        { targetUserIds: recipients },
+      );
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/conversations/:id/messages", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const convId = req.params.id;
+    const body = req.body || {};
+
+    let thread = await getThreadById(convId);
+    if (!thread && body.personId) {
+      thread = await findOrCreateThread(userId, String(body.personId), convId);
+    }
+    if (!thread) {
+      return res.status(404).json({ ok: false, error: "Conversation not found" });
+    }
+
+    const msg = {
+      id: body.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      senderId: userId,
+      from: "me" as const,
+      text: String(body.text || ""),
+      time: nowClockLabel(),
+      seen: false,
+      image: body.image,
+      voice: body.voice,
+      replyTo: body.replyTo,
+    };
+
+    const otherId = thread.participantIds.find((id) => id !== userId) || body.personId;
+    thread.messages = [...(thread.messages || []), msg];
+    thread.meta[userId] = { ...(thread.meta[userId] || {}), unread: 0, archived: false };
+    if (otherId) {
+      const prevUnread = Number(thread.meta[otherId]?.unread || 0);
+      thread.meta[otherId] = {
+        ...(thread.meta[otherId] || {}),
+        unread: prevUnread + 1,
+        archived: false,
+      };
+    }
+    await saveThread(thread);
+
+    const onlineSet = new Set(getOnlineUserIds());
+    // Push real-time message directly to both sender (multi-tab) & recipient!
+    for (const pid of thread.participantIds) {
+      broadcast(
+        "dm:message",
+        {
+          conversationId: thread.id,
+          senderId: userId,
+          conversation: formatThreadForUser(thread, pid, onlineSet),
+          message: {
+            ...msg,
+            from: pid === userId ? "me" : "them",
+          },
+        },
+        { targetUserIds: [pid] },
+      );
+    }
+
+    // Check if otherId has a live human SSE connection right now; if not and it's a seeded companion, send contextual reply
+    const hasHumanRecipientConnected = Array.from(sseClients.values()).some(
+      (c) => c.userId === otherId,
+    );
+    const isSeededCompanion = ["maya", "priya", "jonah", "theo", "lin", "sara", "devon", "elena"].includes(
+      String(otherId || ""),
+    );
+
+    if (otherId && !hasHumanRecipientConnected && isSeededCompanion && body.autoReply !== false) {
+      // Emit brief typing indicator then deliver reply
+      setTimeout(() => {
+        broadcast(
+          "dm:typing",
+          { conversationId: thread!.id, userId: otherId, typing: true },
+          { targetUserIds: [userId] },
+        );
+      }, 450);
+
+      setTimeout(async () => {
+        try {
+          const fresh = await getThreadById(thread!.id);
+          if (!fresh) return;
+          const poolReplies = AUTO_REPLIES[otherId] || AUTO_REPLIES.default;
+          const replyText = poolReplies[Math.floor(Math.random() * poolReplies.length)];
           const replyMsg = {
             id: `msg_reply_${Date.now()}`,
-            from: "them",
-            text: pickContextualReply(personId, message.text, message.attachment?.type),
-            time: nowTimeString(),
+            senderId: otherId,
+            from: "them" as const,
+            text: replyText,
+            time: nowClockLabel(),
           };
-          await updateUserState(clientId, (u) => ({
-            ...u,
-            conversations: u.conversations.map((c: any) =>
-              c.id === convId
-                ? {
-                    ...c,
-                    typing: false,
-                    messages: [...(c.messages || []), replyMsg],
-                  }
-                : c,
+          fresh.messages = [
+            ...(fresh.messages || []).map((m: any) =>
+              m.id === msg.id ? { ...m, seen: true } : m,
             ),
-          }));
+            replyMsg,
+          ];
+          fresh.meta[userId] = {
+            ...(fresh.meta[userId] || {}),
+            unread: Number(fresh.meta[userId]?.unread || 0) + 1,
+          };
+          await saveThread(fresh);
+
+          broadcast(
+            "dm:typing",
+            { conversationId: fresh.id, userId: otherId, typing: false },
+            { targetUserIds: [userId] },
+          );
+          const nowOnline = new Set(getOnlineUserIds());
           broadcast(
             "dm:message",
-            { conversationId: convId, personId, message: replyMsg },
-            clientId,
+            {
+              conversationId: fresh.id,
+              senderId: otherId,
+              conversation: formatThreadForUser(fresh, userId, nowOnline),
+              message: { ...replyMsg, from: "them" },
+            },
+            { targetUserIds: [userId] },
           );
-        }, 2500);
-      }
-
-      sendJson(res, 201, { ok: true, message });
-      return;
+        } catch {}
+      }, 1700);
     }
 
-    if (sub === "react" && method === "POST") {
-      const body = await readBody(req);
-      const { messageId, emoji } = body;
-      await updateUserState(clientId, (u) => ({
-        ...u,
-        conversations: u.conversations.map((c: any) =>
-          c.id !== convId
-            ? c
-            : {
-                ...c,
-                messages: (c.messages || []).map((m: any) => {
-                  if (m.id !== messageId) return m;
-                  const prev: string[] = m.reactions ?? [];
-                  return {
-                    ...m,
-                    reactions: prev.includes(emoji)
-                      ? prev.filter((x) => x !== emoji)
-                      : [...prev, emoji],
-                  };
-                }),
-              },
-        ),
-      }));
-      sendJson(res, 200, { ok: true });
-      return;
-    }
-  }
-
-  // ==================== PROFILE & PEOPLE ====================
-  if (pathname === "/api/me" && method === "PUT") {
-    const body = await readBody(req);
-    let nextMe: any = null;
-    await updateUserState(clientId, (u) => {
-      nextMe = { ...u.me, ...body };
-      return { ...u, me: nextMe };
+    res.status(201).json({
+      ok: true,
+      message: msg,
+      conversation: formatThreadForUser(thread, userId, onlineSet),
     });
-    if (nextMe?.id) {
-      await updateCollection("people", (people) =>
-        people.map((p: any) => (p.id === nextMe.id ? { ...p, ...nextMe } : p)),
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post(
+  ["/api/conversations/:id/messages/:messageId/react", "/api/conversations/:id/react"],
+  async (req, res) => {
+    try {
+      const actor = await resolveRequestActor(req);
+      const convId = req.params.id;
+      const messageId = req.params.messageId || String(req.body?.messageId || "");
+      const emoji = req.body?.emoji;
+    const thread = await getThreadById(convId);
+    if (!thread) return res.status(404).json({ ok: false, error: "Thread not found" });
+
+    thread.messages = (thread.messages || []).map((m: any) =>
+      m.id === messageId
+        ? { ...m, reaction: m.reaction === emoji ? undefined : emoji }
+        : m,
+    );
+    await saveThread(thread);
+
+    const onlineSet = new Set(getOnlineUserIds());
+    for (const pid of thread.participantIds) {
+      broadcast(
+        "dm:reaction",
+        {
+          conversationId: thread.id,
+          messageId,
+          emoji,
+          conversation: formatThreadForUser(thread, pid, onlineSet),
+        },
+        { targetUserIds: [pid] },
       );
     }
-    sendJson(res, 200, { ok: true, me: nextMe });
-    return;
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
+});
 
-  const followMatch = pathname.match(/^\/api\/people\/([^/]+)\/follow$/);
-  if (followMatch && method === "POST") {
-    const targetId = decodeURIComponent(followMatch[1]);
-    let isFollowing = false;
-    await updateUserState(clientId, (u) => {
-      isFollowing = !u.followingIds.includes(targetId);
-      const followingIds = isFollowing
-        ? [...u.followingIds, targetId]
-        : u.followingIds.filter((id) => id !== targetId);
-      const me = {
-        ...u.me,
-        following: Math.max(0, Number(u.me.following || 0) + (isFollowing ? 1 : -1)),
+app.patch("/api/conversations/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const convId = req.params.id;
+    const patch = req.body || {};
+
+    if (patch.deleted) {
+      await deleteThreadForUser(convId, userId);
+      const remaining = await getThreadsForUser(userId);
+      const onlineSet = new Set(getOnlineUserIds());
+      return res.json({
+        ok: true,
+        conversations: remaining.map((t) => formatThreadForUser(t, userId, onlineSet)),
+      });
+    }
+
+    const thread = await getThreadById(convId);
+    if (thread) {
+      const currMeta = thread.meta[userId] || {};
+      thread.meta[userId] = {
+        ...currMeta,
+        ...(typeof patch.unread === "number" ? { unread: patch.unread } : {}),
+        ...(typeof patch.pinned === "boolean" ? { pinned: patch.pinned } : {}),
+        ...(typeof patch.muted === "boolean" ? { muted: patch.muted } : {}),
+        ...(typeof patch.archived === "boolean" ? { archived: patch.archived } : {}),
+        ...(typeof patch.request === "boolean" ? { request: patch.request } : {}),
       };
-      return { ...u, followingIds, me };
+      await saveThread(thread);
+    }
+
+    const allThreads = await getThreadsForUser(userId);
+    const onlineSet = new Set(getOnlineUserIds());
+    res.json({
+      ok: true,
+      conversations: allThreads.map((t) => formatThreadForUser(t, userId, onlineSet)),
     });
-    await updateCollection("people", (people) =>
-      people.map((p: any) =>
-        p.id === targetId
-          ? {
-              ...p,
-              followers: Math.max(0, Number(p.followers || 0) + (isFollowing ? 1 : -1)),
-            }
-          : p,
-      ),
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// Real-time Voice/Video Call Signaling Relay
+app.post("/api/calls/signal", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const targetUserId = String(req.body?.targetUserId || "");
+    const type = String(req.body?.type || "ring"); // ring | accept | decline | end | offer | answer | ice
+    const callKind = String(req.body?.kind || "audio");
+    const callId = String(req.body?.callId || `call_${Date.now()}`);
+
+    if (!targetUserId) {
+      return res.status(400).json({ ok: false, error: "targetUserId required" });
+    }
+
+    const targetOnline = Array.from(sseClients.values()).some(
+      (c) => c.userId === targetUserId,
     );
-    sendJson(res, 200, { ok: true, following: isFollowing });
-    return;
-  }
 
-  // ==================== DRAFTS, PROMPTS, GUIDES, NOTIFICATIONS ====================
-  if (pathname === "/api/drafts" && method === "GET") {
-    const u = await getUserState(clientId);
-    sendJson(res, 200, { ok: true, drafts: u.drafts });
-    return;
-  }
+    broadcast(
+      "call:signal",
+      {
+        callId,
+        type,
+        kind: callKind,
+        fromUserId: actor.userId,
+        targetUserId,
+        sdp: req.body?.sdp,
+        candidate: req.body?.candidate,
+        at: new Date().toISOString(),
+      },
+      { targetUserIds: [targetUserId] },
+    );
 
-  if (pathname === "/api/drafts" && method === "POST") {
-    const body = await readBody(req);
-    const draft = {
-      id: body.id || `draft_${Date.now()}`,
-      text: String(body.text || "").trim(),
-      image: body.image || undefined,
-      savedAt: body.savedAt || "Just now",
-      place: body.place || undefined,
-      circleId: body.circleId || undefined,
-    };
-    const u = await updateUserState(clientId, (curr) => ({
+    res.json({ ok: true, callId, targetOnline });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== NOTIFICATIONS, DRAFTS, GUIDES, PROMPTS, PREFERENCES ====================
+app.post("/api/notifications/read-all", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const nextState = await updateUserState(actor.userId, (curr) => ({
       ...curr,
-      drafts: [draft, ...curr.drafts.filter((d: any) => d.id !== draft.id)],
+      notifications: (curr.notifications || []).map((n: any) => ({ ...n, unread: false })),
     }));
-    sendJson(res, 201, { ok: true, draft, drafts: u.drafts });
-    return;
+    res.json({ ok: true, notifications: nextState.notifications });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
+});
 
-  const draftDeleteMatch = pathname.match(/^\/api\/drafts\/([^/]+)$/);
-  if (draftDeleteMatch && method === "DELETE") {
-    const draftId = decodeURIComponent(draftDeleteMatch[1]);
-    const u = await updateUserState(clientId, (curr) => ({
+app.post("/api/notifications/:id/read", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    const nextState = await updateUserState(actor.userId, (curr) => ({
       ...curr,
-      drafts: curr.drafts.filter((d: any) => d.id !== draftId),
+      notifications: (curr.notifications || []).map((n: any) =>
+        n.id === id ? { ...n, unread: false } : n,
+      ),
     }));
-    sendJson(res, 200, { ok: true, drafts: u.drafts });
-    return;
+    res.json({ ok: true, notifications: nextState.notifications });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
+});
 
-  const promptVoteMatch = pathname.match(/^\/api\/prompts\/([^/]+)\/vote$/);
-  if (promptVoteMatch && method === "POST") {
-    const promptId = decodeURIComponent(promptVoteMatch[1]);
-    const body = await readBody(req);
-    const option = String(body.option || "");
-    await updateUserState(clientId, (u) => ({
-      ...u,
-      promptVotes: { ...u.promptVotes, [promptId]: option },
-    }));
+app.put("/api/drafts", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const drafts = Array.isArray(req.body?.drafts) ? req.body.drafts : [];
+    const nextState = await updateUserState(actor.userId, (curr) => ({ ...curr, drafts }));
+    res.json({ ok: true, drafts: nextState.drafts });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/guides/:id/save", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const guideId = req.params.id;
+    const nextState = await updateUserState(actor.userId, (curr) => {
+      const exists = curr.savedGuideIds.includes(guideId);
+      return {
+        ...curr,
+        savedGuideIds: exists
+          ? curr.savedGuideIds.filter((x) => x !== guideId)
+          : [...curr.savedGuideIds, guideId],
+      };
+    });
+    res.json({ ok: true, savedGuideIds: nextState.savedGuideIds });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/guides/:id/steps/:stepIdx", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const guideId = req.params.id;
+    const stepIdx = Number(req.params.stepIdx);
+    const nextState = await updateUserState(actor.userId, (curr) => {
+      const existing = curr.guideSteps[guideId] || [];
+      const next = existing.includes(stepIdx)
+        ? existing.filter((x) => x !== stepIdx)
+        : [...existing, stepIdx];
+      return {
+        ...curr,
+        guideSteps: { ...curr.guideSteps, [guideId]: next },
+      };
+    });
+    res.json({ ok: true, guideSteps: nextState.guideSteps });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/prompts/:id/vote", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const promptId = req.params.id;
+    const optionId = String(req.body?.optionId || "");
+    const stateBefore = await getUserState(actor.userId);
+    const prevVote = stateBefore.promptVotes[promptId];
+
     let updatedPrompt: any = null;
     await updateCollection("prompts", (prompts) =>
-      prompts.map((p: any) => {
-        if (p.id !== promptId) return p;
-        updatedPrompt = { ...p, votes: Number(p.votes || 0) + 1 };
+      prompts.map((pr: any) => {
+        if (pr.id !== promptId) return pr;
+        updatedPrompt = {
+          ...pr,
+          options: (pr.options || []).map((opt: any) => {
+            if (opt.id === optionId && prevVote !== optionId) {
+              return { ...opt, votes: (opt.votes || 0) + 1 };
+            }
+            if (opt.id === prevVote && prevVote !== optionId) {
+              return { ...opt, votes: Math.max(0, (opt.votes || 0) - 1) };
+            }
+            return opt;
+          }),
+        };
         return updatedPrompt;
       }),
     );
-    if (updatedPrompt) broadcast("prompt:updated", { prompt: updatedPrompt });
-    sendJson(res, 200, { ok: true, prompt: updatedPrompt, voted: option });
-    return;
-  }
 
-  const guideMatch = pathname.match(/^\/api\/guides\/([^/]+)\/progress$/);
-  if (guideMatch && method === "POST") {
-    const guideId = decodeURIComponent(guideMatch[1]);
-    const body = await readBody(req);
-    const u = await updateUserState(clientId, (curr) => {
-      const savedGuideIds =
-        typeof body.saved === "boolean"
-          ? body.saved
-            ? Array.from(new Set([...curr.savedGuideIds, guideId]))
-            : curr.savedGuideIds.filter((id) => id !== guideId)
-          : curr.savedGuideIds;
-      const guideSteps = Array.isArray(body.completedSteps)
-        ? { ...curr.guideSteps, [guideId]: body.completedSteps }
+    const nextState = await updateUserState(actor.userId, (curr) => ({
+      ...curr,
+      promptVotes: { ...curr.promptVotes, [promptId]: optionId },
+    }));
+
+    if (updatedPrompt) broadcast("prompt:updated", updatedPrompt);
+    res.json({ ok: true, prompt: updatedPrompt, promptVotes: nextState.promptVotes });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.put("/api/preferences", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const prefs = req.body || {};
+    const nextState = await updateUserState(actor.userId, (curr) => ({
+      ...curr,
+      preferences: { ...curr.preferences, ...prefs },
+    }));
+    res.json({ ok: true, preferences: nextState.preferences });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== CLOUD WORKSPACE SYNC ====================
+app.get(["/api/workspaces/:syncKey", "/api/workspace/:syncKey"], async (req, res) => {
+  try {
+    const data = await getWorkspaceSnapshot(req.params.syncKey);
+    if (!data) return res.status(404).json({ ok: false, error: "Sync key not found" });
+    res.json({ ok: true, ...data });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.put(["/api/workspaces/:syncKey", "/api/workspace/:syncKey"], async (req, res) => {
+  try {
+    const { handle = "member", displayName = "Thursday Member", snapshot = {} } = req.body || {};
+    const saved = await saveWorkspaceSnapshot(req.params.syncKey, handle, displayName, snapshot);
+    res.json({ ok: true, ...saved });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.delete("/api/conversations/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    await deleteThreadForUser(req.params.id, actor.userId);
+    const remaining = await getThreadsForUser(actor.userId);
+    const onlineSet = new Set(getOnlineUserIds());
+    res.json({
+      ok: true,
+      conversations: remaining.map((t) => formatThreadForUser(t, actor.userId, onlineSet)),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/notifications/read", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.body?.id;
+    const nextState = await updateUserState(actor.userId, (curr) => ({
+      ...curr,
+      notifications: (curr.notifications || []).map((n: any) =>
+        !id || n.id === id ? { ...n, unread: false } : n,
+      ),
+    }));
+    res.json({ ok: true, notifications: nextState.notifications });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/drafts", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const draft = req.body || {};
+    const nextState = await updateUserState(actor.userId, (curr) => ({
+      ...curr,
+      drafts: [draft, ...(curr.drafts || []).filter((d: any) => d.id !== draft.id)],
+    }));
+    res.json({ ok: true, drafts: nextState.drafts });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.delete("/api/drafts/:id", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const id = req.params.id;
+    const nextState = await updateUserState(actor.userId, (curr) => ({
+      ...curr,
+      drafts: (curr.drafts || []).filter((d: any) => d.id !== id),
+    }));
+    res.json({ ok: true, drafts: nextState.drafts });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/guides/:id/progress", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const guideId = req.params.id;
+    const { saved, completedSteps } = req.body || {};
+    const nextState = await updateUserState(actor.userId, (curr) => {
+      let savedGuideIds = curr.savedGuideIds || [];
+      if (typeof saved === "boolean") {
+        savedGuideIds = saved
+          ? Array.from(new Set([...savedGuideIds, guideId]))
+          : savedGuideIds.filter((x) => x !== guideId);
+      }
+      const guideSteps = Array.isArray(completedSteps)
+        ? { ...curr.guideSteps, [guideId]: completedSteps }
         : curr.guideSteps;
       return { ...curr, savedGuideIds, guideSteps };
     });
-    sendJson(res, 200, {
+    res.json({
       ok: true,
-      savedGuideIds: u.savedGuideIds,
-      guideSteps: u.guideSteps,
+      savedGuideIds: nextState.savedGuideIds,
+      guideSteps: nextState.guideSteps,
     });
-    return;
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
   }
-
-  if (pathname === "/api/notifications/read" && method === "POST") {
-    const body = await readBody(req);
-    const u = await updateUserState(clientId, (curr) => ({
-      ...curr,
-      notifications: curr.notifications.map((n: any) =>
-        !body.id || n.id === body.id ? { ...n, read: true } : n,
-      ),
-    }));
-    sendJson(res, 200, { ok: true, notifications: u.notifications });
-    return;
-  }
-
-  if (pathname === "/api/preferences" && method === "PUT") {
-    const body = await readBody(req);
-    const u = await updateUserState(clientId, (curr) => ({
-      ...curr,
-      preferences: body.preferences ?? body,
-    }));
-    sendJson(res, 200, { ok: true, preferences: u.preferences });
-    return;
-  }
-
-  // ==================== CROSS-DEVICE WORKSPACE SYNC ====================
-  const wsMatch = pathname.match(/^\/api\/workspace\/([^/]+)$/);
-  if (wsMatch) {
-    const syncKey = decodeURIComponent(wsMatch[1]);
-    if (method === "GET") {
-      const record = await getWorkspaceSnapshot(syncKey);
-      if (!record) {
-        sendJson(res, 404, { ok: false, error: "No workspace found for that sync code." });
-        return;
-      }
-      sendJson(res, 200, { ok: true, ...record });
-      return;
-    }
-    if (method === "PUT" || method === "POST") {
-      const body = await readBody(req);
-      const snapshot = body.snapshot ?? body;
-      const me = snapshot?.data?.me ?? {};
-      const saved = await saveWorkspaceSnapshot(
-        syncKey,
-        String(me.handle || "norabennett"),
-        String(me.name || "Nora Bennett"),
-        snapshot,
-      );
-      sendJson(res, 200, { ok: true, ...saved });
-      return;
-    }
-  }
-
-  sendJson(res, 404, { ok: false, error: `Route not found: ${method} ${pathname}` });
-}
-
-async function main() {
-  const dbInfo = await initDatabase();
-  const server = http.createServer((req, res) => {
-    handleRequest(req, res).catch((err) => {
-      console.error("API error:", err);
-      if (!res.headersSent) {
-        sendJson(res, 500, {
-          ok: false,
-          error: err instanceof Error ? err.message : "Internal server error",
-        });
-      }
-    });
-  });
-
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(
-      `[thursday-api] listening on http://0.0.0.0:${PORT} (storage: ${dbInfo.mode})`,
-    );
-  });
-}
-
-main().catch((err) => {
-  console.error("Fatal startup error:", err);
-  process.exit(1);
 });
+
+app.post(["/api/admin/reset", "/api/reset"], async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    await updateUserState(actor.userId, () => ({
+      me: structuredClone(actor.account?.profile || INITIAL_SEED.me),
+      followingIds: Array.isArray(INITIAL_SEED.followingIds)
+        ? [...INITIAL_SEED.followingIds]
+        : ["maya", "priya", "jonah"],
+      conversations: structuredClone(INITIAL_SEED.conversations) as any[],
+      notifications: structuredClone(INITIAL_SEED.notifications) as any[],
+      drafts: structuredClone(INITIAL_SEED.drafts) as any[],
+      savedGuideIds: INITIAL_SEED.guides.map((g: any) => g.id),
+      guideSteps: {},
+      promptVotes: {},
+      preferences: structuredClone(INITIAL_SEED.preferences),
+      visitors: [],
+    }));
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+initDatabase()
+  .then(({ mode }) => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Thursday API listening on 0.0.0.0:${PORT} (storage: ${mode})`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to initialize database:", err);
+    process.exit(1);
+  });
