@@ -46,8 +46,13 @@ export function ProfileView({
   circles,
   onVote,
   onOpenCircle,
+  highlights = STORY_HIGHLIGHTS,
+  onOpenHighlight,
+  onAddHighlight,
+  onToast,
 }: any) {
   const [te, Ne] = useState<any>("posts"),
+    [menuOpen, setMenuOpen] = useState<boolean>(false),
     he = useMemo(
       () =>
         posts
@@ -114,13 +119,74 @@ export function ProfileView({
             >
               <ShareNetwork size={13} strokeWidth={1.9} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-label="More profile options"
-              className="inline-flex h-7.5 w-7.5 items-center justify-center rounded-full bg-white/95 text-[#101318] shadow-sm backdrop-blur transition-colors hover:bg-white"
-            >
-              <DotsThree size={14} strokeWidth={2} aria-hidden="true" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="More profile options"
+                aria-expanded={menuOpen}
+                className="inline-flex h-7.5 w-7.5 items-center justify-center rounded-full bg-white/95 text-[#101318] shadow-sm backdrop-blur transition-colors hover:bg-white"
+              >
+                <DotsThree size={14} strokeWidth={2} aria-hidden="true" />
+              </button>
+              {menuOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-30 cursor-default"
+                    onClick={() => setMenuOpen(false)}
+                    aria-label="Close profile menu"
+                    tabIndex={-1}
+                  />
+                  <div className="animate-pop absolute top-[calc(100%+6px)] right-0 z-40 w-[176px] rounded-[10px] border border-line bg-surface p-1 shadow-[0_12px_32px_rgba(29,33,28,0.16)]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(`@${person.handle}`);
+                        onToast?.("Handle copied", `@${person.handle} copied to clipboard.`);
+                        setMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                    >
+                      Copy @{person.handle}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onShare();
+                        setMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                    >
+                      Share profile
+                    </button>
+                    {isMe ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onEdit();
+                          setMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                      >
+                        Edit profile
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onMessage(person.id);
+                          setMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                      >
+                        Send message
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="px-4 pb-4 sm:px-5">
@@ -234,9 +300,15 @@ export function ProfileView({
           </div>
         </div>
         <StoryHighlightsStrip
-          highlights={STORY_HIGHLIGHTS}
-          onOpen={() => onOpenStory?.(pe[0]?.id ?? "")}
-          onAdd={onEdit}
+          highlights={highlights}
+          onOpen={(hl?: any) => {
+            if (onOpenHighlight && hl) {
+              onOpenHighlight(hl);
+            } else {
+              onOpenStory?.(pe[0]?.id ?? "");
+            }
+          }}
+          onAdd={isMe ? onAddHighlight ?? onEdit : undefined}
         />
         <div className="flex items-center gap-1 border-t border-line px-3 sm:px-4">
           {ye.map((le?: any) => (
