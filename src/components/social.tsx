@@ -96,14 +96,39 @@ export function Avatar({
   );
 }
 /**
- * Shared media shown in full.
+ * A fixed-ratio frame for shared media.
  *
- * Nothing here crops. Previously post photos were forced into an `aspect-[5/4]`
- * box with `object-cover`, stories were stretched to fill the whole screen and
- * reels were pinned to `100dvh` — all of which zoomed in and quietly cut off the
- * edges of whatever someone uploaded. These elements size themselves to the
- * media instead: a wide photo is short and complete, a tall one is tall and
- * complete, and nothing is ever letterboxed or cropped.
+ * Every photo and video sits in a box of one agreed shape, and the media is
+ * scaled to fill it with `object-cover` and centred with `object-position:
+ * center`. That makes a mixed feed uniform: a 16:9 clip and a 4:5 photo both
+ * occupy the same footprint instead of making every row a different height.
+ *
+ * The tradeoff is explicit: `cover` fills the frame by scaling up until the
+ * frame is covered, so any part of the image outside the frame's shape is
+ * trimmed — evenly on both sides, because the crop is centred.
+ */
+export function MediaFrameBox({
+  ratio = "4 / 5",
+  children,
+  className,
+  bgClass = "bg-canvas-deep",
+}: any) {
+  return (
+    <div
+      className={cn("relative w-full overflow-hidden", bgClass, className)}
+      style={{ aspectRatio: ratio }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Media that fills a MediaFrameBox edge to edge, centred, never distorted. */
+const fillMedia = "absolute inset-0 h-full w-full object-cover object-center";
+
+/**
+ * Shared media shown in full. Kept for the places that must not crop: the
+ * full-screen viewer, where trimming the picture would defeat the point.
  */
 export function FitImage({
   src,
@@ -124,6 +149,24 @@ export function FitImage({
       {...rest}
     />
   );
+}
+
+/** Photo inside a MediaFrameBox: uniform footprint, cover + centre. */
+export function FramedImage({ src, alt = "", className, ...rest }: any) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className={cn("img-reveal", fillMedia, className)}
+      {...rest}
+    />
+  );
+}
+
+/** Video inside a MediaFrameBox: same footprint, cover + centre. */
+export function FramedVideo({ className, ...rest }: any) {
+  return <video className={cn(fillMedia, className)} {...rest} />;
 }
 
 /**
@@ -784,15 +827,14 @@ export function PostCard({
             className="block w-full"
             aria-label="Open post"
           >
-            {/* The photo keeps its own proportions. It used to be forced into a
-                5:4 box with object-cover, which zoomed in and cut off the edges
-                of anything that was not roughly that shape. */}
-            <img
-              src={K}
-              alt={post.imageAlt ?? ""}
-              className="img-reveal mx-auto block h-auto max-h-[78vh] w-auto max-w-full"
-              loading="lazy"
-            />
+            {/* Uniform frame: every post has the same footprint, and the photo
+                fills it with cover + centre so it is never stretched. */}
+            <div
+              className="relative w-full overflow-hidden bg-canvas-deep"
+              style={{ aspectRatio: "4 / 5" }}
+            >
+              <FramedImage src={K} alt={post.imageAlt ?? ""} />
+            </div>
           </button>
           {J ? (
             <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">

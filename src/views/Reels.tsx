@@ -223,7 +223,7 @@ export function ReelsView({
                   playsInline
                   muted={j}
                   preload="metadata"
-                  className="absolute inset-0 h-full w-full object-contain"
+                  className="absolute inset-0 h-full w-full object-cover object-center"
                   onClick={() => V(X_local.id)}
                   onCanPlay={() =>
                     le((I?: any) =>
@@ -621,12 +621,14 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
             <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black">
               {/* Preview in the clip's own shape: a 9:13 box letterboxed a
                   landscape upload into a tall sliver. */}
-              <video
-                src={x}
-                controls
-                playsInline
-                className="block max-h-[26dvh] w-full bg-black object-contain"
-              />
+              <div className="relative mx-auto w-full max-w-[190px] overflow-hidden rounded-lg bg-black" style={{ aspectRatio: "9 / 16" }}>
+                <video
+                  src={x}
+                  controls
+                  playsInline
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => {

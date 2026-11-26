@@ -991,15 +991,20 @@ export function InboxView({
                                 }
                                 className="block w-full"
                               >
-                                {/* The photo is shown whole. It used to be clamped
-                                    to 150px tall with object-cover, which zoomed in
-                                    and cut off everything outside the slot. */}
-                                <img
-                                  src={E.attachment.url}
-                                  alt={E.attachment.caption || "Shared photo"}
-                                  className="block h-auto max-h-[320px] w-auto max-w-[220px] rounded-[8px]"
-                                  loading="lazy"
-                                />
+                                {/* Uniform frame so every shared photo occupies
+                                    the same footprint; cover + centre keeps it
+                                    undistorted. */}
+                                <div
+                                  className="w-[220px] max-w-full overflow-hidden rounded-[8px] bg-canvas-deep"
+                                  style={{ aspectRatio: "4 / 5" }}
+                                >
+                                  <img
+                                    src={E.attachment.url}
+                                    alt={E.attachment.caption || "Shared photo"}
+                                    className="h-full w-full object-cover object-center"
+                                    loading="lazy"
+                                  />
+                                </div>
                                 {/* No filename or caption line under sent photos.
                                     The filename was being read out as visible text
                                     under every image, which no chat app does. */}

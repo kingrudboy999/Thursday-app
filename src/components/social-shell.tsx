@@ -1986,15 +1986,19 @@ export function StoryViewerModal({
         className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
       />
       <div className="absolute inset-0 bg-[#050806]/45" />
-      {/* The photo itself is never stretched or cropped. It sits in its own
-          layer sized to its natural proportions, so no part of the image is
-          ever lost. The blurred copy behind it is ambience, not the photo. */}
-      <img
-        src={T.image}
-        alt={T.caption}
-        className="story-image relative z-[1] block h-auto max-h-[100dvh] w-full max-w-full object-contain"
-        aria-hidden="true"
-      />
+      {/* Story media sits in a fixed 9:16 stage and fills it with cover +
+          centre, so every story occupies the same shape. */}
+      <div
+        className="relative z-[1] w-full max-w-[min(100vw,calc(100dvh*9/16))] overflow-hidden bg-black"
+        style={{ aspectRatio: "9 / 16", maxHeight: "100dvh" }}
+      >
+        <img
+          src={T.image}
+          alt={T.caption}
+          className="story-image absolute inset-0 h-full w-full object-cover object-center"
+          aria-hidden="true"
+        />
+      </div>
       {/* WhatsApp-style tap zones: right half advances, left half goes back,
           holding either one pauses while your finger is down. */}
       <button
