@@ -48,7 +48,13 @@ import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { ReelsScreen } from "./src/screens/ReelsScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { SpacesScreen } from "./src/screens/SpacesScreen";
-import { mobileApi } from "./src/api";
+import {
+  clearMobileAuthSession,
+  getMobileAuthToken,
+  getMobileAuthUser,
+  mobileApi,
+  setMobileAuthSession,
+} from "./src/api";
 import { usePersistentState } from "./src/storage";
 import { DARK_THEME, LIGHT_THEME, MobileThemeMode } from "./src/theme";
 
@@ -64,7 +70,7 @@ type MobileRoute =
 
 export default function App() {
   const [themeMode, setThemeMode] = usePersistentState<MobileThemeMode>("theme", "light");
-  const [people] = usePersistentState<any[]>("people", INITIAL_PEOPLE);
+  const [people, setPeopleList] = usePersistentState<any[]>("people", INITIAL_PEOPLE);
   const [posts, setPosts] = usePersistentState<any[]>("posts", INITIAL_POSTS);
   const [stories] = usePersistentState<any[]>("stories", INITIAL_STORIES);
   const [seenStoryIds, setSeenStoryIds] = usePersistentState<string[]>("seenStories", []);
@@ -82,13 +88,35 @@ export default function App() {
   const [readReceipts, setReadReceipts] = usePersistentState("readReceipts", true);
 
   const [route, setRoute] = useState<MobileRoute>("home");
-  const [profilePersonId, setProfilePersonId] = useState<string>(ME_ID);
+  const [profilePersonId, setProfilePersonId] = useState<string>(
+    getMobileAuthUser()?.id ?? ME_ID,
+  );
   const [storyIndex, setStoryIndex] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [newPostText, setNewPostText] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(PHOTOS.potteryWindow);
   const [showSplash, setShowSplash] = useState(true);
+  const [account, setAccount] = useState<any>(null);
+  const [onlineIds, setOnlineIds] = useState<string[]>([]);
+
+  // Restore the live PostgreSQL session, otherwise sign into the demo circle.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const meRes = await mobileApi.me();
+      if (active && meRes?.ok && meRes.user) {
+        setMobileAuthSession(getMobileAuthToken() || "", meRes.user);
+        setAccount(meRes.user);
+        return;
+      }
+      const demo = await mobileApi.demoLogin("me");
+      if (active) setAccount(demo?.user ?? null);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     mobileApi.bootstrap().then((data) => {
@@ -103,18 +131,30 @@ export default function App() {
         });
       }
       if (Array.isArray(data.circles) && data.circles.length) setCircles(data.circles);
+      if (Array.isArray(data.people) && data.people.length) {
+        const serverIds = new Set(data.people.map((p: any) => p.id));
+        setPeopleList((local: any[]) => [
+          ...data.people,
+          ...local.filter((p: any) => p?.id && !serverIds.has(p.id)),
+        ]);
+      }
+      if (Array.isArray(data.onlineUserIds)) setOnlineIds(data.onlineUserIds);
     });
   }, []);
 
+  const meId = account?.id ?? ME_ID;
   const theme = themeMode === "dark" ? DARK_THEME : LIGHT_THEME;
-  const me = people.find((p) => p.id === ME_ID) ?? people[0];
+  const me =
+    account?.profile
+      ? { ...account.profile, id: account.id }
+      : people.find((p) => p.id === meId) ?? people[0];
   const viewedPerson = people.find((p) => p.id === profilePersonId) ?? me;
   const unreadDmCount = conversations.reduce((sum, c) => (c.request ? sum : sum + c.unread), 0);
   const unreadNoticeCount = notices.filter((n) => n.unread).length;
 
   const navigate = (next: MobileRoute) => {
     Haptics.selectionAsync().catch(() => {});
-    if (next === "profile") setProfilePersonId(ME_ID);
+    if (next === "profile") setProfilePersonId(meId);
     setRoute(next);
     setDrawerOpen(false);
   };
@@ -229,7 +269,7 @@ export default function App() {
                 mobileApi.votePoll(postId, optionId);
               }}
               onAddComment={(postId, text) => {
-                const comment = { id: `c_${Date.now()}`, authorId: ME_ID, text, time: "Just now" };
+                const comment = { id: `c_${Date.now()}`, authorId: meId, text, time: "Just now" };
                 setPosts((prev) =>
                   prev.map((p) =>
                     p.id === postId
@@ -282,7 +322,7 @@ export default function App() {
                             ...c.messages,
                             {
                               id: `m_${Date.now()}`,
-                              fromId: ME_ID,
+                              fromId: meId,
                               text,
                               time: "Just now",
                               seen: true,
@@ -365,7 +405,7 @@ export default function App() {
             <ProfileScreen
               theme={theme}
               person={viewedPerson}
-              isMe={viewedPerson.id === ME_ID}
+              isMe={viewedPerson.id === meId}
               posts={posts}
               followingIds={followingIds}
               onToggleFollow={(id) =>
@@ -386,6 +426,15 @@ export default function App() {
               onChangeTheme={setThemeMode}
               onToggleQuietHours={setQuietHours}
               onToggleReadReceipts={setReadReceipts}
+              accountName={account?.profile?.name ?? me?.name}
+              accountHandle={account?.handle ?? me?.handle}
+              onSignOut={async () => {
+                await mobileApi.logout();
+                clearMobileAuthSession();
+                setAccount(null);
+                const demo = await mobileApi.demoLogin("me");
+                setAccount(demo?.user ?? null);
+              }}
             />
           ) : null}
         </View>
@@ -533,7 +582,7 @@ export default function App() {
                   if (!clean) return;
                   const newPost = {
                     id: `p_${Date.now()}`,
-                    authorId: ME_ID,
+                    authorId: meId,
                     time: "Just now",
                     location: me.location,
                     place: me.location,
@@ -603,7 +652,7 @@ export default function App() {
               const existing = prev.find((c) => c.personId === story.authorId);
               const replyMsg = {
                 id: `m_${Date.now()}`,
-                fromId: ME_ID,
+                fromId: meId,
                 text,
                 time: "Just now",
                 seen: true,
