@@ -78,6 +78,20 @@ function formatMessageDay(c?: any, createdAt?: any) {
   if (label) return label;
   return /AM|PM/i.test(c || "") ? "Today" : c;
 }
+/** A fixed, natural-looking waveform profile shared by every voice note. */
+const VOICE_BARS = [
+  5, 9, 6, 12, 8, 14, 10, 6, 11, 7, 13, 9, 5, 10, 12, 7, 9, 6, 11, 8, 13, 10, 6, 9,
+  12, 7, 5, 11, 8, 10,
+];
+
+/** Elapsed time for a playing note, derived from progress and total duration. */
+function formatVoiceElapsed(progress: number, duration?: string): string {
+  const parts = String(duration || "0:00").split(":").map((n) => Number(n) || 0);
+  const total = parts.length >= 2 ? parts[0] * 60 + parts[1] : parts[0] || 0;
+  const seconds = Math.max(0, Math.round(total * Math.min(1, Math.max(0, progress))));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
 function formatDuration(c?: any) {
   return c
     ? c.attachment?.type === "image"
@@ -90,14 +104,21 @@ function formatDuration(c?: any) {
 function SwipeableMessage({ message, onReply, onReact, children }: any) {
   const [x, w] = useState<any>(0),
     A = useRef<any>(null),
+    xRef = useRef(0),
     T = message.from === "me",
     y = () => {
-      x > 48 && onReply(message);
+      if (A.current === null) return;
+      xRef.current > 48 && onReply(message);
+      xRef.current = 0;
       w(0);
       A.current = null;
     };
   return (
-    <div className={cn("relative flex", T ? "justify-end" : "justify-start")}>
+    // w-full matters: this row sits inside a column with `items-start`, so without
+    // an explicit width it shrink-wraps and the child's `max-w-[84%]` resolves
+    // against a width derived from its own content. That circularity crushed
+    // wide bubbles (voice notes were clipped mid-waveform) instead of capping them.
+    <div className={cn("relative flex w-full", T ? "justify-end" : "justify-start")}>
       <span
         className={cn(
           "pointer-events-none absolute top-1/2 -translate-y-1/2 text-forest transition-opacity",
@@ -113,7 +134,7 @@ function SwipeableMessage({ message, onReply, onReact, children }: any) {
         </span>
       </span>
       <div
-        className="relative max-w-[84%] touch-pan-y sm:max-w-[74%]"
+        className="relative max-w-[84%] touch-pan-y select-none sm:max-w-[74%]"
         style={{
           transform: `translateX(${x}px)`,
           transition:
@@ -121,17 +142,22 @@ function SwipeableMessage({ message, onReply, onReact, children }: any) {
         }}
         onPointerDown={(g?: any) => {
           A.current = g.clientX;
+          xRef.current = 0;
+          // Keep receiving the drag even once the finger slides off this element
+          // (it now starts near the bubble's edge, so leaving is normal).
+          g.currentTarget.setPointerCapture?.(g.pointerId);
         }}
         onPointerMove={(g?: any) => {
           if (A.current === null) return;
           const R = g.clientX - A.current;
-          R > 4 && w(Math.min(R, 84));
+          if (R > 4) {
+            const v = Math.min(R, 84);
+            xRef.current = v;
+            w(v);
+          }
         }}
         onPointerUp={y}
         onPointerCancel={y}
-        onPointerLeave={() => {
-          A.current !== null && y();
-        }}
         onDoubleClick={onReact}
       >
         {children}
@@ -235,6 +261,111 @@ export function InboxView({
     const E = window.setInterval(() => pt((ge?: any) => ge + 1), 1e3);
     return () => window.clearInterval(E);
   }, [de]);
+  useEffect(() => () => stopVoiceNotePlayback(), []);
+  // --- hold-to-record voice notes -------------------------------------------------
+  // A press on the mic starts recording straight away. Sliding up past the lock
+  // line pins the recording in hands-free mode; letting go anywhere else sends.
+  // The gesture is tracked on window, because the mic button is swapped out for
+  // the recording bar the instant recording begins.
+  const [locked, setLocked] = useState(false),
+    lockedRef = useRef(false),
+    holdY = useRef(0),
+    recStartRef = useRef(0),
+    startingRef = useRef(false),
+    releasedEarly = useRef(false),
+    holdTimer = useRef(0),
+    [slideUp, setSlideUp] = useState(0);
+  const LOCK_AT = 56;
+  const beginHold = async () => {
+    if (recorderRef.current) return;
+    const session = new VoiceRecorderSession();
+    recorderRef.current = session;
+    startingRef.current = true;
+    releasedEarly.current = false;
+    holdY.current = 0;
+    lockedRef.current = false;
+    setSlideUp(0);
+    setLocked(false);
+    const ok = await session.start();
+    startingRef.current = false;
+    if (recorderRef.current !== session) return; // cancelled while waiting
+    if (!ok) {
+      recorderRef.current = null;
+      return;
+    }
+    if (releasedEarly.current) {
+      // let go before the mic was ready — nothing was captured
+      recorderRef.current = null;
+      releasedEarly.current = false;
+      session.cancel();
+      return;
+    }
+    recStartRef.current = Date.now();
+    qe(true);
+    pt(0);
+    window.clearTimeout(holdTimer.current);
+    holdTimer.current = window.setTimeout(() => void finishVoice(false), 180000);
+  };
+  const finishVoice = async (cancel: boolean) => {
+    window.clearTimeout(holdTimer.current);
+    const session = recorderRef.current;
+    recorderRef.current = null;
+    const secs = Math.max(2, Math.round((Date.now() - recStartRef.current) / 1000));
+    if (!cancel && session) {
+      const audioUrl = await session.stop();
+      if (audioUrl) {
+        Te({
+          type: "voice",
+          duration: `0:${String(secs).padStart(2, "0")}`,
+          ...(audioUrl ? { audioUrl } : {}),
+        });
+      }
+    } else {
+      session?.cancel();
+    }
+    qe(false);
+    pt(0);
+    lockedRef.current = false;
+    setLocked(false);
+    holdY.current = 0;
+    setSlideUp(0);
+  };
+  const startHoldGesture = (startY: number) => {
+    const move = (ev: PointerEvent) => {
+      const dy = Math.max(0, startY - ev.clientY);
+      holdY.current = dy;
+      setSlideUp(Math.min(dy, 96));
+      if (dy >= LOCK_AT && !lockedRef.current) {
+        lockedRef.current = true;
+        setLocked(true);
+      } else if (dy < LOCK_AT - 14 && lockedRef.current) {
+        lockedRef.current = false;
+        setLocked(false);
+      }
+    };
+    const end = (cancel: boolean) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancelEv);
+      if (!cancel && lockedRef.current) {
+        // released past the lock line: keep recording hands-free
+        setSlideUp(0);
+        return;
+      }
+      if (startingRef.current) {
+        releasedEarly.current = true;
+        return;
+      }
+      void finishVoice(cancel);
+    };
+    const up = () => end(false);
+    const cancelEv = () => end(true);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancelEv);
+    void beginHold();
+  };
+  useEffect(() => () => window.clearTimeout(holdTimer.current), []);
   useEffect(() => () => stopVoiceNotePlayback(), []);
   useEffect(() => {
     if (!activeCall) return;
@@ -862,15 +993,13 @@ export function InboxView({
                               >
                                 <img
                                   src={E.attachment.url}
-                                  alt={E.attachment.caption ?? "Shared photo"}
+                                  alt={E.attachment.caption || "Shared photo"}
                                   className="h-[150px] w-full max-w-[220px] rounded-[8px] object-cover"
                                   loading="lazy"
                                 />
-                                {E.attachment.caption ? (
-                                  <span className="block px-1 pt-1 pb-0.5 text-left text-[10px] text-muted">
-                                    {E.attachment.caption}
-                                  </span>
-                                ) : null}
+                                {/* No filename or caption line under sent photos.
+                                    The filename was being read out as visible text
+                                    under every image, which no chat app does. */}
                               </button>
                             ) : E.attachment?.type === "voice" ? (
                               <button
@@ -888,7 +1017,7 @@ export function InboxView({
                                   );
                                 }}
                                 aria-label="Play voice note"
-                                className="flex items-center gap-2 text-left"
+                                className="flex w-[210px] max-w-full items-center gap-2.5 text-left sm:w-[240px]"
                               >
                                 <span
                                   className={cn(
@@ -904,44 +1033,51 @@ export function InboxView({
                                     <Play size={10} weight="fill" />
                                   )}
                                 </span>
-                                <span className="flex items-center gap-[2px]">
-                                  {[
-                                    6, 10, 5, 12, 8, 14, 7, 10, 6, 12, 9, 5,
-                                  ].map((tt?: any, Vt?: any) => {
-                                    const lit =
+                                {/* Waveform with a real progress fill. It used to be a
+                                    fixed 12-bar strip that clipped at the bubble edge
+                                    and only ever showed the total duration, so a
+                                    playing note gave no sense of position. */}
+                                <span className="relative flex min-w-0 flex-1 items-center gap-[2px]">
+                                  {VOICE_BARS.map((h, i) => {
+                                    const played =
                                       playingVoice?.id === E.id &&
-                                      Vt / 12 <= playingVoice.progress;
+                                      i / VOICE_BARS.length <= playingVoice.progress;
                                     return (
                                       <span
-                                        key={Vt}
+                                        key={i}
                                         className={cn(
-                                          "w-[2px] rounded-full transition-colors",
+                                          "w-[2px] shrink-0 rounded-full transition-colors",
                                           je
-                                            ? lit
+                                            ? played
                                               ? "bg-white"
-                                              : "bg-white/50"
-                                            : lit
+                                              : "bg-white/45"
+                                            : played
                                               ? "bg-forest"
-                                              : "bg-forest/45",
+                                              : "bg-forest/40",
                                         )}
-                                        style={{
-                                          height: tt,
-                                        }}
+                                        style={{ height: h }}
                                       />
                                     );
                                   })}
                                 </span>
                                 <span
                                   className={cn(
-                                    "text-[10px] tabular-nums",
+                                    "shrink-0 pl-0.5 text-[10px] leading-none tabular-nums",
                                     je ? "text-white/80" : "text-muted",
                                   )}
                                 >
-                                  {E.attachment.duration}
+                                  {playingVoice?.id === E.id && E.attachment.duration
+                                    ? `${formatVoiceElapsed(
+                                        playingVoice.progress,
+                                        E.attachment.duration,
+                                      )} / ${E.attachment.duration}`
+                                    : E.attachment.duration || "0:00"}
                                 </span>
                               </button>
                             ) : null}
-                            {E.text && E.attachment?.type !== "image"
+                            {E.text &&
+                            E.attachment?.type !== "image" &&
+                            E.attachment?.type !== "voice"
                               ? E.text
                               : null}
                           </div>
@@ -1153,22 +1289,32 @@ export function InboxView({
                     <div className="flex items-center gap-2 rounded-[8px] border border-clay/25 bg-clay-wash px-2.5 py-2">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-clay" />
                       <p className="flex-1 text-[11px] font-medium text-clay">
-                        Recording · 0:{String(De).padStart(2, "0")}
+                        {locked
+                          ? `Locked · 0:${String(De).padStart(2, "0")}`
+                          : `Recording · 0:${String(De).padStart(2, "0")}`}
+                        {locked ? (
+                          <span className="ml-1.5 text-[10px] font-normal text-clay/70">
+                            Tap Send when done
+                          </span>
+                        ) : (
+                          <span
+                            className={cn(
+                              "ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-normal transition-colors",
+                              slideUp >= 40 ? "text-forest" : "text-clay/70",
+                            )}
+                          >
+                            <ArrowBendUpLeft
+                              size={9}
+                              strokeWidth={2.4}
+                              className="rotate-90"
+                            />
+                            {slideUp >= 40 ? "Keep going to lock" : "Slide up to lock"}
+                          </span>
+                        )}
                       </p>
                       <button
                         type="button"
-                        onClick={async () => {
-                          const durationSec = Math.max(De, 2);
-                          const audioUrl = await recorderRef.current?.stop();
-                          recorderRef.current = null;
-                          Te({
-                            type: "voice",
-                            duration: `0:${String(durationSec).padStart(2, "0")}`,
-                            ...(audioUrl ? { audioUrl } : {}),
-                          });
-                          qe(false);
-                          pt(0);
-                        }}
+                        onClick={() => void finishVoice(false)}
                         className="inline-flex h-6 items-center gap-1 rounded-[5px] bg-clay px-2 text-[10px] font-semibold text-white"
                       >
                         <PaperPlaneTilt size={9} strokeWidth={2.4} />
@@ -1176,12 +1322,7 @@ export function InboxView({
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          recorderRef.current?.cancel();
-                          recorderRef.current = null;
-                          qe(false);
-                          pt(0);
-                        }}
+                        onClick={() => void finishVoice(true)}
                         aria-label="Cancel voice note"
                         className="inline-flex h-6 w-6 items-center justify-center rounded-full text-clay hover:bg-clay-soft"
                       >
@@ -1260,15 +1401,13 @@ export function InboxView({
                       ) : (
                         <button
                           type="button"
-                          onClick={async () => {
-                            const session = new VoiceRecorderSession();
-                            recorderRef.current = session;
-                            await session.start();
-                            qe(true);
-                            pt(0);
+                          aria-label="Hold to record a voice note, slide up to lock"
+                          onPointerDown={(g?: any) => {
+                            g.preventDefault();
+                            startHoldGesture(g.clientY);
                           }}
-                          aria-label="Record a voice note"
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest text-white hover:bg-forest-hover"
+                          onContextMenu={(g?: any) => g.preventDefault()}
+                          className="inline-flex h-9 w-9 shrink-0 touch-none select-none items-center justify-center rounded-full bg-forest text-white hover:bg-forest-hover"
                         >
                           <Microphone size={15} strokeWidth={2} />
                         </button>

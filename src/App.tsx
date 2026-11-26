@@ -304,6 +304,12 @@ export function App() {
       if (Array.isArray(data.highlights)) {
         setHighlights(data.highlights);
       }
+      if (Array.isArray(data.notifications)) {
+        // The server is the only place notifications are created, so it is the
+        // only source. The client used to read these from localStorage alone
+        // and therefore never showed one, which is why the bell looked dead.
+        q(data.notifications);
+      }
       if (Array.isArray(data.reels)) {
         te(data.reels);
       }
