@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
+import { hashPassword, normalizeEmail, normalizeHandle } from "./auth.js";
 import { INITIAL_SEED } from "./seed.js";
 
 const { Pool } = pg;
@@ -16,6 +17,33 @@ export type CollectionKey =
   | "prompts"
   | "guides";
 
+export interface AccountRecord {
+  id: string;
+  email: string;
+  handle: string;
+  passwordHash: string;
+  profile: any;
+  createdAt: string;
+}
+
+export interface ThreadRecord {
+  id: string;
+  participantIds: string[];
+  messages: any[];
+  meta: Record<
+    string,
+    {
+      unread?: number;
+      pinned?: boolean;
+      muted?: boolean;
+      archived?: boolean;
+      request?: boolean;
+      lastReadAt?: string;
+    }
+  >;
+  updatedAt: string;
+}
+
 export interface UserPrivateState {
   me: any;
   followingIds: string[];
@@ -26,6 +54,7 @@ export interface UserPrivateState {
   guideSteps: Record<string, number[]>;
   promptVotes: Record<string, string>;
   preferences: any;
+  visitors?: Array<{ personId: string; time: string }>;
 }
 
 const DEFAULT_COLLECTIONS: Record<CollectionKey, any[]> = {
@@ -40,19 +69,39 @@ const DEFAULT_COLLECTIONS: Record<CollectionKey, any[]> = {
   guides: structuredClone(INITIAL_SEED.guides) as any[],
 };
 
-export function createDefaultUserState(): UserPrivateState {
+export function createDefaultUserState(customMe?: any): UserPrivateState {
+  const meProfile = customMe ? structuredClone(customMe) : structuredClone(INITIAL_SEED.me);
+  const isNora = meProfile?.id === "me";
   return {
-    me: structuredClone(INITIAL_SEED.me),
-    followingIds: Array.isArray(INITIAL_SEED.followingIds)
-      ? [...INITIAL_SEED.followingIds]
-      : ["maya", "priya", "jonah"],
-    conversations: structuredClone(INITIAL_SEED.conversations || []) as any[],
-    notifications: structuredClone(INITIAL_SEED.notifications || []) as any[],
-    drafts: structuredClone(INITIAL_SEED.drafts || []) as any[],
+    me: meProfile,
+    followingIds: isNora
+      ? Array.isArray(INITIAL_SEED.followingIds)
+        ? [...INITIAL_SEED.followingIds]
+        : ["maya", "priya", "jonah"]
+      : ["me", "maya", "priya"].filter((id) => id !== meProfile?.id),
+    conversations: isNora ? (structuredClone(INITIAL_SEED.conversations || []) as any[]) : [],
+    notifications: isNora
+      ? (structuredClone(INITIAL_SEED.notifications || []) as any[])
+      : [
+          {
+            id: `welcome_${Date.now()}`,
+            type: "follow",
+            personIds: ["maya", "priya"],
+            text: "welcomed you to Thursday — say hello whenever you feel ready.",
+            time: "Just now",
+            unread: true,
+          },
+        ],
+    drafts: isNora ? (structuredClone(INITIAL_SEED.drafts || []) as any[]) : [],
     savedGuideIds: (INITIAL_SEED.guides || []).map((g: any) => g.id),
     guideSteps: {},
     promptVotes: {},
     preferences: structuredClone(INITIAL_SEED.preferences || {}),
+    visitors: [
+      { personId: "maya", time: "2h ago" },
+      { personId: "priya", time: "5h ago" },
+      { personId: "theo", time: "Yesterday" },
+    ].filter((v) => v.personId !== meProfile?.id),
   };
 }
 
@@ -63,12 +112,73 @@ const fallbackPath = path.resolve(process.cwd(), ".local-thursday-db.json");
 let memoryStore: {
   collections: Record<CollectionKey, any[]>;
   users: Record<string, UserPrivateState>;
-  workspaces: Record<string, { handle: string; displayName: string; snapshot: any; updatedAt: string }>;
+  accounts: Record<string, AccountRecord>;
+  sessions: Record<string, { userId: string; expiresAt: string }>;
+  threads: Record<string, ThreadRecord>;
+  workspaces: Record<
+    string,
+    { handle: string; displayName: string; snapshot: any; updatedAt: string }
+  >;
 } = {
   collections: structuredClone(DEFAULT_COLLECTIONS),
   users: {},
+  accounts: {},
+  sessions: {},
+  threads: {},
   workspaces: {},
 };
+
+function buildSeedAccounts(): AccountRecord[] {
+  const defaultHash = hashPassword("thursday123");
+  return (INITIAL_SEED.people || []).map((person: any) => {
+    const handle = normalizeHandle(person.handle || person.id);
+    const email =
+      person.id === "me"
+        ? "nora@thursday.app"
+        : `${person.id}@thursday.app`;
+    return {
+      id: person.id,
+      email,
+      handle,
+      passwordHash: defaultHash,
+      profile: structuredClone(person),
+      createdAt: new Date().toISOString(),
+    };
+  });
+}
+
+function buildSeedThreads(): ThreadRecord[] {
+  return (INITIAL_SEED.conversations || []).map((conv: any) => {
+    const otherId = conv.personId;
+    const pair = ["me", otherId].sort();
+    const id = conv.id || `thread_${pair.join("_")}`;
+    return {
+      id,
+      participantIds: ["me", otherId],
+      messages: (conv.messages || []).map((m: any) => ({
+        ...m,
+        senderId: m.senderId || (m.from === "me" ? "me" : otherId),
+      })),
+      meta: {
+        me: {
+          unread: Number(conv.unread || 0),
+          pinned: Boolean(conv.pinned),
+          muted: Boolean(conv.muted),
+          archived: Boolean(conv.archived),
+          request: Boolean(conv.request),
+        },
+        [otherId]: {
+          unread: 0,
+          pinned: false,
+          muted: false,
+          archived: false,
+          request: false,
+        },
+      },
+      updatedAt: new Date().toISOString(),
+    };
+  });
+}
 
 function loadFallbackFromDisk() {
   try {
@@ -76,10 +186,26 @@ function loadFallbackFromDisk() {
       const parsed = JSON.parse(fs.readFileSync(fallbackPath, "utf8"));
       if (parsed?.collections) {
         memoryStore = {
-          collections: { ...structuredClone(DEFAULT_COLLECTIONS), ...parsed.collections },
+          collections: {
+            ...structuredClone(DEFAULT_COLLECTIONS),
+            ...parsed.collections,
+          },
           users: parsed.users || {},
+          accounts: parsed.accounts || {},
+          sessions: parsed.sessions || {},
+          threads: parsed.threads || {},
           workspaces: parsed.workspaces || {},
         };
+      }
+    }
+    if (Object.keys(memoryStore.accounts).length === 0) {
+      for (const acc of buildSeedAccounts()) {
+        memoryStore.accounts[acc.id] = acc;
+      }
+    }
+    if (Object.keys(memoryStore.threads).length === 0) {
+      for (const th of buildSeedThreads()) {
+        memoryStore.threads[th.id] = th;
       }
     }
   } catch {}
@@ -106,12 +232,11 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
   pool = new Pool({
     connectionString: databaseUrl,
     ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-    max: 10,
+    max: 12,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 8_000,
   });
 
-  // Retry connection up to 8 times during container boot
   for (let attempt = 1; attempt <= 8; attempt++) {
     try {
       await pool.query("SELECT 1");
@@ -140,6 +265,30 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS thursday_accounts (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      handle TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      profile JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS thursday_sessions (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS thursday_threads (
+      id TEXT PRIMARY KEY,
+      participant_ids TEXT[] NOT NULL,
+      messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+      meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS thursday_workspaces (
       sync_key TEXT PRIMARY KEY,
       handle TEXT,
@@ -149,7 +298,10 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
     );
   `);
 
-  for (const [key, defaultItems] of Object.entries(DEFAULT_COLLECTIONS) as [CollectionKey, any[]][]) {
+  for (const [key, defaultItems] of Object.entries(DEFAULT_COLLECTIONS) as [
+    CollectionKey,
+    any[],
+  ][]) {
     await pool.query(
       `INSERT INTO thursday_collections (collection_key, items)
        VALUES ($1, $2::jsonb)
@@ -158,12 +310,289 @@ export async function initDatabase(): Promise<{ mode: "postgres" | "file" }> {
     );
   }
 
+  // Seed canonical member accounts if not yet present
+  const existingAccCount = await pool.query("SELECT COUNT(*)::int AS cnt FROM thursday_accounts");
+  if ((existingAccCount.rows[0]?.cnt ?? 0) === 0) {
+    for (const acc of buildSeedAccounts()) {
+      await pool.query(
+        `INSERT INTO thursday_accounts (id, email, handle, password_hash, profile)
+         VALUES ($1, $2, $3, $4, $5::jsonb)
+         ON CONFLICT (id) DO NOTHING`,
+        [acc.id, acc.email, acc.handle, acc.passwordHash, JSON.stringify(acc.profile)],
+      );
+    }
+  }
+
+  // Seed initial shared DM threads if not yet present
+  const existingThreadCount = await pool.query("SELECT COUNT(*)::int AS cnt FROM thursday_threads");
+  if ((existingThreadCount.rows[0]?.cnt ?? 0) === 0) {
+    for (const th of buildSeedThreads()) {
+      await pool.query(
+        `INSERT INTO thursday_threads (id, participant_ids, messages, meta, updated_at)
+         VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [th.id, th.participantIds, JSON.stringify(th.messages), JSON.stringify(th.meta)],
+      );
+    }
+  }
+
   return { mode: "postgres" };
 }
 
 export function getDbMode(): "postgres" | "file" {
   return usingPostgres ? "postgres" : "file";
 }
+
+// ==================== ACCOUNTS & SESSIONS ====================
+
+export async function findAccountByIdentifier(identifier: string): Promise<AccountRecord | null> {
+  const cleanEmail = normalizeEmail(identifier);
+  const cleanHandle = normalizeHandle(identifier);
+  if (!usingPostgres || !pool) {
+    const found = Object.values(memoryStore.accounts).find(
+      (a) => a.email === cleanEmail || a.handle === cleanHandle || a.id === identifier,
+    );
+    return found ? structuredClone(found) : null;
+  }
+  const { rows } = await pool.query(
+    `SELECT id, email, handle, password_hash, profile, created_at
+     FROM thursday_accounts
+     WHERE email = $1 OR handle = $2 OR id = $3
+     LIMIT 1`,
+    [cleanEmail, cleanHandle, identifier],
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    email: r.email,
+    handle: r.handle,
+    passwordHash: r.password_hash,
+    profile: r.profile,
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+  };
+}
+
+export async function isHandleTaken(handle: string): Promise<boolean> {
+  const clean = normalizeHandle(handle);
+  if (!clean) return true;
+  const existing = await findAccountByIdentifier(clean);
+  return Boolean(existing);
+}
+
+export async function createAccount(account: AccountRecord): Promise<AccountRecord> {
+  if (!usingPostgres || !pool) {
+    memoryStore.accounts[account.id] = structuredClone(account);
+    saveFallbackToDisk();
+    return account;
+  }
+  await pool.query(
+    `INSERT INTO thursday_accounts (id, email, handle, password_hash, profile)
+     VALUES ($1, $2, $3, $4, $5::jsonb)`,
+    [
+      account.id,
+      account.email,
+      account.handle,
+      account.passwordHash,
+      JSON.stringify(account.profile),
+    ],
+  );
+  return account;
+}
+
+export async function updateAccountProfile(userId: string, profile: any): Promise<void> {
+  if (!usingPostgres || !pool) {
+    if (memoryStore.accounts[userId]) {
+      memoryStore.accounts[userId].profile = structuredClone(profile);
+      saveFallbackToDisk();
+    }
+    return;
+  }
+  await pool.query(
+    `UPDATE thursday_accounts SET profile = $2::jsonb WHERE id = $1`,
+    [userId, JSON.stringify(profile)],
+  );
+}
+
+export async function createSession(token: string, userId: string): Promise<void> {
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  if (!usingPostgres || !pool) {
+    memoryStore.sessions[token] = { userId, expiresAt };
+    saveFallbackToDisk();
+    return;
+  }
+  await pool.query(
+    `INSERT INTO thursday_sessions (token, user_id, expires_at)
+     VALUES ($1, $2, $3::timestamptz)`,
+    [token, userId, expiresAt],
+  );
+}
+
+export async function deleteSession(token: string): Promise<void> {
+  if (!usingPostgres || !pool) {
+    delete memoryStore.sessions[token];
+    saveFallbackToDisk();
+    return;
+  }
+  await pool.query("DELETE FROM thursday_sessions WHERE token = $1", [token]);
+}
+
+export async function getAccountBySessionToken(token: string): Promise<AccountRecord | null> {
+  if (!token) return null;
+  if (!usingPostgres || !pool) {
+    const sess = memoryStore.sessions[token];
+    if (!sess || new Date(sess.expiresAt).getTime() < Date.now()) return null;
+    const acc = memoryStore.accounts[sess.userId];
+    return acc ? structuredClone(acc) : null;
+  }
+  const { rows } = await pool.query(
+    `SELECT a.id, a.email, a.handle, a.password_hash, a.profile, a.created_at
+     FROM thursday_sessions s
+     JOIN thursday_accounts a ON a.id = s.user_id
+     WHERE s.token = $1 AND s.expires_at > NOW()
+     LIMIT 1`,
+    [token],
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    email: r.email,
+    handle: r.handle,
+    passwordHash: r.password_hash,
+    profile: r.profile,
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+  };
+}
+
+// ==================== SHARED REAL-TIME THREADS ====================
+
+export async function getThreadsForUser(userId: string): Promise<ThreadRecord[]> {
+  if (!usingPostgres || !pool) {
+    return Object.values(memoryStore.threads)
+      .filter((t) => t.participantIds.includes(userId))
+      .map((t) => structuredClone(t));
+  }
+  const { rows } = await pool.query(
+    `SELECT id, participant_ids, messages, meta, updated_at
+     FROM thursday_threads
+     WHERE $1 = ANY(participant_ids)
+     ORDER BY updated_at DESC`,
+    [userId],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    participantIds: r.participant_ids,
+    messages: r.messages || [],
+    meta: r.meta || {},
+    updatedAt: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
+  }));
+}
+
+export async function getThreadById(threadId: string): Promise<ThreadRecord | null> {
+  if (!usingPostgres || !pool) {
+    const t = memoryStore.threads[threadId];
+    return t ? structuredClone(t) : null;
+  }
+  const { rows } = await pool.query(
+    `SELECT id, participant_ids, messages, meta, updated_at
+     FROM thursday_threads WHERE id = $1 LIMIT 1`,
+    [threadId],
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    participantIds: r.participant_ids,
+    messages: r.messages || [],
+    meta: r.meta || {},
+    updatedAt: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
+  };
+}
+
+export async function findOrCreateThread(
+  userA: string,
+  userB: string,
+  preferredId?: string,
+): Promise<ThreadRecord> {
+  const existingList = await getThreadsForUser(userA);
+  const existing = existingList.find((t) => t.participantIds.includes(userB));
+  if (existing) return existing;
+
+  const pair = [userA, userB].sort();
+  const id = preferredId || `conv_${pair.join("_")}_${Date.now()}`;
+  const record: ThreadRecord = {
+    id,
+    participantIds: [userA, userB],
+    messages: [],
+    meta: {
+      [userA]: { unread: 0, pinned: false, muted: false, archived: false, request: false },
+      [userB]: { unread: 0, pinned: false, muted: false, archived: false, request: false },
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  await saveThread(record);
+  return record;
+}
+
+export async function saveThread(thread: ThreadRecord): Promise<ThreadRecord> {
+  thread.updatedAt = new Date().toISOString();
+  if (!usingPostgres || !pool) {
+    memoryStore.threads[thread.id] = structuredClone(thread);
+    saveFallbackToDisk();
+    return thread;
+  }
+  await pool.query(
+    `INSERT INTO thursday_threads (id, participant_ids, messages, meta, updated_at)
+     VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+     ON CONFLICT (id)
+     DO UPDATE SET
+       participant_ids = EXCLUDED.participant_ids,
+       messages = EXCLUDED.messages,
+       meta = EXCLUDED.meta,
+       updated_at = NOW()`,
+    [thread.id, thread.participantIds, JSON.stringify(thread.messages), JSON.stringify(thread.meta)],
+  );
+  return thread;
+}
+
+export async function deleteThreadForUser(threadId: string, userId: string): Promise<void> {
+  const thread = await getThreadById(threadId);
+  if (!thread) return;
+  if (!usingPostgres || !pool) {
+    delete memoryStore.threads[threadId];
+    saveFallbackToDisk();
+    return;
+  }
+  await pool.query("DELETE FROM thursday_threads WHERE id = $1 AND $2 = ANY(participant_ids)", [
+    threadId,
+    userId,
+  ]);
+}
+
+export function formatThreadForUser(thread: ThreadRecord, userId: string, onlineIds: Set<string>) {
+  const otherId = thread.participantIds.find((id) => id !== userId) || userId;
+  const userMeta = thread.meta?.[userId] || {};
+  const otherMeta = thread.meta?.[otherId] || {};
+  return {
+    id: thread.id,
+    personId: otherId,
+    unread: Number(userMeta.unread || 0),
+    online: onlineIds.has(otherId),
+    lastActive: onlineIds.has(otherId) ? "Active now" : "Active recently",
+    pinned: Boolean(userMeta.pinned),
+    muted: Boolean(userMeta.muted),
+    archived: Boolean(userMeta.archived),
+    request: Boolean(userMeta.request),
+    otherLastReadAt: otherMeta.lastReadAt || null,
+    messages: (thread.messages || []).map((m: any) => ({
+      ...m,
+      from: (m.senderId ? m.senderId === userId : m.from === "me") ? "me" : "them",
+    })),
+  };
+}
+
+// ==================== COLLECTIONS & USER STATE ====================
 
 export async function getCollection<T = any>(key: CollectionKey): Promise<T[]> {
   if (!usingPostgres || !pool) {
@@ -219,11 +648,11 @@ export async function getAllCollections(): Promise<Record<CollectionKey, any[]>>
   return out;
 }
 
-export async function getUserState(clientId: string): Promise<UserPrivateState> {
-  const safeId = (clientId || "default").slice(0, 80);
+export async function getUserState(clientId: string, customMe?: any): Promise<UserPrivateState> {
+  const safeId = (clientId || "me").slice(0, 80);
   if (!usingPostgres || !pool) {
     if (!memoryStore.users[safeId]) {
-      memoryStore.users[safeId] = createDefaultUserState();
+      memoryStore.users[safeId] = createDefaultUserState(customMe);
       saveFallbackToDisk();
     }
     return structuredClone(memoryStore.users[safeId]);
@@ -232,7 +661,7 @@ export async function getUserState(clientId: string): Promise<UserPrivateState> 
     "SELECT state FROM thursday_user_state WHERE client_id = $1",
     [safeId],
   );
-  const defaults = createDefaultUserState();
+  const defaults = createDefaultUserState(customMe);
   if (!rows.length || !rows[0].state) {
     await pool.query(
       `INSERT INTO thursday_user_state (client_id, state)
@@ -242,14 +671,18 @@ export async function getUserState(clientId: string): Promise<UserPrivateState> 
     );
     return defaults;
   }
-  return { ...defaults, ...rows[0].state };
+  return {
+    ...defaults,
+    ...rows[0].state,
+    me: customMe ? { ...rows[0].state.me, ...customMe } : rows[0].state.me || defaults.me,
+  };
 }
 
 export async function updateUserState(
   clientId: string,
   updater: (current: UserPrivateState) => UserPrivateState,
 ): Promise<UserPrivateState> {
-  const safeId = (clientId || "default").slice(0, 80);
+  const safeId = (clientId || "me").slice(0, 80);
   const current = await getUserState(safeId);
   const next = updater(current);
   if (!usingPostgres || !pool) {
@@ -265,6 +698,53 @@ export async function updateUserState(
     [safeId, JSON.stringify(next)],
   );
   return next;
+}
+
+export async function pushNotificationToUser(
+  targetUserId: string,
+  notice: {
+    id?: string;
+    type: "like" | "comment" | "follow" | "mention";
+    actorId: string;
+    text: string;
+    postId?: string;
+    postImage?: string;
+  },
+): Promise<any | null> {
+  if (!targetUserId || targetUserId === notice.actorId) return null;
+  const fullNotice = {
+    id: notice.id || `notice_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    type: notice.type,
+    personIds: [notice.actorId],
+    text: notice.text,
+    time: "Just now",
+    unread: true,
+    postId: notice.postId,
+    postImage: notice.postImage,
+  };
+  await updateUserState(targetUserId, (curr) => ({
+    ...curr,
+    notifications: [fullNotice, ...(curr.notifications || []).slice(0, 49)],
+  }));
+  return fullNotice;
+}
+
+export async function recordProfileVisit(
+  targetUserId: string,
+  visitorUserId: string,
+): Promise<Array<{ personId: string; time: string }>> {
+  if (!targetUserId || !visitorUserId || targetUserId === visitorUserId) {
+    const st = await getUserState(targetUserId);
+    return st.visitors || [];
+  }
+  const updated = await updateUserState(targetUserId, (curr) => {
+    const filtered = (curr.visitors || []).filter((v) => v.personId !== visitorUserId);
+    return {
+      ...curr,
+      visitors: [{ personId: visitorUserId, time: "Just now" }, ...filtered].slice(0, 12),
+    };
+  });
+  return updated.visitors || [];
 }
 
 export async function saveWorkspaceSnapshot(
