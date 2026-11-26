@@ -1135,7 +1135,15 @@ export function QuietHoursCard({ enabled, onChange, fromTime = "22:00", untilTim
   );
 }
 
-export function ProfileVisitorsStrip({ people, onOpen }: any) {
+export function ProfileVisitorsStrip({
+  people,
+  visitors,
+  onOpen,
+}: any) {
+  const tracked: Array<{ personId: string; time: string }> =
+    Array.isArray(visitors) && visitors.length ? visitors : RECENT_VISITORS;
+  const isLive = Array.isArray(visitors) && visitors.length > 0;
+  const shown = tracked.slice(0, 5);
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
       <div className="flex items-center justify-between">
@@ -1143,28 +1151,36 @@ export function ProfileVisitorsStrip({ people, onOpen }: any) {
           <Eye size={11} />
           {" Profile visitors"}
         </p>
-        <span className="text-[9.5px] text-faint">last 7 days</span>
+        <span className="inline-flex items-center gap-1 text-[9.5px] text-faint">
+          {isLive ? (
+            <>
+              <span className="h-1 w-1 rounded-full bg-forest" />
+              live
+            </>
+          ) : (
+            "last 7 days"
+          )}
+        </span>
       </div>
       <div className="mt-2 flex items-center justify-between">
         <div className="flex -space-x-2">
-          {RECENT_VISITORS.slice(0, 5).map((m?: any) => {
-            const d = people.find((x?: any) => x.id === m.personId);
-            return d ? (
+          {shown.map((m?: any) => {
+            const person = people.find((x?: any) => x.id === m.personId);
+            return person ? (
               <button
                 key={m.personId}
                 type="button"
-                onClick={() => onOpen(d.id)}
-                className="rounded-full ring-2 ring-surface"
-                aria-label={`${d.name}, ${m.time}`}
+                onClick={() => onOpen(person.id)}
+                className="rounded-full ring-2 ring-surface transition-transform hover:-translate-y-0.5"
+                aria-label={`${person.name}, ${m.time || "recently"}`}
               >
-                <Avatar person={d} size="sm" />
+                <Avatar person={person} size="sm" />
               </button>
             ) : null;
           })}
         </div>
         <span className="text-[10.5px] text-muted">
-          +{RECENT_VISITORS.length - 5}
-          {" more"}
+          {tracked.length > 5 ? `+${tracked.length - 5} more` : "recent"}
         </span>
       </div>
     </div>
