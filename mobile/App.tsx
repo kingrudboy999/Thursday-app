@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -48,6 +48,7 @@ import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { ReelsScreen } from "./src/screens/ReelsScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { SpacesScreen } from "./src/screens/SpacesScreen";
+import { mobileApi } from "./src/api";
 import { usePersistentState } from "./src/storage";
 import { DARK_THEME, LIGHT_THEME, MobileThemeMode } from "./src/theme";
 
@@ -89,6 +90,22 @@ export default function App() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(PHOTOS.potteryWindow);
   const [showSplash, setShowSplash] = useState(true);
 
+  useEffect(() => {
+    mobileApi.bootstrap().then((data) => {
+      if (!data?.ok) return;
+      if (Array.isArray(data.posts) && data.posts.length) {
+        setPosts((local) => {
+          const map = new Map<string, any>();
+          for (const p of [...data.posts, ...local]) {
+            if (p?.id && !map.has(p.id)) map.set(p.id, p);
+          }
+          return Array.from(map.values());
+        });
+      }
+      if (Array.isArray(data.circles) && data.circles.length) setCircles(data.circles);
+    });
+  }, []);
+
   const theme = themeMode === "dark" ? DARK_THEME : LIGHT_THEME;
   const me = people.find((p) => p.id === ME_ID) ?? people[0];
   const viewedPerson = people.find((p) => p.id === profilePersonId) ?? me;
@@ -109,16 +126,18 @@ export default function App() {
         <ReelsScreen
           reels={reels}
           people={people}
-          onToggleLike={(id) =>
+          onToggleLike={(id) => {
             setReels((prev) =>
               prev.map((r) =>
                 r.id === id ? { ...r, liked: !r.liked, likes: r.liked ? r.likes - 1 : r.likes + 1 } : r,
               ),
-            )
-          }
-          onToggleSave={(id) =>
-            setReels((prev) => prev.map((r) => (r.id === id ? { ...r, saved: !r.saved } : r)))
-          }
+            );
+            mobileApi.reelAction(id, "like");
+          }}
+          onToggleSave={(id) => {
+            setReels((prev) => prev.map((r) => (r.id === id ? { ...r, saved: !r.saved } : r)));
+            mobileApi.reelAction(id, "save");
+          }}
           onExit={() => setRoute("home")}
         />
       </SafeAreaProvider>
@@ -185,11 +204,13 @@ export default function App() {
                       : p,
                   ),
                 );
+                mobileApi.postAction(postId, "like");
               }}
-              onToggleSave={(postId) =>
-                setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, saved: !p.saved } : p)))
-              }
-              onVotePoll={(postId, optionId) =>
+              onToggleSave={(postId) => {
+                setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, saved: !p.saved } : p)));
+                mobileApi.postAction(postId, "save");
+              }}
+              onVotePoll={(postId, optionId) => {
                 setPosts((prev) =>
                   prev.map((p) => {
                     if (p.id !== postId || !p.poll || p.poll.votedId) return p;
@@ -204,23 +225,23 @@ export default function App() {
                       },
                     };
                   }),
-                )
-              }
-              onAddComment={(postId, text) =>
+                );
+                mobileApi.votePoll(postId, optionId);
+              }}
+              onAddComment={(postId, text) => {
+                const comment = { id: `c_${Date.now()}`, authorId: ME_ID, text, time: "Just now" };
                 setPosts((prev) =>
                   prev.map((p) =>
                     p.id === postId
                       ? {
                           ...p,
-                          comments: [
-                            ...p.comments,
-                            { id: `c_${Date.now()}`, authorId: ME_ID, text, time: "Just now" },
-                          ],
+                          comments: [...p.comments, comment],
                         }
                       : p,
                   ),
-                )
-              }
+                );
+                mobileApi.addComment(postId, comment);
+              }}
               onOpenProfile={(pid) => {
                 setProfilePersonId(pid);
                 setRoute("profile");
@@ -510,22 +531,22 @@ export default function App() {
                 onPress={() => {
                   const clean = newPostText.trim();
                   if (!clean) return;
-                  setPosts((prev) => [
-                    {
-                      id: `p_${Date.now()}`,
-                      authorId: ME_ID,
-                      time: "Just now",
-                      location: me.location,
-                      text: clean,
-                      images: selectedPhoto ? [selectedPhoto] : [],
-                      likes: 0,
-                      reposts: 0,
-                      liked: false,
-                      saved: false,
-                      comments: [],
-                    },
-                    ...prev,
-                  ]);
+                  const newPost = {
+                    id: `p_${Date.now()}`,
+                    authorId: ME_ID,
+                    time: "Just now",
+                    location: me.location,
+                    place: me.location,
+                    text: clean,
+                    images: selectedPhoto ? [selectedPhoto] : [],
+                    likes: 0,
+                    reposts: 0,
+                    liked: false,
+                    saved: false,
+                    comments: [],
+                  };
+                  setPosts((prev) => [newPost, ...prev]);
+                  mobileApi.createPost(newPost, me);
                   setNewPostText("");
                   setComposerOpen(false);
                 }}
