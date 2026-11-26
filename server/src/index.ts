@@ -621,16 +621,33 @@ app.get("/api/bootstrap", async (req, res) => {
       getThreadsForUser(userId),
     ]);
 
+    // A signed-out visitor has no account and no stored profile, and the seed
+    // `me` is null. Reading `.id` off that null used to take the whole
+    // bootstrap down with a 500 -- every logged-out visitor got a dead page.
+    const storedMe = userState.me && typeof userState.me === "object" ? userState.me : {};
     const meProfile = actor.account?.profile
-      ? { ...userState.me, ...actor.account.profile, id: userId }
-      : userState.me;
+      ? { ...storedMe, ...actor.account.profile, id: userId }
+      : { ...storedMe, id: userId };
 
     const blockedSet = new Set(userState.blockedIds || []);
+    // A null can end up in the people collection (a row deleted out from under
+    // the list, a partial write). It used to crash bootstrap for every
+    // signed-out visitor, because the projector read `p.id` unguarded.
+    const safePeople = (collections.people || []).filter(
+      (p: any) => p && typeof p === "object" && typeof p.id === "string",
+    );
     // Counts are derived from real relationships, never from a stored profile
     // snapshot. The snapshot was written once at signup and never updated, so
     // the profile's own page showed a different follower count than everybody
     // else saw -- and never moved when people followed or unfollowed.
-    const followingCount = userState.followingIds.length;
+    // Count only follows that point at somebody who still exists. The stored
+    // followingIds of long-lived accounts still contain demo ids like "maya"
+    // and "priya" from builds that seeded fake people, so a raw length reports
+    // a following list you cannot see anywhere in the app.
+    const liveIds = new Set(safePeople.map((p: any) => p.id));
+    const followingCount = (userState.followingIds || []).filter((id: string) =>
+      liveIds.has(id),
+    ).length;
     const followerCounts = await getFollowerCounts();
     const withRealCounts = (p: any) => {
       // A profile row can be missing (an account deleted between reads). Guard
@@ -642,12 +659,12 @@ app.get("/api/bootstrap", async (req, res) => {
         followers: followerCounts[p.id] ?? 0,
       };
     };
-    const people = collections.people.some((p: any) => p.id === userId)
-      ? collections.people
+    const people = safePeople.some((p: any) => p.id === userId)
+      ? safePeople
           .filter((p: any) => !blockedSet.has(p.id))
           .map((p: any) => (p.id === userId ? { ...p, ...meProfile } : p))
           .map(withRealCounts)
-      : [meProfile, ...collections.people.filter((p: any) => !blockedSet.has(p.id))].map(
+      : [meProfile, ...safePeople.filter((p: any) => !blockedSet.has(p.id))].map(
           withRealCounts,
         );
 
@@ -663,12 +680,12 @@ app.get("/api/bootstrap", async (req, res) => {
       onlineUserIds: Array.from(onlineSet),
       people: people.map((p: any) => externalizeMedia(p, `people_${p.id}`, mediaOrigin)),
       posts: collections.posts
-        .filter((p: any) => !blockedSet.has(p.authorId))
+        .filter((p: any) => p && typeof p === "object" && !blockedSet.has(p.authorId))
         .map((p: any) => projectPostForUser(p, userId)),
       stories: projectStoriesForUser(collections.stories, blockedSet),
       highlights: collections.highlights,
       reels: collections.reels
-        .filter((r: any) => !blockedSet.has(r.authorId))
+        .filter((r: any) => r && typeof r === "object" && !blockedSet.has(r.authorId))
         .map((r: any) => externalizeMedia(projectReelForUser(r, userId), `reels_${r.id}`, mediaOrigin)),
       circles: collections.circles.map((c: any) => projectCircleForUser(c, userId)),
       events: collections.events.map((e: any) => projectEventForUser(e, userId)),
