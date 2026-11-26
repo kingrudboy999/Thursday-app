@@ -31,6 +31,9 @@ import {
   saveThread,
   saveWorkspaceSnapshot,
   updateAccountProfile,
+  updateAccountPassword,
+  deleteAccountCompletely,
+  getAccountById,
   updateCollection,
   updateUserState,
 } from "./db.js";
@@ -119,6 +122,30 @@ function extractBearerToken(req: Request): string {
     return req.query.token.trim();
   }
   return "";
+}
+
+/**
+ * Stories are ephemeral: a post disappears 24 hours after it was made.
+ * Nothing enforced that before, so the story rail accumulated forever.
+ */
+const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+
+function storyTimestamp(story: any): number | null {
+  const raw = story?.createdAt || story?.postedAt;
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function projectStoriesForUser(stories: any[], blockedIds: Set<string>) {
+  const now = Date.now();
+  return (stories || []).filter((story: any) => {
+    if (blockedIds.has(story.authorId) || blockedIds.has(story.personId)) return false;
+    const at = storyTimestamp(story);
+    // Seed stories carry no timestamp; keep them so the demo isn't empty.
+    if (at === null) return true;
+    return now - at < STORY_TTL_MS;
+  });
 }
 
 async function resolveRequestActor(req: Request): Promise<{
@@ -492,9 +519,12 @@ app.get("/api/bootstrap", async (req, res) => {
       ? { ...userState.me, ...actor.account.profile, id: userId }
       : userState.me;
 
+    const blockedSet = new Set(userState.blockedIds || []);
     const people = collections.people.some((p: any) => p.id === userId)
-      ? collections.people.map((p: any) => (p.id === userId ? { ...p, ...meProfile } : p))
-      : [meProfile, ...collections.people];
+      ? collections.people
+          .filter((p: any) => !blockedSet.has(p.id))
+          .map((p: any) => (p.id === userId ? { ...p, ...meProfile } : p))
+      : [meProfile, ...collections.people.filter((p: any) => !blockedSet.has(p.id))];
 
     const formattedConversations = userThreads.map((t) =>
       formatThreadForUser(t, userId, onlineSet),
@@ -507,10 +537,14 @@ app.get("/api/bootstrap", async (req, res) => {
       userId,
       onlineUserIds: Array.from(onlineSet),
       people,
-      posts: collections.posts.map((p: any) => projectPostForUser(p, userId)),
-      stories: collections.stories,
+      posts: collections.posts
+        .filter((p: any) => !blockedSet.has(p.authorId))
+        .map((p: any) => projectPostForUser(p, userId)),
+      stories: projectStoriesForUser(collections.stories, blockedSet),
       highlights: collections.highlights,
-      reels: collections.reels.map((r: any) => projectReelForUser(r, userId)),
+      reels: collections.reels
+        .filter((r: any) => !blockedSet.has(r.authorId))
+        .map((r: any) => projectReelForUser(r, userId)),
       circles: collections.circles.map((c: any) => projectCircleForUser(c, userId)),
       events: collections.events.map((e: any) => projectEventForUser(e, userId)),
       prompts: collections.prompts,
@@ -521,6 +555,8 @@ app.get("/api/bootstrap", async (req, res) => {
       // back to seeded demo conversations, which is why the inbox showed fake
       // people with fake messages that could never receive a reply.
       conversations: formattedConversations,
+      blockedIds: userState.blockedIds || [],
+      mutedIds: userState.mutedIds || [],
       notifications: userState.notifications,
       drafts: userState.drafts,
       savedGuideIds: userState.savedGuideIds,
@@ -603,6 +639,192 @@ app.put("/api/me", async (req, res) => {
 
     broadcast("profile:updated", nextState.me);
     res.json({ ok: true, me: nextState.me });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== SAFETY: BLOCK, MUTE & REPORT ====================
+/**
+ * Blocking has to mean something everywhere, otherwise it is decorative.
+ * A block hides that person's content from you, stops their messages, and
+ * stops yours from reaching them.
+ */
+app.post("/api/people/:id/block", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const targetId = req.params.id;
+    if (targetId === userId) {
+      return res.status(400).json({ ok: false, error: "You cannot block yourself." });
+    }
+
+    const shouldBlock = req.body?.blocked !== false;
+    const nextState = await updateUserState(userId, (curr) => {
+      const blocked = new Set(curr.blockedIds || []);
+      if (shouldBlock) blocked.add(targetId);
+      else blocked.delete(targetId);
+      return {
+        ...curr,
+        blockedIds: Array.from(blocked),
+        // Blocking also unfollows in both directions, like every other app.
+        followingIds: shouldBlock
+          ? (curr.followingIds || []).filter((id) => id !== targetId)
+          : curr.followingIds,
+      };
+    });
+
+    if (shouldBlock) {
+      await updateCollection("people", (people) =>
+        people.map((person: any) =>
+          person.id === userId
+            ? { ...person, following: Math.max(0, (person.following || 1) - 1) }
+            : person,
+        ),
+      );
+    }
+
+    broadcast(
+      "safety:updated",
+      { blockedIds: nextState.blockedIds, mutedIds: nextState.mutedIds || [] },
+      { targetUserIds: [userId] },
+    );
+    res.json({
+      ok: true,
+      blocked: shouldBlock,
+      blockedIds: nextState.blockedIds,
+      followingIds: nextState.followingIds,
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/people/:id/mute", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const userId = actor.userId;
+    const targetId = req.params.id;
+    const shouldMute = req.body?.muted !== false;
+
+    // A whisper is per-thread in most apps; here it follows the person.
+    const nextState = await updateUserState(userId, (curr) => {
+      const muted = new Set(curr.mutedIds || []);
+      if (shouldMute) muted.add(targetId);
+      else muted.delete(targetId);
+      return { ...curr, mutedIds: Array.from(muted) };
+    });
+
+    broadcast(
+      "safety:updated",
+      { blockedIds: nextState.blockedIds || [], mutedIds: nextState.mutedIds || [] },
+      { targetUserIds: [userId] },
+    );
+    res.json({ ok: true, muted: shouldMute, mutedIds: nextState.mutedIds });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+/**
+ * Reports are kept in their own collection so they can be reviewed later.
+ * There is no moderation queue yet, but the data has to exist before one can.
+ */
+app.post("/api/reports", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
+    const targetType = String(body.targetType || "");
+    const targetId = String(body.targetId || "");
+    const reason = String(body.reason || "").slice(0, 80);
+    const note = String(body.note || "").slice(0, 1000);
+
+    if (!["person", "post", "message", "reel", "comment"].includes(targetType)) {
+      return res.status(400).json({ ok: false, error: "Unknown report type." });
+    }
+    if (!targetId) {
+      return res.status(400).json({ ok: false, error: "Nothing to report." });
+    }
+    if (!reason) {
+      return res.status(400).json({ ok: false, error: "Pick a reason." });
+    }
+
+    const report = {
+      id: `report_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      reporterId: actor.userId,
+      targetType,
+      targetId,
+      reason,
+      note,
+      status: "open",
+      createdAt: new Date().toISOString(),
+    };
+    await updateCollection("reports", (list) => [report, ...list]);
+    console.log(
+      `[safety] report ${report.id}: ${targetType}/${targetId} by ${actor.userId} (${reason})`,
+    );
+    res.status(201).json({ ok: true, reportId: report.id });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== ACCOUNT MANAGEMENT ====================
+app.post("/api/auth/change-password", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    if (!actor.account) {
+      return res.status(401).json({ ok: false, error: "Sign in to change your password." });
+    }
+    const current = String(req.body?.currentPassword || "");
+    const next = String(req.body?.newPassword || "");
+
+    if (!verifyPassword(current, actor.account.passwordHash)) {
+      return res.status(400).json({ ok: false, error: "That current password is not right." });
+    }
+    if (next.length < 8) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Use at least 8 characters for your new password." });
+    }
+    if (next === current) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Your new password must be different." });
+    }
+
+    await updateAccountPassword(actor.account.id, hashPassword(next));
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+app.post("/api/auth/delete-account", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    if (!actor.account) {
+      return res.status(401).json({ ok: false, error: "Sign in to delete your account." });
+    }
+    const password = String(req.body?.password || "");
+    if (!verifyPassword(password, actor.account.passwordHash)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Enter your password to confirm deletion." });
+    }
+    // Accept either the word or the handle, so this cannot happen by reflex.
+    const typed = String(req.body?.confirm || "").trim().toLowerCase();
+    const expected = (actor.account.handle || "").toLowerCase();
+    if (typed !== "delete" && typed !== expected && typed !== "@" + expected) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Type "delete" or your handle to confirm.' });
+    }
+
+    const userId = actor.account.id;
+    await deleteAccountCompletely(userId);
+    console.log(`[account] deleted ${userId}`);
+    res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err?.message });
   }
@@ -1106,7 +1328,10 @@ app.post("/api/stories", async (req, res) => {
     const body = req.body || {};
     const story = {
       id: body.id || `story_${Date.now()}`,
+      // Server time wins; a client cannot backdate a story into existence.
+      createdAt: new Date().toISOString(),
       personId: actor.userId,
+      authorId: actor.userId,
       image: body.image,
       caption: body.caption || "",
       time: "Just now",
@@ -1547,6 +1772,25 @@ app.post("/api/conversations/:id/messages", async (req, res) => {
     };
 
     const otherId = thread.participantIds.find((id) => id !== userId) || body.personId;
+
+    // A block is mutual silence: neither side can message through it.
+    if (otherId) {
+      const [mine, theirs] = await Promise.all([
+        getUserState(userId),
+        getUserState(otherId),
+      ]);
+      const iBlockedThem = (mine.blockedIds || []).includes(otherId);
+      const theyBlockedMe = (theirs.blockedIds || []).includes(userId);
+      if (iBlockedThem || theyBlockedMe) {
+        return res.status(403).json({
+          ok: false,
+          error: iBlockedThem
+            ? "You blocked this person. Unblock them to send messages."
+            : "This conversation is unavailable.",
+        });
+      }
+    }
+
     thread.messages = [...(thread.messages || []), msg];
     thread.meta[userId] = { ...(thread.meta[userId] || {}), unread: 0, archived: false };
     if (otherId) {

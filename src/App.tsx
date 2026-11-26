@@ -28,6 +28,12 @@ import {
   apiSendMessage,
   apiSendTyping,
   apiStartConversation,
+  apiBlockPerson,
+  apiMutePerson,
+  apiReportContent,
+  apiChangePassword,
+  apiDeleteAccount,
+  REPORT_REASONS,
   apiToggleCircle,
   apiToggleEventRsvp,
   apiToggleFollow,
@@ -64,6 +70,7 @@ import {
   PostDetailModal,
   SearchPaletteModal,
   StoryViewerModal,
+  ReportModal,
   TopBar,
 } from "./components/social-shell";
 import {
@@ -153,6 +160,9 @@ export function App() {
     [onlineIds, setOnlineIds] = useState<string[]>([]),
     [live, setLive] = useState<boolean>(false),
     [visitors, setVisitors] = useState<any[]>([]),
+    [blockedIds, setBlockedIds] = useState<string[]>([]),
+    [reportTarget, setReportTarget] = useState<{ type: string; id: string } | null>(null),
+    [mutedIds, setMutedIds] = useState<string[]>([]),
     [incomingCall, setIncomingCall] = useState<any>(null),
     [callLog, setCallLog] = useState<any[]>([]),
     // The profile view must default to whoever is signed in. Hard-coding ME_ID
@@ -341,6 +351,8 @@ export function App() {
       if (Array.isArray(data.guides) && data.guides.length) {
         setGuides(data.guides);
       }
+      if (Array.isArray(data.blockedIds)) setBlockedIds(data.blockedIds);
+      if (Array.isArray(data.mutedIds)) setMutedIds(data.mutedIds);
       if (Array.isArray(data.conversations)) {
         // Server threads are the only truth for the inbox. Local conversations
         // that the server does not know about are dropped, which also clears
@@ -1571,6 +1583,9 @@ export function App() {
               stories={_}
               highlights={highlights}
               onOpenStory={At_local}
+              onToggleBlock={handleSetBlock}
+              onToggleMute={handleSetMute}
+              onReport={(type: string, id: string) => setReportTarget({ type, id })}
               onOpenHighlight={handleOpenHighlight}
               onAddHighlight={() => setCreateHighlightOpen(true)}
               onToast={Te}
@@ -1627,6 +1642,30 @@ export function App() {
               onOpenPerson={ge}
               onSignOut={handleSignOut}
               onBackHome={() => E("home")}
+              blockedPeople={c.filter((p: any) => (blockedIds || []).includes(p.id))}
+              mutedPeople={c.filter((p: any) => (mutedIds || []).includes(p.id))}
+              onUnblock={(id: string) => handleSetBlock(id, false)}
+              onUnmute={(id: string) => handleSetMute(id, false)}
+              onChangePassword={async (currentPassword: string, newPassword: string) => {
+                const res = await apiChangePassword(currentPassword, newPassword);
+                return {
+                  ok: res.ok,
+                  error: res.ok ? undefined : res.error || "Could not change your password.",
+                };
+              }}
+              onDeleteAccount={async (password: string, confirm: string) => {
+                const res = await apiDeleteAccount(password, confirm);
+                if (res.ok) {
+                  resetStoredWorkspaceState();
+                  setAuthUser(null);
+                  window.location.reload();
+                  return { ok: true };
+                }
+                return {
+                  ok: false,
+                  error: res.error || "Could not delete your account.",
+                };
+              }}
             />
           );
         default:
@@ -1731,6 +1770,64 @@ export function App() {
 
   const activeViewerStories = highlightViewerStories ?? _;
 
+  // Blocking and muting are optimistic: the list updates immediately, then the
+  // server confirms. If it fails we put the list back.
+  const handleSetBlock = useCallback(
+    async (personId: string, blocked: boolean) => {
+      const before = blockedIds;
+      setBlockedIds((prev) =>
+        blocked ? Array.from(new Set([...prev, personId])) : prev.filter((id) => id !== personId),
+      );
+      const res = await apiBlockPerson(personId, blocked);
+      if (!res.ok) {
+        setBlockedIds(before);
+        Te(
+          "Could not update block",
+          res.error || "Please try again.",
+        );
+        return;
+      }
+      const confirmed = (res.data?.blockedIds as string[]) || [];
+      if (Array.isArray(confirmed)) setBlockedIds(confirmed);
+      // The server unfollows on block; mirror that locally or the person
+      // lingers in the "Following" list with no way back.
+      if (blocked) {
+        const following = (res.data?.followingIds as string[]) || [];
+        if (Array.isArray(following)) g(following);
+        else g((prev: string[]) => prev.filter((id) => id !== personId));
+      }
+      u((people: any[]) =>
+        blocked ? people.filter((p) => p.id !== personId) : people,
+      );
+      Te(
+        blocked ? "Blocked" : "Unblocked",
+        blocked
+          ? "They can no longer message you or appear in your feed."
+          : "You can see each other again.",
+      );
+    },
+    [blockedIds, Te],
+  );
+
+  const handleSetMute = useCallback(
+    async (personId: string, muted: boolean) => {
+      const before = mutedIds;
+      setMutedIds((prev) =>
+        muted ? Array.from(new Set([...prev, personId])) : prev.filter((id) => id !== personId),
+      );
+      const res = await apiMutePerson(personId, muted);
+      if (!res.ok) {
+        setMutedIds(before);
+        Te("Could not update mute", res.error || "Please try again.");
+        return;
+      }
+      const confirmed = (res.data?.mutedIds as string[]) || [];
+      if (Array.isArray(confirmed)) setMutedIds(confirmed);
+      Te(muted ? "Muted" : "Unmuted", muted ? "You won't be notified about them." : "Their updates are back.");
+    },
+    [mutedIds, Te],
+  );
+
   const handleAuthenticated = useCallback(
     (user: AuthUser) => {
       setAuthUser(user);
@@ -1790,6 +1887,7 @@ export function App() {
         unreadNotices={A0}
         unreadMessages={s0}
         followingIds={y}
+        blockedIds={blockedIds}
         people={c}
         circles={x}
         events={A}
@@ -1810,6 +1908,7 @@ export function App() {
         unreadNotices={A0}
         unreadMessages={s0}
         followingIds={y}
+        blockedIds={blockedIds}
         people={c}
         circles={x}
         events={A}
@@ -1976,6 +2075,27 @@ export function App() {
           return { ok: true };
         }}
       />
+      <ReportModal
+        open={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        reasons={REPORT_REASONS}
+        targetLabel={
+          reportTarget?.type === "person"
+            ? `@${c.find((p: any) => p.id === reportTarget.id)?.handle || "this person"}`
+            : undefined
+        }
+        onSubmit={async ({ reason, note }: any) =>
+          apiReportContent({
+            targetType: (reportTarget?.type || "person") as any,
+            targetId: reportTarget?.id || "",
+            reason,
+            note,
+          }).then((res) => ({
+            ok: res.ok,
+            error: res.ok ? undefined : res.error,
+          }))
+        }
+      />
       {incomingCall ? (
         <IncomingCallBanner
           call={incomingCall}
@@ -1989,8 +2109,8 @@ export function App() {
               ye("messages");
             }
             Te(
-              call.kind === "video" ? "Video call joined" : "Call joined",
-              `${other?.name ?? "Your friend"} is on the line.`,
+              "Nudge accepted",
+              `${other?.name ?? "Your friend"} accepted — say hello in the chat.`,
             );
             setIncomingCall(null);
           }}

@@ -588,9 +588,12 @@ export function InboxView({
                     targetUserId: Ae.id,
                     conversationId: fe.id,
                   });
-                  onToast?.("Calling", `Ringing ${Ae.name.split(" ")[0]}…`);
+                  onToast?.(
+                    "Ringing",
+                    `${Ae.name.split(" ")[0]} will see a nudge to come chat — live audio isn't wired up yet.`,
+                  );
                 }}
-                aria-label="Call"
+                aria-label="Ring to chat"
                 className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-ink sm:inline-flex"
               >
                 <Phone size={15} strokeWidth={2} />
@@ -614,9 +617,12 @@ export function InboxView({
                     targetUserId: Ae.id,
                     conversationId: fe.id,
                   });
-                  onToast?.("Video call", `Ringing ${Ae.name.split(" ")[0]}…`);
+                  onToast?.(
+                    "Ringing",
+                    `${Ae.name.split(" ")[0]} will see a nudge to come chat — video isn't wired up yet.`,
+                  );
                 }}
-                aria-label="Video call"
+                aria-label="Ring to chat (video)"
                 className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-ink sm:inline-flex"
               >
                 <VideoCamera size={16} strokeWidth={2} />

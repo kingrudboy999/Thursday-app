@@ -15,7 +15,8 @@ export type CollectionKey =
   | "circles"
   | "events"
   | "prompts"
-  | "guides";
+  | "guides"
+  | "reports";
 
 export interface AccountRecord {
   id: string;
@@ -55,6 +56,10 @@ export interface UserPrivateState {
   promptVotes: Record<string, string>;
   preferences: any;
   visitors?: Array<{ personId: string; time: string }>;
+  /** People you have blocked. Their content never reaches you. */
+  blockedIds?: string[];
+  /** People whose activity you follow quietly — still visible, no notifications. */
+  mutedIds?: string[];
 }
 
 const DEFAULT_COLLECTIONS: Record<CollectionKey, any[]> = {
@@ -67,6 +72,8 @@ const DEFAULT_COLLECTIONS: Record<CollectionKey, any[]> = {
   events: structuredClone(INITIAL_SEED.events) as any[],
   prompts: structuredClone(INITIAL_SEED.prompts) as any[],
   guides: structuredClone(INITIAL_SEED.guides) as any[],
+  // Moderation queue. Empty until someone reports something.
+  reports: [],
 };
 
 export function createDefaultUserState(customMe?: any): UserPrivateState {
@@ -99,6 +106,8 @@ export function createDefaultUserState(customMe?: any): UserPrivateState {
     guideSteps: {},
     promptVotes: {},
     preferences: structuredClone(INITIAL_SEED.preferences || {}),
+    blockedIds: [],
+    mutedIds: [],
     visitors: [
       { personId: "maya", time: "2h ago" },
       { personId: "priya", time: "5h ago" },
@@ -440,6 +449,97 @@ export async function createAccount(account: AccountRecord): Promise<AccountReco
   return account;
 }
 
+export async function updateAccountPassword(
+  userId: string,
+  passwordHash: string,
+): Promise<void> {
+  if (!usingPostgres || !pool) {
+    if (memoryStore.accounts[userId]) {
+      memoryStore.accounts[userId].passwordHash = passwordHash;
+      saveFallbackToDisk();
+    }
+    return;
+  }
+  await pool.query(
+    `UPDATE thursday_accounts SET password_hash = $2 WHERE id = $1`,
+    [userId, passwordHash],
+  );
+}
+
+export async function getAccountById(userId: string): Promise<AccountRecord | null> {
+  if (!usingPostgres || !pool) {
+    const found = memoryStore.accounts[userId];
+    return found ? structuredClone(found) : null;
+  }
+  const { rows } = await pool.query(
+    `SELECT id, email, handle, password_hash, profile, created_at
+       FROM thursday_accounts WHERE id = $1 LIMIT 1`,
+    [userId],
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    email: r.email,
+    handle: r.handle,
+    passwordHash: r.password_hash,
+    profile: r.profile,
+    createdAt: r.created_at,
+  };
+}
+
+/**
+ * Deletes an account and everything that belonged to it. Deliberately thorough:
+ * a half-deleted account that still appears in the directory is worse than one
+ * that cannot be deleted at all.
+ */
+export async function deleteAccountCompletely(userId: string): Promise<void> {
+  if (!usingPostgres || !pool) {
+    delete memoryStore.accounts[userId];
+    delete memoryStore.users[userId];
+    for (const [token, session] of Object.entries(memoryStore.sessions)) {
+      if (session.userId === userId) delete memoryStore.sessions[token];
+    }
+    for (const [id, thread] of Object.entries(memoryStore.threads)) {
+      if (thread.participantIds.includes(userId)) delete memoryStore.threads[id];
+    }
+    const collections = memoryStore.collections as Record<string, any[]>;
+    for (const key of Object.keys(collections)) {
+      if (Array.isArray(collections[key])) {
+        collections[key] = collections[key].filter(
+          (item: any) => item?.id !== userId && item?.authorId !== userId,
+        );
+      }
+    }
+    saveFallbackToDisk();
+    return;
+  }
+
+  await pool.query(`DELETE FROM thursday_sessions WHERE user_id = $1`, [userId]);
+  await pool.query(`DELETE FROM thursday_user_state WHERE client_id = $1`, [userId]);
+  await pool.query(`DELETE FROM thursday_accounts WHERE id = $1`, [userId]);
+  await pool.query(
+    `DELETE FROM thursday_threads WHERE $1 = ANY(participant_ids)`,
+    [userId],
+  );
+  // Remove them from the shared directory and anything they authored.
+  const { rows } = await pool.query(
+    `SELECT collection_key, items FROM thursday_collections`,
+  );
+  for (const row of rows) {
+    const items: any[] = Array.isArray(row.items) ? row.items : [];
+    const kept = items.filter(
+      (item: any) => item?.id !== userId && item?.authorId !== userId,
+    );
+    if (kept.length !== items.length) {
+      await pool.query(
+        `UPDATE thursday_collections SET items = $2::jsonb WHERE collection_key = $1`,
+        [row.collection_key, JSON.stringify(kept)],
+      );
+    }
+  }
+}
+
 export async function updateAccountProfile(userId: string, profile: any): Promise<void> {
   if (!usingPostgres || !pool) {
     if (memoryStore.accounts[userId]) {
@@ -720,6 +820,8 @@ export async function getUserState(clientId: string, customMe?: any): Promise<Us
     // They are never merged back in, so the inbox drains itself instead of
     // needing a manual database edit.
     conversations: [],
+    blockedIds: Array.isArray(stored.blockedIds) ? stored.blockedIds : [],
+    mutedIds: Array.isArray(stored.mutedIds) ? stored.mutedIds : [],
   };
 }
 

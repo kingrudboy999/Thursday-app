@@ -397,6 +397,7 @@ export function DesktopSidebar({
   unreadNotices,
   unreadMessages,
   followingIds,
+  blockedIds = [],
   people,
   circles,
   events,
@@ -408,7 +409,12 @@ export function DesktopSidebar({
   onSignOut,
 }: any) {
   const q = people.filter(
-      (j?: any) => j.id !== me.id && followingIds.includes(j.id),
+      (j?: any) =>
+        j.id !== me.id &&
+        followingIds.includes(j.id) &&
+        // A blocked person can still appear in `people` from a stale local cache,
+        // so the following list has to exclude them explicitly.
+        !(blockedIds || []).includes(j.id),
     ),
     _ = (j?: any) =>
       j === "notifications"
@@ -2103,6 +2109,111 @@ export function StoryViewerModal({
     document.body,
   );
 }
+/** Reason picker shared by every "Report" affordance in the app. */
+export function ReportModal({
+  open,
+  onClose,
+  onSubmit,
+  targetLabel,
+  reasons,
+}: any) {
+  const [reason, setReason] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+  const [busy, setBusy] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    if (open) {
+      setReason("");
+      setNote("");
+      setError("");
+      setBusy(false);
+    }
+  }, [open]);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Report"
+      description={`Tell us what's wrong. ${targetLabel ? `Reporting ${targetLabel}.` : ""}`}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!reason || busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              const res = await onSubmit?.({ reason, note });
+              setBusy(false);
+              if (res?.ok) onClose();
+              else setError(res?.error || "Could not send that report.");
+            }}
+            className="h-8 rounded-[7px] bg-red-600 px-3.5 text-[12px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? "Sending…" : "Send report"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-2 px-4 py-4 sm:px-5">
+        {(reasons || []).map((option: string) => (
+          <label
+            key={option}
+            className={cn(
+              "flex cursor-pointer items-center gap-2.5 rounded-[8px] border px-3 py-2 text-[12px] transition-colors",
+              reason === option
+                ? "border-red-300 bg-red-50 font-semibold text-red-700"
+                : "border-line bg-surface text-ink-soft hover:bg-surface-muted",
+            )}
+          >
+            <input
+              type="radio"
+              name="report-reason"
+              value={option}
+              checked={reason === option}
+              onChange={() => setReason(option)}
+              className="sr-only"
+            />
+            <span
+              className={cn(
+                "inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border",
+                reason === option ? "border-red-600" : "border-line-strong",
+              )}
+            >
+              {reason === option ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+              ) : null}
+            </span>
+            {option}
+          </label>
+        ))}
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Add anything else that helps (optional)"
+          rows={3}
+          maxLength={1000}
+          className="w-full resize-none rounded-[8px] border border-line-strong bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-forest"
+        />
+        {error ? (
+          <p role="alert" className="rounded-[6px] bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </Modal>
+  );
+}
+
 export function SearchPaletteModal({
   open,
   onClose,

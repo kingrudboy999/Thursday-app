@@ -516,6 +516,57 @@ export async function apiSendCallSignal(payload: {
   });
 }
 
+// ==================== SAFETY: BLOCK, MUTE & REPORT ====================
+export async function apiBlockPerson(personId: string, blocked = true) {
+  return apiRequestDetailed(`/api/people/${encodeURIComponent(personId)}/block`, {
+    method: "POST",
+    body: JSON.stringify({ blocked }),
+  });
+}
+
+export async function apiMutePerson(personId: string, muted = true) {
+  return apiRequestDetailed(`/api/people/${encodeURIComponent(personId)}/mute`, {
+    method: "POST",
+    body: JSON.stringify({ muted }),
+  });
+}
+
+export const REPORT_REASONS = [
+  "Spam or advertising",
+  "Harassment or bullying",
+  "Hate speech",
+  "Nudity or sexual content",
+  "Scam or fraud",
+  "Something else",
+] as const;
+
+export async function apiReportContent(payload: {
+  targetType: "person" | "post" | "message" | "reel" | "comment";
+  targetId: string;
+  reason: string;
+  note?: string;
+}) {
+  return apiRequestDetailed("/api/reports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ==================== ACCOUNT MANAGEMENT ====================
+export async function apiChangePassword(currentPassword: string, newPassword: string) {
+  return apiRequestDetailed("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+export async function apiDeleteAccount(password: string, confirm: string) {
+  return apiRequestDetailed("/api/auth/delete-account", {
+    method: "POST",
+    body: JSON.stringify({ password, confirm }),
+  });
+}
+
 // ==================== PROFILE, FOLLOWS & VISITORS ====================
 export async function apiUpdateMe(me: any) {
   return apiRequest("/api/me", {

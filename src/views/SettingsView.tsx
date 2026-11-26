@@ -21,6 +21,7 @@ import {
   Moon,
   Palette,
   Shield,
+  ShieldCheck,
   Sparkle,
   Sun,
   Trash,
@@ -110,6 +111,12 @@ export function SettingsView({
   onOpenPerson,
   onBackHome,
   onSignOut,
+  onChangePassword,
+  onDeleteAccount,
+  blockedPeople = [],
+  mutedPeople = [],
+  onUnblock,
+  onUnmute,
 }: any) {
   const [R, z] = useState<any>(false),
     [v, q] = useState<any>(preferences.quietHoursEnabled ?? true),
@@ -117,7 +124,17 @@ export function SettingsView({
     [untilTime, setUntilTime] = useState<string>(preferences.quietHoursUntil || "07:30"),
     [syncCode, setSyncCode] = useState<string>(() => getClientId()),
     [syncBusy, setSyncBusy] = useState<boolean>(false),
-    [backendLive, setBackendLive] = useState<boolean | null>(null);
+    [backendLive, setBackendLive] = useState<boolean | null>(null),
+    [pwOpen, setPwOpen] = useState<boolean>(false),
+    [pwCurrent, setPwCurrent] = useState<string>(""),
+    [pwNext, setPwNext] = useState<string>(""),
+    [pwBusy, setPwBusy] = useState<boolean>(false),
+    [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null),
+    [delOpen, setDelOpen] = useState<boolean>(false),
+    [delPassword, setDelPassword] = useState<string>(""),
+    [delConfirm, setDelConfirm] = useState<string>(""),
+    [delBusy, setDelBusy] = useState<boolean>(false),
+    [delMsg, setDelMsg] = useState<string>("");
 
   useEffect(() => {
     let active = true;
@@ -505,6 +522,207 @@ export function SettingsView({
               </div>
             ))}
           </div>
+        </SettingsSectionCard>
+        <SettingsSectionCard
+          icon={ShieldCheck}
+          title="People you've blocked"
+          description="Blocked people can't message you, and their posts and stories stay out of your feed."
+        >
+          {blockedPeople.length === 0 ? (
+            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[11.5px] text-muted">
+              You haven't blocked anyone.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {blockedPeople.map((person: any) => (
+                <li
+                  key={person.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface-muted px-2.5 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Avatar person={person} size="sm" />
+                    <div className="min-w-0">
+                      <p className="truncate text-[11.5px] font-semibold text-ink">
+                        {person.name || "Someone"}
+                      </p>
+                      <p className="truncate text-[10px] text-faint">@{person.handle}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onUnblock?.(person.id)}
+                    className="h-7 shrink-0 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface"
+                  >
+                    Unblock
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {mutedPeople.length > 0 ? (
+            <div className="mt-3">
+              <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-faint uppercase">
+                Muted · {mutedPeople.length}
+              </p>
+              <ul className="space-y-1.5">
+                {mutedPeople.map((person: any) => (
+                  <li
+                    key={person.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface-muted px-2.5 py-2"
+                  >
+                    <span className="truncate text-[11.5px] text-ink-soft">
+                      {person.name || "Someone"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onUnmute?.(person.id)}
+                      className="h-7 shrink-0 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface"
+                    >
+                      Unmute
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </SettingsSectionCard>
+        <SettingsSectionCard
+          icon={Lock}
+          title="Password"
+          description="Change the password you use to sign in."
+          action={
+            <button
+              type="button"
+              onClick={() => {
+                setPwOpen(!pwOpen);
+                setPwMsg(null);
+              }}
+              className="h-7 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted"
+            >
+              {pwOpen ? "Cancel" : "Change"}
+            </button>
+          }
+        >
+          {pwOpen ? (
+            <div className="space-y-2">
+              <input
+                type="password"
+                value={pwCurrent}
+                onChange={(e) => setPwCurrent(e.target.value)}
+                placeholder="Current password"
+                autoComplete="current-password"
+                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-forest"
+              />
+              <input
+                type="password"
+                value={pwNext}
+                onChange={(e) => setPwNext(e.target.value)}
+                placeholder="New password (at least 8 characters)"
+                autoComplete="new-password"
+                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-forest"
+              />
+              {pwMsg ? (
+                <p
+                  className={cn(
+                    "rounded-[6px] px-2.5 py-1.5 text-[11px] font-medium",
+                    pwMsg.ok ? "bg-forest-soft text-forest" : "bg-red-50 text-red-700",
+                  )}
+                >
+                  {pwMsg.text}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                disabled={pwBusy || !pwCurrent || pwNext.length < 8}
+                onClick={async () => {
+                  setPwBusy(true);
+                  setPwMsg(null);
+                  const res = await onChangePassword?.(pwCurrent, pwNext);
+                  setPwBusy(false);
+                  if (res?.ok) {
+                    setPwMsg({ ok: true, text: "Password changed. Use it next time you sign in." });
+                    setPwCurrent("");
+                    setPwNext("");
+                  } else {
+                    setPwMsg({ ok: false, text: res?.error || "Could not change your password." });
+                  }
+                }}
+                className="h-8 rounded-[6px] bg-forest px-3 text-[11.5px] font-semibold text-white hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pwBusy ? "Saving…" : "Update password"}
+              </button>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[11.5px] text-muted">
+              You sign in with a password. Changing it signs out other devices.
+            </p>
+          )}
+        </SettingsSectionCard>
+        <SettingsSectionCard
+          icon={Warning}
+          title="Delete account"
+          description="Permanently removes your profile, posts, messages and stories. This cannot be undone."
+          action={
+            <button
+              type="button"
+              onClick={() => {
+                setDelOpen(!delOpen);
+                setDelMsg("");
+              }}
+              className="h-7 rounded-[6px] border border-red-200 bg-red-50 px-2.5 text-[10.5px] font-semibold text-red-700 hover:bg-red-100"
+            >
+              {delOpen ? "Cancel" : "Delete"}
+            </button>
+          }
+        >
+          {delOpen ? (
+            <div className="space-y-2">
+              <p className="rounded-[6px] bg-red-50 px-2.5 py-2 text-[11px] leading-snug font-medium text-red-700">
+                This erases everything and cannot be reversed. Your messages leave everyone
+                else's inbox too.
+              </p>
+              <input
+                type="password"
+                value={delPassword}
+                onChange={(e) => setDelPassword(e.target.value)}
+                placeholder="Your password"
+                autoComplete="current-password"
+                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-red-400"
+              />
+              <input
+                type="text"
+                value={delConfirm}
+                onChange={(e) => setDelConfirm(e.target.value)}
+                placeholder='Type "delete" to confirm'
+                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-red-400"
+              />
+              {delMsg ? (
+                <p className="rounded-[6px] bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700">
+                  {delMsg}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                disabled={delBusy || !delPassword || !delConfirm}
+                onClick={async () => {
+                  setDelBusy(true);
+                  setDelMsg("");
+                  const res = await onDeleteAccount?.(delPassword, delConfirm);
+                  setDelBusy(false);
+                  if (!res?.ok) {
+                    setDelMsg(res?.error || "Could not delete your account.");
+                  }
+                }}
+                className="h-8 rounded-[6px] bg-red-600 px-3 text-[11.5px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {delBusy ? "Deleting…" : "Permanently delete"}
+              </button>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[11.5px] text-muted">
+              Your data is yours. You can remove it at any time.
+            </p>
+          )}
         </SettingsSectionCard>
         <SettingsSectionCard
           icon={DeviceMobile}

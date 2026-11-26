@@ -36,6 +36,9 @@ export function ProfileView({
   followingIds,
   onToggleFollow,
   onOpenPost,
+  onToggleBlock,
+  onToggleMute,
+  onReport,
   onLike,
   onSave,
   onRepost,
@@ -201,16 +204,48 @@ export function ProfileView({
                         Edit profile
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onMessage(person.id);
-                          setMenuOpen(false);
-                        }}
-                        className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
-                      >
-                        Send message
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onMessage(person.id);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                        >
+                          Send message
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onToggleMute?.(person.id, !person.muted);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                        >
+                          {person.muted ? "Unmute" : "Mute"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onToggleBlock?.(person.id, true);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                        >
+                          Block
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onReport?.("person", person.id);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] font-medium text-red-600 hover:bg-red-50"
+                        >
+                          Report
+                        </button>
+                      </>
                     )}
                   </div>
                 </>
