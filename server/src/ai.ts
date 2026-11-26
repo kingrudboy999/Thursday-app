@@ -30,24 +30,16 @@ export interface AiModelState {
   lastError?: string;
 }
 
-const RAW_KEYS = [
-  "OPENROUTER_KEY_REMOVED_01",
-  "OPENROUTER_KEY_REMOVED_04",
-  "OPENROUTER_KEY_REMOVED_03",
-  "OPENROUTER_KEY_REMOVED_06",
-  "OPENROUTER_KEY_REMOVED_08",
-  "OPENROUTER_KEY_REMOVED_11",
-  "OPENROUTER_KEY_REMOVED_09",
-  "OPENROUTER_KEY_REMOVED_14",
-  "OPENROUTER_KEY_REMOVED_16",
-  "OPENROUTER_KEY_REMOVED_12",
-  "OPENROUTER_KEY_REMOVED_02",
-  "OPENROUTER_KEY_REMOVED_07",
-  "OPENROUTER_KEY_REMOVED_13",
-  "OPENROUTER_KEY_REMOVED_15",
-  "OPENROUTER_KEY_REMOVED_05",
-  "OPENROUTER_KEY_REMOVED_10",
-];
+/**
+ * No keys are compiled in. Supply them at runtime:
+ *   OPENROUTER_API_KEYS="sk-or-v1-...,sk-or-v1-..."
+ *   or OPENROUTER_API_KEY, OPENROUTER_API_KEY_2, OPENROUTER_API_KEY_3, ...
+ *
+ * Keys used to be hardcoded here. That put live credentials in the repository
+ * and its whole git history, so the array is empty by design and collectKeys()
+ * reads the real values from the environment.
+ */
+const RAW_KEYS: string[] = [];
 
 /**
  * Extra keys can be injected without a redeploy via env vars.
