@@ -427,35 +427,94 @@ export function playGentleCallTone(): () => void {
   };
 }
 
-export function readFileAsDataUrl(file: File, maxDimension = 1200): Promise<string> {
-  return new Promise((resolve, reject) => {
+/**
+ * Reads an image file into a compressed JPEG data URL, sized for storage.
+ *
+ * Phone photos are the hard case, and the old version failed on them:
+ *
+ *  - iPhones frequently hand over HEIC. Browsers cannot decode HEIC, so the
+ *    image errors out; the old code then resolved the *original* data URL, and
+ *    that `data:image/heic;base64,…` string renders as nothing. The profile
+ *    looked empty even though a value had been saved.
+ *  - Truncated or corrupt JPEGs took the same path and stored bytes that no
+ *    browser can draw.
+ *  - A large photo could exceed the upload body limit, which fails the request
+ *    while the UI still announced success.
+ *
+ * This now always yields a bounded JPEG, or rejects so the caller can explain
+ * the problem instead of saving something that cannot be displayed.
+ */
+export async function readFileAsDataUrl(
+  file: File,
+  maxDimension = 1200,
+): Promise<string> {
+  const raw = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.onerror = () => reject(new Error("That file could not be read."));
     reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!file.type.startsWith("image/") || typeof Image === "undefined") {
-        resolve(result);
-        return;
-      }
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxDimension / Math.max(img.width || 1, img.height || 1));
-        const width = Math.max(1, Math.round(img.width * scale));
-        const height = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx2d = canvas.getContext("2d");
-        if (!ctx2d) {
-          resolve(result);
-          return;
-        }
-        ctx2d.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.84));
-      };
-      img.onerror = () => resolve(result);
-      img.src = result;
+      resolve(typeof reader.result === "string" ? reader.result : "");
     };
     reader.readAsDataURL(file);
+  });
+
+  const looksLikeImage =
+    file.type.startsWith("image/") || /^data:image\//.test(raw);
+  if (!looksLikeImage) {
+    throw new Error("Please choose an image file.");
+  }
+
+  const decoded = await loadImageElement(raw);
+  if (!decoded) {
+    // HEIC and other undecodable formats land here. Ask for a normal photo
+    // rather than storing something the browser can never display.
+    const isHeic = /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+    throw new Error(
+      isHeic
+        ? "iPhone HEIC photos can't be shown in the browser. In your camera settings choose “Most Compatible”, or pick a JPEG/PNG instead."
+        : "That image couldn't be opened. Try a different photo.",
+    );
+  }
+
+  const scale = Math.min(
+    1,
+    maxDimension / Math.max(decoded.width || 1, decoded.height || 1),
+  );
+  const width = Math.max(1, Math.round(decoded.width * scale));
+  const height = Math.max(1, Math.round(decoded.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx2d = canvas.getContext("2d");
+  if (!ctx2d) {
+    throw new Error("This browser could not prepare that image.");
+  }
+  ctx2d.drawImage(decoded, 0, 0, width, height);
+
+  // Step the quality down until the result is comfortably storable, so a busy
+  // photo never turns into a multi-megabyte request.
+  let quality = 0.84;
+  let out = canvas.toDataURL("image/jpeg", quality);
+  const softCap = 600_000;
+  while (out.length > softCap && quality > 0.4) {
+    quality -= 0.12;
+    out = canvas.toDataURL("image/jpeg", quality);
+  }
+  if (out.length > 2_500_000) {
+    throw new Error("That image is too large. Try a smaller photo.");
+  }
+  return out;
+}
+
+function loadImageElement(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    if (typeof Image === "undefined") {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
   });
 }

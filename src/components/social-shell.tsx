@@ -2383,7 +2383,10 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
     [y, g] = useState<any>(me.location),
     [R, z] = useState<any>(me.website),
     [avatar, setAvatar] = useState<string>(me.avatar),
-    [cover, setCover] = useState<string>(me.cover);
+    [cover, setCover] = useState<string>(me.cover),
+    [photoError, setPhotoError] = useState<string>(""),
+    [photoRejected, setPhotoRejected] = useState<boolean>(false),
+    [saving, setSaving] = useState<boolean>(false);
   useEffect(() => {
     if (open) {
       w(me.name);
@@ -2392,6 +2395,9 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
       z(me.website);
       setAvatar(me.avatar);
       setCover(me.cover);
+      setPhotoError("");
+      setPhotoRejected(false);
+      setSaving(false);
     }
   }, [open, me]);
   return (
@@ -2411,21 +2417,28 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
           </button>
           <button
             type="button"
-            onClick={() => {
-              x.trim() &&
-                (onSave({
-                  name: x.trim(),
-                  bio: A.trim(),
-                  location: y.trim(),
-                  website: R.trim(),
-                  avatar,
-                  cover,
-                }),
-                onClose());
+            disabled={saving || photoRejected}
+            onClick={async () => {
+              if (!x.trim() || saving || photoRejected) return;
+              setSaving(true);
+              setPhotoError("");
+              const result = await onSave?.({
+                name: x.trim(),
+                bio: A.trim(),
+                location: y.trim(),
+                website: R.trim(),
+                avatar,
+                cover,
+              });
+              setSaving(false);
+              // Stay open on failure so the message is visible and the photo
+              // is not lost.
+              if (result?.ok) onClose();
+              else setPhotoError(result?.error || "Could not save your profile.");
             }}
-            className="h-8 rounded-[7px] bg-forest px-3.5 text-[12px] font-semibold text-white hover:bg-forest-hover"
+            className="h-8 rounded-[7px] bg-forest px-3.5 text-[12px] font-semibold text-white hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save profile
+            {saving ? "Saving…" : photoRejected ? "Pick another photo" : "Save profile"}
           </button>
         </div>
       }
@@ -2449,9 +2462,17 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
                 className="sr-only"
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) {
+                  if (!f) return;
+                  setPhotoError("");
+                  setPhotoRejected(false);
+                  try {
                     const dataUrl = await readFileAsDataUrl(f, 512);
                     if (dataUrl) setAvatar(dataUrl);
+                  } catch (err: any) {
+                    setPhotoRejected(true);
+                    setPhotoError(err?.message || "That photo could not be used.");
+                  } finally {
+                    e.target.value = "";
                   }
                 }}
               />
@@ -2464,15 +2485,31 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
                 className="sr-only"
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) {
+                  if (!f) return;
+                  setPhotoError("");
+                  setPhotoRejected(false);
+                  try {
                     const dataUrl = await readFileAsDataUrl(f, 1280);
                     if (dataUrl) setCover(dataUrl);
+                  } catch (err: any) {
+                    setPhotoRejected(true);
+                    setPhotoError(err?.message || "That cover photo could not be used.");
+                  } finally {
+                    e.target.value = "";
                   }
                 }}
               />
             </label>
           </div>
         </div>
+        {photoError ? (
+          <p
+            role="alert"
+            className="rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[11.5px] leading-snug font-medium text-red-700"
+          >
+            {photoError}
+          </p>
+        ) : null}
         {[
           {
             label: "Name",

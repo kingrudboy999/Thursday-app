@@ -32,7 +32,7 @@ import {
   apiToggleEventRsvp,
   apiToggleFollow,
   apiUpdateConversation,
-  apiUpdateMe,
+  apiUpdateMeDetailed,
   apiUpdatePreferences,
   apiVotePoll,
   apiVotePrompt,
@@ -1897,13 +1897,41 @@ export function App() {
         open={se}
         onClose={() => h(false)}
         me={fe}
-        onSave={(H?: any) => {
+        onSave={async (H?: any) => {
           const updatedMe = { ...fe, ...H };
+          // Optimistic: paint it immediately so the profile never looks blank.
           u((Y?: any) =>
             Y.map((Q?: any) => (Q.id === meId ? updatedMe : Q)),
           );
-          apiUpdateMe(updatedMe);
-          if (authUser) {
+          const result = await apiUpdateMeDetailed(updatedMe);
+          if (!result.ok) {
+            // Put the previous values back rather than leaving a photo on screen
+            // that the server never accepted.
+            u((Y?: any) =>
+              Y.map((Q?: any) => (Q.id === meId ? fe : Q)),
+            );
+            return {
+              ok: false,
+              error:
+                result.error ||
+                "Could not save your profile. Please try again.",
+            };
+          }
+          if (result.data?.me) {
+            const confirmed = { ...updatedMe, ...result.data.me };
+            u((Y?: any) =>
+              Y.map((Q?: any) => (Q.id === meId ? confirmed : Q)),
+            );
+            if (authUser) {
+              const nextUser = {
+                ...authUser,
+                handle: confirmed.handle || authUser.handle,
+                profile: { ...authUser.profile, ...confirmed },
+              } as AuthUser;
+              setAuthUser(nextUser);
+              saveAuthSession(getAuthToken(), nextUser);
+            }
+          } else if (authUser) {
             const nextUser = {
               ...authUser,
               handle: updatedMe.handle || authUser.handle,
@@ -1916,6 +1944,7 @@ export function App() {
             "Profile updated",
             "Your circle will see the new details right away.",
           );
+          return { ok: true };
         }}
       />
       {incomingCall ? (

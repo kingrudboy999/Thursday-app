@@ -134,6 +134,19 @@ async function apiRequest<T = any>(
   path: string,
   options: RequestInit = {},
 ): Promise<T | null> {
+  const { ok, data } = await apiRequestDetailed<T>(path, options);
+  return ok ? data : null;
+}
+
+/**
+ * Like apiRequest, but reports why a call failed instead of collapsing every
+ * outcome to null. Fire-and-forget calls keep using apiRequest; flows that tell
+ * the person "saved" must use this so they can tell the truth.
+ */
+export async function apiRequestDetailed<T = any>(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
   try {
     const token = getAuthToken();
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -145,10 +158,29 @@ async function apiRequest<T = any>(
         ...(options.headers || {}),
       },
     });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
+    if (!res.ok) {
+      let reason = "";
+      try {
+        const body = await res.clone().json();
+        reason = String(body?.error || body?.message || "");
+      } catch {
+        if (res.status === 413) reason = "That photo is too large to upload.";
+      }
+      return {
+        ok: false,
+        status: res.status,
+        data: null,
+        error: reason || `Request failed (${res.status})`,
+      };
+    }
+    return { ok: true, status: res.status, data: (await res.json()) as T };
+  } catch (err: any) {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error: err?.message || "Could not reach Thursday. Check your connection.",
+    };
   }
 }
 
@@ -487,6 +519,14 @@ export async function apiSendCallSignal(payload: {
 // ==================== PROFILE, FOLLOWS & VISITORS ====================
 export async function apiUpdateMe(me: any) {
   return apiRequest("/api/me", {
+    method: "PUT",
+    body: JSON.stringify(me),
+  });
+}
+
+/** Saves the profile and reports whether it really reached the server. */
+export async function apiUpdateMeDetailed(me: any) {
+  return apiRequestDetailed("/api/me", {
     method: "PUT",
     body: JSON.stringify(me),
   });

@@ -527,11 +527,55 @@ app.get("/api/bootstrap", async (req, res) => {
 });
 
 // ==================== PROFILE & FOLLOW & VISITORS ====================
+/**
+ * A profile photo is only worth storing if a browser can actually draw it.
+ * The old client would fall back to the raw file when it could not decode one
+ * (HEIC from an iPhone, a truncated JPEG), and the server happily saved it —
+ * which is how a profile ends up "set" but completely blank.
+ */
+function validateProfileImage(value: unknown, label: string): string | null {
+  if (value === undefined || value === null) return null;
+  const raw = String(value);
+  if (!raw) return null;
+  if (!raw.startsWith("data:")) {
+    // A normal URL is fine; leave it alone.
+    return /^https?:\/\//i.test(raw) ? null : `${label} must be an image.`;
+  }
+  const match = /^data:([a-z0-9.+\/-]+);base64,/i.exec(raw);
+  if (!match) return `${label} is not a valid image.`;
+  const mime = match[1].toLowerCase();
+  const renderable = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/avif",
+  ];
+  if (!renderable.includes(mime)) {
+    return `${label} is in a format browsers cannot display. Please use a JPEG or PNG.`;
+  }
+  if (raw.length > 8_000_000) {
+    return `${label} is too large. Please choose a smaller photo.`;
+  }
+  return null;
+}
+
 app.put("/api/me", async (req, res) => {
   try {
     const actor = await resolveRequestActor(req);
     const userId = actor.userId;
     const updates = req.body || {};
+
+    for (const [field, label] of [
+      ["avatar", "That profile photo"],
+      ["cover", "That cover photo"],
+    ] as const) {
+      const problem = validateProfileImage(updates[field], label);
+      if (problem) {
+        return res.status(400).json({ ok: false, error: problem });
+      }
+    }
 
     const nextState = await updateUserState(userId, (curr) => ({
       ...curr,
