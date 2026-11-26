@@ -16,6 +16,7 @@ import {
   DeviceMobile,
   DownloadSimple,
   Keyboard,
+  SignOut,
   Lock,
   Moon,
   Palette,
@@ -108,6 +109,7 @@ export function SettingsView({
   onToast,
   onOpenPerson,
   onBackHome,
+  onSignOut,
 }: any) {
   const [R, z] = useState<any>(false),
     [v, q] = useState<any>(preferences.quietHoursEnabled ?? true),
@@ -187,8 +189,9 @@ export function SettingsView({
           title="Account"
           description="The identity your circle sees across Thursday."
           action={
-            <span className="text-[8.5px] font-medium text-forest">
-              Local account
+            <span className="inline-flex items-center gap-1 text-[8.5px] font-medium text-forest">
+              <span className="h-1 w-1 animate-pulse rounded-full bg-forest" />
+              Live account
             </span>
           }
         >
@@ -697,6 +700,29 @@ export function SettingsView({
               </div>
             </div>
           ) : null}
+        </SettingsSectionCard>
+        <SettingsSectionCard
+          icon={SignOut}
+          title="Session"
+          description="You are signed in with a live PostgreSQL session."
+          action={
+            <button
+              type="button"
+              onClick={() => onSignOut?.()}
+              className="inline-flex h-6.5 items-center gap-1 rounded-[6px] border border-clay/30 bg-clay-wash px-2 text-[10px] font-semibold text-clay transition-colors hover:bg-clay/10"
+            >
+              <SignOut size={10} strokeWidth={2.2} />
+              {" Sign out"}
+            </button>
+          }
+        >
+          <div className="px-4 py-3.5 sm:px-5">
+            <p className="text-[11px] leading-[1.6] text-muted">
+              Signing out ends this device's session on the Railway backend.
+              Your posts, circles, and messages stay safe in PostgreSQL and will
+              be right here when you return.
+            </p>
+          </div>
         </SettingsSectionCard>
         <SettingsSectionCard
           icon={Keyboard}
