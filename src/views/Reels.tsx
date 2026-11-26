@@ -33,6 +33,8 @@ export function ReelsView({
   onAddComment,
   onOpenPerson,
   onCreateReel,
+  onRecordView,
+  onlineIds = [],
   onOpenMessages,
   onClose,
 }: any) {
@@ -99,6 +101,14 @@ export function ReelsView({
     document.addEventListener("keydown", X_local);
     return () => document.removeEventListener("keydown", X_local);
   }, [U, he, He, onClose]);
+  // Fire a real, server-tracked view increment when a reel becomes active
+  useEffect(() => {
+    if (!U) return;
+    const timer = window.setTimeout(() => {
+      onRecordView?.(U);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [U]);
   const V = (X_local?: any) => {
       const h = Ce.current[X_local]?.querySelector("video");
       h &&
@@ -345,7 +355,10 @@ export function ReelsView({
                         <MapPin size={9} strokeWidth={2} />
                         {X_local.location}
                       </span>
-                      <span className="text-white/45 tabular-nums">
+                      <span className="inline-flex items-center gap-1 text-white/45 tabular-nums">
+                        {onlineIds.includes(se.id) ? (
+                          <span className="h-1 w-1 animate-pulse rounded-full bg-[#7ed6a2]" />
+                        ) : null}
                         {formatCount(X_local.views)}
                         {" views"}
                       </span>
@@ -638,9 +651,21 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
                       q("That file is not a video. Try an MP4 or MOV.");
                       return;
                     }
-                    w(URL.createObjectURL(j));
-                    T(j.name);
-                    q("");
+                    if (j.size > 24 * 1024 * 1024) {
+                      q("Keep uploads under 24 MB so it syncs for everyone.");
+                      return;
+                    }
+                    // Persist as a durable data URL so the reel survives reload
+                    // and streams to every other account in real time.
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      if (typeof reader.result === "string") {
+                        w(reader.result);
+                        T(j.name);
+                        q("");
+                      }
+                    };
+                    reader.readAsDataURL(j);
                   }
                 }}
               />
