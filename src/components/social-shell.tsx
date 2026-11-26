@@ -25,11 +25,13 @@ import {
   PlayCircle,
   Plus,
   Repeat,
+  SignOut,
   SlidersHorizontal,
   Sparkle,
   Sun,
   UserCircle,
   UsersThree,
+  WifiHigh,
   X,
 } from "../lib/icons";
 import { BrandLockup } from "./brand";
@@ -211,9 +213,165 @@ export function ThemeSegmentedControl({ theme, onChange }: any) {
     </div>
   );
 }
+export function LivePresencePill({ live, onlineCount, className }: any) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-medium",
+        live
+          ? "border-forest/25 bg-forest-wash text-forest"
+          : "border-line bg-surface-muted text-faint",
+        className,
+      )}
+      title={
+        live
+          ? `${onlineCount} ${onlineCount === 1 ? "person" : "people"} online right now`
+          : "Reconnecting to the live stream…"
+      }
+    >
+      <span
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          live ? "animate-pulse bg-forest" : "bg-faint",
+        )}
+      />
+      {live ? `Live · ${onlineCount} online` : "Reconnecting…"}
+    </span>
+  );
+}
+export function AccountMenu({
+  me,
+  live,
+  onOpenPerson,
+  onNavigate,
+  onSignOut,
+  align = "left",
+  onCloseMenu,
+}: any) {
+  const [open, setOpen] = useState<boolean>(false);
+  const [busy, setBusy] = useState<boolean>(false);
+  const ref = useRef<any>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e?: any) => {
+      if (ref.current && e?.target && ref.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    const esc = (e?: any) => e?.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", handle);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+
+  const go = (action?: () => void) => {
+    setOpen(false);
+    onCloseMenu?.();
+    action?.();
+  };
+
+  return (
+    <div className="relative w-full" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+        className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-canvas-deep/70"
+      >
+        <Avatar person={me} size="md" online={live} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13.5px] font-semibold text-ink">
+            {me.name}
+          </span>
+          <span className="block truncate text-[12px] text-muted">
+            @{me.handle}
+          </span>
+        </span>
+        <CaretDown
+          size={13}
+          className={cn(
+            "shrink-0 text-faint transition-transform",
+            open && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className={cn(
+            "animate-pop absolute z-50 w-[228px] overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_44px_rgba(24,28,24,0.18)]",
+            align === "right" ? "right-0 top-14" : "bottom-14 left-0",
+          )}
+        >
+          <div className="border-b border-line px-3 py-2">
+            <p className="truncate text-[12px] font-semibold text-ink">
+              {me.name}
+            </p>
+            <p className="truncate text-[11px] text-muted">@{me.handle}</p>
+            <span className="mt-1.5 inline-flex">
+              <LivePresencePill live={live} onlineCount={1} />
+            </span>
+          </div>
+          {[
+            {
+              label: "Your profile",
+              icon: UserCircle,
+              onClick: () => go(() => onOpenPerson?.(me.id)),
+            },
+            {
+              label: "Settings & privacy",
+              icon: GearSix,
+              onClick: () => go(() => onNavigate?.("settings")),
+            },
+            {
+              label: "Saved posts",
+              icon: BookmarkSimple,
+              onClick: () => go(() => onNavigate?.("bookmarks")),
+            },
+          ].map((item: any) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              onClick={item.onClick}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink"
+            >
+              <item.icon size={14} strokeWidth={1.8} aria-hidden="true" />
+              {item.label}
+            </button>
+          ))}
+          <div className="my-1 h-px bg-line" />
+          <button
+            type="button"
+            role="menuitem"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setOpen(false);
+              await onSignOut?.();
+              setBusy(false);
+            }}
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-semibold text-clay transition-colors hover:bg-clay-wash disabled:opacity-60"
+          >
+            <SignOut size={14} strokeWidth={1.9} aria-hidden="true" />
+            {busy ? "Signing out…" : "Sign out"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 export function DesktopSidebar({
   view,
   me,
+  live = false,
+  onlineIds = [],
   unreadNotices,
   unreadMessages,
   followingIds,
@@ -225,9 +383,10 @@ export function DesktopSidebar({
   onNavigate,
   onCreate,
   onOpenPerson,
+  onSignOut,
 }: any) {
   const q = people.filter(
-      (j?: any) => j.id !== "me" && followingIds.includes(j.id),
+      (j?: any) => j.id !== me.id && followingIds.includes(j.id),
     ),
     _ = (j?: any) =>
       j === "notifications"
@@ -325,7 +484,7 @@ export function DesktopSidebar({
                 <Avatar
                   person={j}
                   size="xs"
-                  online={j.id === "maya" || j.id === "priya"}
+                  online={onlineIds.includes(j.id)}
                 />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-soft">
                   {j.name}
@@ -454,31 +613,16 @@ export function DesktopSidebar({
       </div>
       <div className="shrink-0 border-t border-line p-3">
         <div className="mb-2 flex items-center justify-between gap-2 px-1">
-          <p className="text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
-            Theme
-          </p>
+          <LivePresencePill live={live} onlineCount={onlineIds.length} />
           <ThemeSegmentedControl theme={theme} onChange={onToggleTheme} />
         </div>
-        <button
-          type="button"
-          onClick={() => onOpenPerson("me")}
-          className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-canvas-deep/70"
-        >
-          <Avatar person={me} size="md" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13.5px] font-semibold text-ink">
-              {me.name}
-            </span>
-            <span className="block truncate text-[12px] text-muted">
-              @{me.handle}
-            </span>
-          </span>
-          <GearSix
-            size={16}
-            className="shrink-0 text-faint"
-            aria-hidden="true"
-          />
-        </button>
+        <AccountMenu
+          me={me}
+          live={live}
+          onOpenPerson={onOpenPerson}
+          onNavigate={onNavigate}
+          onSignOut={onSignOut}
+        />
       </div>
     </aside>
   );
@@ -486,6 +630,9 @@ export function DesktopSidebar({
 export function TopBar({
   view,
   me,
+  live = false,
+  onlineCount = 0,
+  onlineIds = [],
   unreadNotices,
   unreadMessages,
   onSearch,
@@ -493,6 +640,7 @@ export function TopBar({
   onOpenPerson,
   mobileNavOpen,
   onOpenMobile,
+  onSignOut,
 }: any) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-xl">
@@ -521,6 +669,7 @@ export function TopBar({
           <span className="truncate text-[13px] font-semibold text-ink">
             {VIEW_TITLES[view]}
           </span>
+          <LivePresencePill live={live} onlineCount={onlineCount} />
         </div>
         <div className="flex flex-1 justify-center px-1 sm:px-3">
           <button
@@ -569,14 +718,27 @@ export function TopBar({
               <span className="pulse-dot absolute top-2 right-2 h-2 w-2 rounded-full bg-clay ring-2 ring-surface" />
             ) : null}
           </button>
+          <span className="ml-1 sm:hidden">
+            <LivePresencePill live={live} onlineCount={onlineCount} />
+          </span>
           <button
             type="button"
-            onClick={() => onOpenPerson("me")}
+            onClick={() => onOpenPerson(me.id)}
             aria-label="Your profile"
             className="ml-1.5 hidden rounded-full ring-1 ring-line transition-shadow hover:ring-line-strong sm:block"
           >
-            <Avatar person={me} size="sm" />
+            <Avatar person={me} size="sm" online={live} />
           </button>
+          <div className="relative ml-1 hidden sm:block">
+            <AccountMenu
+              me={me}
+              live={live}
+              align="right"
+              onOpenPerson={onOpenPerson}
+              onNavigate={onNavigate}
+              onSignOut={onSignOut}
+            />
+          </div>
         </div>
       </div>
     </header>
@@ -679,6 +841,8 @@ export function MobileDrawer({
   onClose,
   view,
   me,
+  live = false,
+  onlineIds = [],
   unreadNotices,
   unreadMessages,
   followingIds,
@@ -690,6 +854,7 @@ export function MobileDrawer({
   onNavigate,
   onCreate,
   onOpenPerson,
+  onSignOut,
 }: any) {
   if (
     (useEffect(() => {
@@ -711,8 +876,7 @@ export function MobileDrawer({
     !open)
   )
     return null;
-  people.filter((U?: any) => U.id !== "me" && followingIds.includes(U.id))
-    .length;
+  people.filter((U?: any) => U.id !== me.id && followingIds.includes(U.id)).length;
   const j = (U?: any) =>
       U === "notifications"
         ? unreadNotices
@@ -890,7 +1054,7 @@ export function MobileDrawer({
               }}
               className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 text-left transition-colors hover:bg-canvas-deep/70"
             >
-              <Avatar person={me} size="sm" />
+              <Avatar person={me} size="sm" online={live} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[12px] font-semibold text-ink">
                   {me.name}
@@ -908,6 +1072,20 @@ export function MobileDrawer({
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-canvas-deep hover:text-ink"
             >
               <GearSix size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
+            <LivePresencePill live={live} onlineCount={onlineIds.length} />
+            <button
+              type="button"
+              onClick={async () => {
+                await onSignOut?.();
+                onClose();
+              }}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] font-semibold text-clay hover:bg-clay-wash"
+            >
+              <SignOut size={12} strokeWidth={2} aria-hidden="true" />
+              Sign out
             </button>
           </div>
         </div>
@@ -1557,7 +1735,7 @@ export function PostDetailModal({
                 </div>
               </div>
             ) : null}
-            {post.authorId === "me" ? (
+            {post.authorId === (me?.id ?? "me") ? (
               <div className="flex items-center justify-between gap-2 px-4 pb-1">
                 <PinPostButton
                   pinned={!!post.pinned}
@@ -1617,7 +1795,7 @@ export function PostDetailModal({
                             onClick={() => onOpenPerson(U.id)}
                             className="truncate text-[12px] font-semibold text-ink hover:underline"
                           >
-                            {C.authorId === "me" ? "You" : U.name}
+                            {C.authorId === (me?.id ?? "me") ? "You" : U.name}
                           </button>
                           {U.verified ? (
                             <VerifiedBadge className="h-2.5 w-2.5" />
@@ -1695,8 +1873,10 @@ export function StoryViewerModal({
   onChange,
   onSeen,
   onReply,
+  meId = "me",
 }: any) {
-  const T = stories[index],
+  const storyViewerMeId = meId,
+    T = stories[index],
     y = T ? people.find((_?: any) => _.id === T.authorId) : null,
     [g, R] = useState<any>(false),
     z = useRef<any>(null);
@@ -1794,7 +1974,7 @@ export function StoryViewerModal({
               {y.verified ? <VerifiedBadge className="text-white/80" /> : null}
             </p>
             <p className="truncate text-[11px] text-white/65 drop-shadow">
-              {T.authorId === "me" ? "Your story" : "2h ago"}
+              {T.authorId === (storyViewerMeId ?? "me") ? "Your story" : "2h ago"}
             </p>
           </div>
           <button
@@ -1861,6 +2041,7 @@ export function StoryViewerModal({
 export function SearchPaletteModal({
   open,
   onClose,
+  meId = "me",
   people,
   posts,
   topics,
@@ -1882,7 +2063,7 @@ export function SearchPaletteModal({
               C.name.toLowerCase().includes(j) ||
               C.handle.toLowerCase().includes(j),
           )
-        : people.filter((C?: any) => C.id !== "me").slice(0, 4);
+        : people.filter((C?: any) => C.id !== meId).slice(0, 4);
     }, [people, R]),
     q = useMemo(() => {
       const j = R.trim().toLowerCase();
