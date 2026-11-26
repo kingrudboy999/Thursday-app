@@ -23,7 +23,7 @@ import {
   setCollection,
   getThreadById,
   getThreadsForUser,
-  getFollowerCounts,
+  getFollowGraph,
   getUserState,
   getWorkspaceSnapshot,
   initDatabase,
@@ -645,17 +645,22 @@ app.get("/api/bootstrap", async (req, res) => {
     // and "priya" from builds that seeded fake people, so a raw length reports
     // a following list you cannot see anywhere in the app.
     const liveIds = new Set(safePeople.map((p: any) => p.id));
-    const followingCount = (userState.followingIds || []).filter((id: string) =>
-      liveIds.has(id),
-    ).length;
-    const followerCounts = await getFollowerCounts();
+    const graph = await getFollowGraph();
+    // Everybody's following list, filtered to people who still exist -- so a
+    // profile shows the same number whether you are looking at your own page
+    // or somebody else's.
+    const followingCountFor = (personId: string): number => {
+      const ids = personId === userId ? userState.followingIds || [] : graph.following[personId] || [];
+      return ids.filter((id: string) => liveIds.has(id)).length;
+    };
+    const followerCounts = graph.followers;
     const withRealCounts = (p: any) => {
       // A profile row can be missing (an account deleted between reads). Guard
       // it: this ran on a null entry and took the whole bootstrap down.
       if (!p || typeof p !== "object") return p;
       return {
         ...p,
-        following: p.id === userId ? followingCount : p.following,
+        following: followingCountFor(p.id),
         followers: followerCounts[p.id] ?? 0,
       };
     };
@@ -1024,10 +1029,17 @@ app.post("/api/people/:id/follow", async (req, res) => {
     // Report the derived count, not the incrementally patched one -- the
     // patched number starts from whatever was in the profile snapshot and
     // drifts away from the real follower list.
-    const counts = await getFollowerCounts();
+    const graph = await getFollowGraph();
+    const livePeople = updatedPeople.filter((p: any) => p && typeof p.id === "string");
+    const liveIds = new Set(livePeople.map((p: any) => p.id));
     const updatedTarget = updatedPeople.find((p: any) => p.id === targetId);
     const personWithRealCounts = updatedTarget
-      ? { ...updatedTarget, followers: counts[targetId] ?? 0 }
+      ? {
+          ...updatedTarget,
+          followers: graph.followers[targetId] ?? 0,
+          following: (graph.following[targetId] || []).filter((id: string) => liveIds.has(id))
+            .length,
+        }
       : updatedTarget;
     broadcast("person:updated", personWithRealCounts);
     res.json({
@@ -1035,8 +1047,11 @@ app.post("/api/people/:id/follow", async (req, res) => {
       followingIds: nextState.followingIds,
       following: isNowFollowing,
       person: personWithRealCounts,
-      followers: counts[targetId] ?? 0,
-      followingCount: nextState.followingIds.length,
+      followers: graph.followers[targetId] ?? 0,
+      // Count only follows that still point at somebody, so the number matches
+      // the list the follow button actually renders.
+      followingCount: (nextState.followingIds || []).filter((id: string) => liveIds.has(id))
+        .length,
     });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err?.message });

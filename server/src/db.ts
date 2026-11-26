@@ -844,26 +844,38 @@ export async function updateUserState(
  * The source of truth is the follow edge -- `followingIds` on each user's state.
  * Counting those edges can never disagree with the list of people you follow.
  */
-export async function getFollowerCounts(): Promise<Record<string, number>> {
-  const counts: Record<string, number> = {};
-  const addEdges = (followingIds: unknown) => {
-    if (!Array.isArray(followingIds)) return;
-    for (const targetId of followingIds) {
-      if (typeof targetId !== "string" || !targetId) continue;
-      counts[targetId] = (counts[targetId] || 0) + 1;
-    }
+export async function getFollowGraph(): Promise<{
+  followers: Record<string, number>;
+  following: Record<string, string[]>;
+}> {
+  const followers: Record<string, number> = {};
+  const following: Record<string, string[]> = {};
+  const addEdges = (ownerId: string, followingIds: unknown) => {
+    const ids = Array.isArray(followingIds)
+      ? followingIds.filter((x: unknown): x is string => typeof x === "string" && !!x)
+      : [];
+    following[ownerId] = ids;
+    for (const targetId of ids) followers[targetId] = (followers[targetId] || 0) + 1;
   };
 
   if (!usingPostgres || !pool) {
-    for (const state of Object.values(memoryStore.users)) addEdges(state.followingIds);
-    return counts;
+    for (const [ownerId, state] of Object.entries(memoryStore.users)) {
+      addEdges(ownerId, state.followingIds);
+    }
+    return { followers, following };
   }
 
   const { rows } = await pool.query(
     `SELECT client_id, state->'followingIds' AS following FROM thursday_user_state`,
   );
-  for (const row of rows) addEdges(row.following);
-  return counts;
+  for (const row of rows) addEdges(row.client_id, row.following);
+  return { followers, following };
+}
+
+/** Follower counts only. Kept for callers that do not need the full graph. */
+export async function getFollowerCounts(): Promise<Record<string, number>> {
+  const { followers } = await getFollowGraph();
+  return followers;
 }
 
 export async function pushNotificationToUser(
