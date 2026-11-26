@@ -47,12 +47,15 @@ export function ProfileView({
   onVote,
   onOpenCircle,
   highlights = STORY_HIGHLIGHTS,
+  visitors = [],
+  onlineIds = [],
   onOpenHighlight,
   onAddHighlight,
   onToast,
 }: any) {
   const [te, Ne] = useState<any>("posts"),
     [menuOpen, setMenuOpen] = useState<boolean>(false),
+    isOnline = onlineIds.includes(person.id),
     he = useMemo(
       () =>
         posts
@@ -63,7 +66,7 @@ export function ProfileView({
     ),
     K = posts.filter((le?: any) => le.liked),
     ae = he.flatMap((le?: any) =>
-      le.images.map((Ee?: any) => ({
+      (le.images ?? []).map((Ee?: any) => ({
         image: Ee,
         post: le,
       })),
@@ -196,6 +199,7 @@ export function ProfileView({
                 <Avatar
                   person={person}
                   size="xl"
+                  online={isOnline}
                   className="[&_img]:h-[72px] [&_img]:w-[72px]"
                 />
               </span>
@@ -261,7 +265,15 @@ export function ProfileView({
               </h1>
               {person.verified ? <VerifiedBadge className="h-4 w-4" /> : null}
             </div>
-            <p className="mt-0.5 text-[12px] text-muted">@{person.handle}</p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
+              <span>@{person.handle}</span>
+              {isOnline ? (
+                <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-forest">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-forest" />
+                  Active now
+                </span>
+              ) : null}
+            </p>
             <p className="mt-2.5 max-w-[540px] text-[13px] leading-[1.65] text-ink-soft">
               {person.bio}
             </p>
@@ -333,7 +345,11 @@ export function ProfileView({
         </div>
       </section>
       <div className="mt-3.5">
-        <ProfileVisitorsStrip people={people} onOpen={onOpenPerson} />
+        <ProfileVisitorsStrip
+          people={people}
+          visitors={visitors}
+          onOpen={onOpenPerson}
+        />
       </div>
       <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
         {te === "media" ? (
