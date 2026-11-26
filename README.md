@@ -2,7 +2,7 @@
 
 **Thursday** is a calm, intentional social space designed for the people you actually chose — featuring a photography-forward feed, edge-to-edge uncropped stories, full-screen vertical Reels, Circles, real-life Gatherings, and full-screen direct messaging with swipe-to-reply.
 
-This repository contains both the **Web PWA** (React 19 + TypeScript + Vite + Tailwind CSS v4 + Phosphor Icons) and the **Native Mobile Client** (`mobile/`, built with React Native 0.76 + Expo SDK 52 and configured for ~24 MB slim per-ABI Android APKs).
+This repository contains the **Web PWA** (React 19 + TypeScript + Vite + Tailwind CSS v4 + Phosphor Icons), the **Railway PostgreSQL + SSE Backend** (`server/`, Node 22 + `pg`), and the **Native Mobile Client** (`mobile/`, built with React Native 0.76 + Expo SDK 52 and configured for ~24 MB slim per-ABI Android APKs).
 
 ---
 
@@ -51,6 +51,13 @@ Thursday-app/
 │       ├── Spaces.tsx              # Circles communities & Gatherings RSVPs
 │       ├── Profile.tsx             # Profile header, highlights, pinned posts & tabs
 │       └── SettingsView.tsx        # Theme, quiet hours, privacy, install & workspace export
+├── server/                         # Railway Node 22 + PostgreSQL REST & SSE backend
+│   ├── Dockerfile                  # Production multi-stage Alpine container
+│   ├── package.json                # Backend scripts & pg driver
+│   └── src/
+│       ├── index.ts                # HTTP + SSE stream server (/api/*)
+│       ├── db.ts                   # PostgreSQL persistence + local fallback
+│       └── seed.ts                 # Canonical initial Thursday seed data
 ├── mobile/                         # Complete Expo / React Native iOS & Android app
 │   ├── App.tsx                     # Native shell, 5-slot dock, drawer & modals
 │   ├── app.json                    # Expo config + R8 / shrinkResources / ABI split plugin
