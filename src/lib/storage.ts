@@ -25,6 +25,46 @@ export function resetStoredWorkspaceState() {
   } catch {}
 }
 /**
+ * One-time sweep of everything the old seed left in localStorage.
+ *
+ * Bootstrap now replaces each collection wholesale, so this is belt and
+ * braces for browsers that cached the demo world before that change: seeded
+ * people, highlights, circles and gatherings are dropped by id so no stale
+ * copy can flash on screen or survive an offline open.
+ */
+const SEEDED_PERSON_IDS = [
+  "me", "maya", "priya", "jonah", "theo", "lena", "sam", "amara", "ravi",
+];
+let seededContentPurged = false;
+export function purgeSeededContentOnce() {
+  if (seededContentPurged) return;
+  seededContentPurged = true;
+  try {
+    for (const key of Object.keys(window.localStorage)) {
+      if (!key.startsWith(STORAGE_PREFIX)) continue;
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(parsed)) continue;
+      const kept = parsed.filter((item: any) => {
+        if (!item) return false;
+        const author = item.authorId ?? item.hostId ?? item.ownerId ?? item.personId;
+        const ids = [item.id, author, ...(item.moderatorIds || [])].filter(Boolean);
+        return !ids.some((id: string) => SEEDED_PERSON_IDS.includes(String(id)));
+      });
+      if (kept.length !== parsed.length) {
+        window.localStorage.setItem(key, JSON.stringify(kept));
+      }
+    }
+  } catch {}
+}
+
+/**
  * Earlier builds shipped a demo inbox (conv_maya, conv_priya, …) that was
  * cached in localStorage. Those conversations could never receive a reply,
  * because the people in them only ever existed as static copy. This drops

@@ -283,67 +283,35 @@ export function App() {
     let active = true;
     fetchBootstrap().then((data) => {
       if (!active || !data?.ok) return;
-      if (Array.isArray(data.posts) && data.posts.length) {
-        d((localPosts: any[]) => {
-          const serverIds = new Set(data.posts.map((p: any) => p.id));
-          const localOnly = localPosts.filter(
-            (p: any) => p?.id && !serverIds.has(p.id),
-          );
-          return [...data.posts, ...localOnly];
-        });
+      // Server state is authoritative once it has been fetched. These blocks
+      // used to apply only when the server had something, which meant a stale
+      // browser cache always won on an empty account — deleted content kept
+      // reappearing from localStorage.
+      if (Array.isArray(data.posts)) {
+        // Everything the user has posted lives on the server, so anything that
+        // exists only in this browser is left over from a seed that is gone.
+        d(data.posts);
       }
-      if (Array.isArray(data.people) && data.people.length) {
-        u((localPeople: any[]) => {
-          const serverIds = new Set(data.people.map((p: any) => p.id));
-          const localOnly = localPeople.filter(
-            (p: any) => p?.id && !serverIds.has(p.id),
-          );
-          // Server projection wins for every shared account, so a stale
-          // browser cache can never shadow a profile edited elsewhere.
-          return [...data.people, ...localOnly];
-        });
+      if (Array.isArray(data.people)) {
+        // The server's directory is the whole directory. Keeping local-only
+        // people is what left deleted accounts visible in followers, mention
+        // lists and profile screens long after they were removed.
+        u(data.people);
       }
-      if (Array.isArray(data.stories) && data.stories.length) {
-        j((localStories: any[]) => {
-          const map = new Map<string, any>();
-          for (const s of [...data.stories, ...localStories]) {
-            if (s?.id && !map.has(s.id)) map.set(s.id, s);
-          }
-          return Array.from(map.values());
-        });
+      if (Array.isArray(data.stories)) {
+        j(data.stories);
       }
-      if (Array.isArray(data.highlights) && data.highlights.length) {
+      if (Array.isArray(data.highlights)) {
         setHighlights(data.highlights);
       }
-      if (Array.isArray(data.reels) && data.reels.length) {
-        te((localReels: any[]) => {
-          const map = new Map<string, any>();
-          for (const r of [...data.reels, ...localReels]) {
-            if (r?.id && !map.has(r.id)) map.set(r.id, r);
-          }
-          for (const r of data.reels) {
-            if (r?.id) map.set(r.id, r);
-          }
-          return Array.from(map.values());
-        });
+      if (Array.isArray(data.reels)) {
+        te(data.reels);
       }
-      if (Array.isArray(data.circles) && data.circles.length) {
-        w((localCircles: any[]) => {
-          const serverIds = new Set(data.circles.map((c: any) => c.id));
-          return [
-            ...data.circles,
-            ...localCircles.filter((c: any) => c?.id && !serverIds.has(c.id)),
-          ];
-        });
+      if (Array.isArray(data.circles)) {
+        w(data.circles);
       }
-      if (Array.isArray(data.events) && data.events.length) {
-        T((localEvents: any[]) => {
-          const serverIds = new Set(data.events.map((e: any) => e.id));
-          return [
-            ...data.events,
-            ...localEvents.filter((e: any) => e?.id && !serverIds.has(e.id)),
-          ];
-        });
+      if (Array.isArray(data.events)) {
+        T(data.events);
       }
       if (Array.isArray(data.prompts) && data.prompts.length) {
         setPrompts(data.prompts);

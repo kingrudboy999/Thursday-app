@@ -282,19 +282,36 @@ app.get("/api/health", (_req, res) => {
  */
 const MEDIA_INLINE_LIMIT = 24 * 1024; // ~24 KB of base64 stays inline
 
-function externalizeMedia<T>(value: T, mediaId: string): T {
+/**
+ * Where the browser should fetch media from.
+ *
+ * These URLs used to be relative ("/api/media/..."), which only works if the
+ * web app and the API share an origin. They do not: the site is served by
+ * Vercel, whose catch-all rewrite answers any unknown path with index.html —
+ * so every avatar and cover came back as HTML and rendered as a broken image.
+ * An absolute URL is origin-correct everywhere it is used.
+ */
+function mediaOriginFor(req: Request): string {
+  const configured = String(process.env.PUBLIC_API_URL || "").replace(/\/$/, "");
+  if (configured) return configured;
+  const proto = String(req.header("x-forwarded-proto") || req.protocol || "https").split(",")[0].trim();
+  const host = String(req.header("x-forwarded-host") || req.get("host") || "").split(",")[0].trim();
+  return host ? `${proto}://${host}` : "";
+}
+
+function externalizeMedia<T>(value: T, mediaId: string, origin = ""): T {
   if (Array.isArray(value)) {
-    return value.map((v, i) => externalizeMedia(v, `${mediaId}_${i}`)) as unknown as T;
+    return value.map((v, i) => externalizeMedia(v, `${mediaId}_${i}`, origin)) as unknown as T;
   }
   if (value && typeof value === "object") {
     const out: any = {};
     for (const [k, v] of Object.entries(value as any)) {
-      out[k] = externalizeMedia(v, `${mediaId}_${k}`);
+      out[k] = externalizeMedia(v, `${mediaId}_${k}`, origin);
     }
     return out;
   }
   if (typeof value === "string" && value.startsWith("data:") && value.length > MEDIA_INLINE_LIMIT) {
-    return `/api/media/${mediaId}` as unknown as T;
+    return `${origin}/api/media/${mediaId}` as unknown as T;
   }
   return value;
 }
@@ -582,6 +599,7 @@ app.post("/api/auth/logout", async (req, res) => {
 app.get("/api/bootstrap", async (req, res) => {
   try {
     const actor = await resolveRequestActor(req);
+    const mediaOrigin = mediaOriginFor(req);
     const userId = actor.userId;
     const onlineSet = new Set(getOnlineUserIds());
 
@@ -612,7 +630,7 @@ app.get("/api/bootstrap", async (req, res) => {
       authenticated: Boolean(actor.account),
       userId,
       onlineUserIds: Array.from(onlineSet),
-      people: people.map((p: any) => externalizeMedia(p, `people_${p.id}`)),
+      people: people.map((p: any) => externalizeMedia(p, `people_${p.id}`, mediaOrigin)),
       posts: collections.posts
         .filter((p: any) => !blockedSet.has(p.authorId))
         .map((p: any) => projectPostForUser(p, userId)),
@@ -620,7 +638,7 @@ app.get("/api/bootstrap", async (req, res) => {
       highlights: collections.highlights,
       reels: collections.reels
         .filter((r: any) => !blockedSet.has(r.authorId))
-        .map((r: any) => externalizeMedia(projectReelForUser(r, userId), `reels_${r.id}`)),
+        .map((r: any) => externalizeMedia(projectReelForUser(r, userId), `reels_${r.id}`, mediaOrigin)),
       circles: collections.circles.map((c: any) => projectCircleForUser(c, userId)),
       events: collections.events.map((e: any) => projectEventForUser(e, userId)),
       prompts: collections.prompts,
