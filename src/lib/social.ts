@@ -81,10 +81,18 @@ export const TOPICS = [
 ];
 export const SUGGESTED_PERSON_IDS: string[] = [];
 export const EXPLORE_ITEMS: any[] = [];
+/**
+ * Human count: 1234 -> "1.2k", 2000000 -> "2m", 0 -> "0".
+ *
+ * Coerces first, because a missing or null count used to fall through to
+ * String(undefined) and render the word "undefined" on screen.
+ */
 export function formatCount(c?: any) {
-  return c >= 1e6
-    ? `${(c / 1e6).toFixed(1).replace(".0", "")}m`
-    : c >= 1e3
-      ? `${(c / 1e3).toFixed(1).replace(".0", "")}k`
-      : String(c);
+  const n = Number(c);
+  const safe = Number.isFinite(n) && n > 0 ? n : 0;
+  return safe >= 1e6
+    ? `${(safe / 1e6).toFixed(1).replace(".0", "")}m`
+    : safe >= 1e3
+      ? `${(safe / 1e3).toFixed(1).replace(".0", "")}k`
+      : String(safe);
 }

@@ -416,7 +416,7 @@ export async function apiRecordReelView(reelId: string) {
 
 export async function apiReelAction(
   reelId: string,
-  action: "like" | "save" | "comments",
+  action: "like" | "save" | "comments" | "share",
   payload?: any,
 ) {
   return apiRequest(`/api/reels/${encodeURIComponent(reelId)}/${action}`, {

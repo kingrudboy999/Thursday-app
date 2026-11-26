@@ -833,6 +833,39 @@ export async function updateUserState(
   return next;
 }
 
+/**
+ * Follower counts, computed from who actually follows whom.
+ *
+ * The profile object carried a `followers` number that was written once and
+ * then drifted: it started at an invented 1, only moved when the follow button
+ * was pressed by that one person, and was never true for anybody else. So the
+ * profile showed a different number to its own owner than to a visitor.
+ *
+ * The source of truth is the follow edge -- `followingIds` on each user's state.
+ * Counting those edges can never disagree with the list of people you follow.
+ */
+export async function getFollowerCounts(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  const addEdges = (followingIds: unknown) => {
+    if (!Array.isArray(followingIds)) return;
+    for (const targetId of followingIds) {
+      if (typeof targetId !== "string" || !targetId) continue;
+      counts[targetId] = (counts[targetId] || 0) + 1;
+    }
+  };
+
+  if (!usingPostgres || !pool) {
+    for (const state of Object.values(memoryStore.users)) addEdges(state.followingIds);
+    return counts;
+  }
+
+  const { rows } = await pool.query(
+    `SELECT client_id, state->'followingIds' AS following FROM thursday_user_state`,
+  );
+  for (const row of rows) addEdges(row.following);
+  return counts;
+}
+
 export async function pushNotificationToUser(
   targetUserId: string,
   notice: {

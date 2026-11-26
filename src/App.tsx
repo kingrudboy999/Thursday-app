@@ -721,7 +721,27 @@ export function App() {
           );
         return Q ? Y.filter((et?: any) => et !== H) : [...Y, H];
       });
-      apiToggleFollow(H);
+      // The server answers with the authoritative counts, computed from the
+      // real follow edges. Paint those instead of guessing +1/-1 locally, so
+      // the number under the profile can never disagree with the follow list.
+      apiToggleFollow(H)
+        .then((res: any) => {
+          const person = res?.person;
+          if (!person?.id) return;
+          d((people?: any[]) =>
+            (people || []).map((p: any) =>
+              p.id === person.id ? { ...p, followers: person.followers } : p,
+            ),
+          );
+          x((me: any) =>
+            me
+              ? { ...me, following: res.followingCount ?? me.following }
+              : me,
+          );
+        })
+        .catch(() => {
+          /* offline: the list stays as it was, nothing to reconcile */
+        });
     },
     m0 = (H?: any) => {
       const Y = {
@@ -746,7 +766,15 @@ export function App() {
         liked: !Y.liked,
         likes: Math.max(0, Y.likes + (Y.liked ? -1 : 1)),
       }));
-      apiPostAction(H, "like");
+      // Reconcile with the server's authoritative count. The optimistic number
+      // is a guess; if two devices like at once, only the server knows the sum.
+      apiPostAction(H, "like")
+        .then((res: any) => {
+          const post = res?.post;
+          if (!post || typeof post.likes !== "number") return;
+          tt(post.id, (Y?: any) => ({ ...Y, likes: post.likes, liked: post.liked }));
+        })
+        .catch(() => {});
     },
     V1 = (H?: any) => {
       let Y = false;
@@ -1283,7 +1311,17 @@ export function App() {
             : Q,
         ),
       );
-      apiReelAction(H, "like");
+      // Optimistic flip for instant feedback, then correct to the server's
+      // real count so a double-tap or a stale tab cannot leave the number wrong.
+      apiReelAction(H, "like")
+        .then((res: any) => {
+          const reel = res?.reel;
+          if (!reel || typeof reel.likes !== "number") return;
+          te((list?: any) =>
+            list.map((r: any) => (r.id === reel.id ? { ...r, likes: reel.likes } : r)),
+          );
+        })
+        .catch(() => {});
     },
     Wa = (H?: any) => {
       let Y = false;
@@ -1305,16 +1343,20 @@ export function App() {
       );
     },
     Ia = (H?: any) => {
-      te((Y?: any) =>
-        Y.map((Q?: any) =>
-          Q.id === H.id
-            ? {
-                ...Q,
-                shares: Q.shares + 1,
-              }
-            : Q,
-        ),
-      );
+      // Count the share on the server first, then paint what it reports. The
+      // old handler only incremented the number in this browser, so it reset on
+      // reload and no other viewer ever saw it.
+      apiReelAction(H.id, "share")
+        .then((res: any) => {
+          const shares = res?.shares;
+          if (typeof shares !== "number") return;
+          te((Y?: any) =>
+            Y.map((Q?: any) => (Q.id === H.id ? { ...Q, shares } : Q)),
+          );
+        })
+        .catch(() => {
+          /* sharing still works if the count cannot be recorded */
+        });
       shareContent({
         title: `Reel by ${c.find((Y?: any) => Y.id === H.authorId)?.name ?? "someone on Thursday"}`,
         text: H.caption,

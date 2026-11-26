@@ -23,6 +23,7 @@ import {
   setCollection,
   getThreadById,
   getThreadsForUser,
+  getFollowerCounts,
   getUserState,
   getWorkspaceSnapshot,
   initDatabase,
@@ -233,6 +234,9 @@ function projectCircleForUser(circle: any, userId: string) {
       : [];
   return {
     ...circle,
+    // Derived from the member list, not a running tally. The old field was
+    // incremented by hand and drifted from the list it was supposed to count.
+    members: joinedBy.length,
     joined: joinedBy.includes(userId),
   };
 }
@@ -242,6 +246,8 @@ function projectEventForUser(ev: any, userId: string) {
   const rsvped = attendeeIds.includes(userId) || (userId === "me" && Boolean(ev.rsvped));
   return {
     ...ev,
+    // Count the people who said yes, rather than tracking a separate number.
+    attendees: attendeeIds.length,
     rsvped,
     attendeeIds,
   };
@@ -485,8 +491,12 @@ app.post("/api/auth/signup", async (req, res) => {
       bio,
       location,
       website: `${handle}.thursday.social`,
-      followers: 1,
-      following: 3,
+      // A new account has no followers and follows nobody. These used to be
+      // `followers: 1, following: 3` -- invented numbers that pointed at people
+      // who did not exist, so every profile claimed a following it never had,
+      // and the count never matched anyone's actual follower list.
+      followers: 0,
+      following: 0,
       verified: false,
     };
 
@@ -616,11 +626,30 @@ app.get("/api/bootstrap", async (req, res) => {
       : userState.me;
 
     const blockedSet = new Set(userState.blockedIds || []);
+    // Counts are derived from real relationships, never from a stored profile
+    // snapshot. The snapshot was written once at signup and never updated, so
+    // the profile's own page showed a different follower count than everybody
+    // else saw -- and never moved when people followed or unfollowed.
+    const followingCount = userState.followingIds.length;
+    const followerCounts = await getFollowerCounts();
+    const withRealCounts = (p: any) => {
+      // A profile row can be missing (an account deleted between reads). Guard
+      // it: this ran on a null entry and took the whole bootstrap down.
+      if (!p || typeof p !== "object") return p;
+      return {
+        ...p,
+        following: p.id === userId ? followingCount : p.following,
+        followers: followerCounts[p.id] ?? 0,
+      };
+    };
     const people = collections.people.some((p: any) => p.id === userId)
       ? collections.people
           .filter((p: any) => !blockedSet.has(p.id))
           .map((p: any) => (p.id === userId ? { ...p, ...meProfile } : p))
-      : [meProfile, ...collections.people.filter((p: any) => !blockedSet.has(p.id))];
+          .map(withRealCounts)
+      : [meProfile, ...collections.people.filter((p: any) => !blockedSet.has(p.id))].map(
+          withRealCounts,
+        );
 
     const formattedConversations = userThreads.map((t) =>
       formatThreadForUser(t, userId, onlineSet),
@@ -645,7 +674,7 @@ app.get("/api/bootstrap", async (req, res) => {
       events: collections.events.map((e: any) => projectEventForUser(e, userId)),
       prompts: collections.prompts,
       guides: collections.guides,
-      me: meProfile,
+      me: withRealCounts(meProfile),
       followingIds: userState.followingIds,
       // Only real threads are returned. Previously an empty thread table fell
       // back to seeded demo conversations, which is why the inbox showed fake
@@ -975,13 +1004,22 @@ app.post("/api/people/:id/follow", async (req, res) => {
       }
     }
 
+    // Report the derived count, not the incrementally patched one -- the
+    // patched number starts from whatever was in the profile snapshot and
+    // drifts away from the real follower list.
+    const counts = await getFollowerCounts();
     const updatedTarget = updatedPeople.find((p: any) => p.id === targetId);
-    broadcast("person:updated", updatedTarget);
+    const personWithRealCounts = updatedTarget
+      ? { ...updatedTarget, followers: counts[targetId] ?? 0 }
+      : updatedTarget;
+    broadcast("person:updated", personWithRealCounts);
     res.json({
       ok: true,
       followingIds: nextState.followingIds,
       following: isNowFollowing,
-      person: updatedTarget,
+      person: personWithRealCounts,
+      followers: counts[targetId] ?? 0,
+      followingCount: nextState.followingIds.length,
     });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err?.message });
@@ -1660,8 +1698,10 @@ app.post("/api/reels", async (req, res) => {
       liked: false,
       saved: false,
       shares: 0,
-      views: "1",
-      viewCount: 1,
+      // Zero until somebody watches it. This used to start at 1, so a brand
+      // new reel claimed a viewer it never had.
+      views: 0,
+      viewCount: 0,
       comments: [],
     };
     await updateCollection("reels", (reels) => [reel, ...reels]);
@@ -1682,10 +1722,9 @@ app.post("/api/reels/:id/view", async (req, res) => {
         const parsed =
           typeof r.viewCount === "number"
             ? r.viewCount
-            : Number(r.views) ||
-              (String(r.views || "").toLowerCase().endsWith("k")
-                ? Math.round(parseFloat(r.views) * 1000)
-                : Number(String(r.views || "1").replace(/[^0-9]/g, "")) || 1);
+            : String(r.views || "").toLowerCase().endsWith("k")
+              ? Math.round(parseFloat(r.views) * 1000)
+              : Number(String(r.views ?? 0).replace(/[^0-9]/g, "")) || 0;
         const nextCount = parsed + 1;
         // Keep counts numeric so the client can format consistently live.
         updated = { ...r, viewCount: nextCount, views: nextCount };
@@ -1753,6 +1792,32 @@ app.post("/api/reels/:id/save", async (req, res) => {
   }
 });
 
+/**
+ * Record a share.
+ *
+ * Sharing a reel used to bump the number in the browser only: the count
+ * looked right until you refreshed, and nobody else ever saw it. It has to
+ * be a real, counted event on the server to mean anything.
+ */
+app.post("/api/reels/:id/share", async (req, res) => {
+  try {
+    const id = req.params.id;
+    let updated: any = null;
+    await updateCollection("reels", (reels) =>
+      reels.map((r: any) => {
+        if (r.id !== id) return r;
+        updated = { ...r, shares: Math.max(0, Number(r.shares) || 0) + 1 };
+        return updated;
+      }),
+    );
+    if (!updated) return res.status(404).json({ ok: false, error: "Reel not found" });
+    broadcast("reel:updated", updated);
+    res.json({ ok: true, reel: updated, shares: updated.shares });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
 app.post("/api/reels/:id/comments", async (req, res) => {
   try {
     const actor = await resolveRequestActor(req);
@@ -1794,7 +1859,6 @@ app.post("/api/circles", async (req, res) => {
       description: String(body.description || ""),
       category: body.category || "Craft",
       image: body.image,
-      members: 1,
       posts: 0,
       joinedBy: [actor.userId],
       joined: true,
@@ -1825,11 +1889,7 @@ app.post(["/api/circles/:id/toggle", "/api/circles/:id/join"], async (req, res) 
             : [];
         const has = joinedBy.includes(userId);
         const nextJoinedBy = has ? joinedBy.filter((x) => x !== userId) : [...joinedBy, userId];
-        updated = {
-          ...c,
-          joinedBy: nextJoinedBy,
-          members: Math.max(0, (c.members || 0) + (has ? -1 : 1)),
-        };
+        updated = { ...c, joinedBy: nextJoinedBy };
         return updated;
       }),
     );
@@ -1858,7 +1918,6 @@ app.post("/api/events", async (req, res) => {
       location: body.location || "TBD",
       mode: body.mode || "In person",
       image: body.image,
-      attendees: 1,
       spots: Number(body.spots || 16),
       rsvped: true,
       attendeeIds: [actor.userId],
@@ -1886,11 +1945,7 @@ app.post("/api/events/:id/rsvp", async (req, res) => {
         const attendeeIds = has
           ? currentIds.filter((x) => x !== userId)
           : [...currentIds, userId];
-        updated = {
-          ...ev,
-          attendees: Math.max(0, (ev.attendees || 0) + (has ? -1 : 1)),
-          attendeeIds,
-        };
+        updated = { ...ev, attendeeIds };
         return updated;
       }),
     );
