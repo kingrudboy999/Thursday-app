@@ -1,4 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  checkBackendHealth,
+  getClientId,
+  pullWorkspaceFromRailway,
+  pushWorkspaceToRailway,
+} from "../lib/api";
 import { cn } from "../lib/cn";
 import {
   ArrowCounterClockwise,
@@ -17,6 +23,7 @@ import {
   Sparkle,
   Sun,
   Trash,
+  UploadSimple,
   UserCircle,
   UsersThree,
   Warning,
@@ -90,17 +97,37 @@ export function SettingsView({
   me,
   preferences,
   stats,
+  draftsCount,
+  savedGuidesCount,
   onUpdate,
   onEditProfile,
   onExport,
+  onImportWorkspace,
+  onReloadFromStorage,
   onReset,
   onToast,
   onOpenPerson,
   onBackHome,
 }: any) {
   const [R, z] = useState<any>(false),
-    [v, q] = useState<any>(true),
-    _ = (C?: any, U?: any) =>
+    [v, q] = useState<any>(preferences.quietHoursEnabled ?? true),
+    [fromTime, setFromTime] = useState<string>(preferences.quietHoursFrom || "22:00"),
+    [untilTime, setUntilTime] = useState<string>(preferences.quietHoursUntil || "07:30"),
+    [syncCode, setSyncCode] = useState<string>(() => getClientId()),
+    [syncBusy, setSyncBusy] = useState<boolean>(false),
+    [backendLive, setBackendLive] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    checkBackendHealth().then((res) => {
+      if (active) setBackendLive(res.ok);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const _ = (C?: any, U?: any) =>
       onUpdate({
         ...preferences,
         notifications: {
@@ -397,20 +424,44 @@ export function SettingsView({
           description="Protect the edges of your day from notifications."
         >
           <div className="px-4 py-3.5 sm:px-5">
-            <QuietHoursCard enabled={v} onChange={q} />
+            <QuietHoursCard
+              enabled={v}
+              onChange={(enabledVal: boolean) => {
+                q(enabledVal);
+                onUpdate({ ...preferences, quietHoursEnabled: enabledVal });
+              }}
+              fromTime={fromTime}
+              untilTime={untilTime}
+            />
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-line px-2.5 py-2">
-                <p className="text-[9px] font-semibold tracking-[0.06em] text-faint uppercase">
+              <label className="rounded-lg border border-line px-2.5 py-2">
+                <span className="block text-[9px] font-semibold tracking-[0.06em] text-faint uppercase">
                   From
-                </p>
-                <p className="mt-0.5 text-[12px] font-medium text-ink">22:00</p>
-              </div>
-              <div className="rounded-lg border border-line px-2.5 py-2">
-                <p className="text-[9px] font-semibold tracking-[0.06em] text-faint uppercase">
+                </span>
+                <input
+                  type="time"
+                  value={fromTime}
+                  onChange={(e) => {
+                    setFromTime(e.target.value);
+                    onUpdate({ ...preferences, quietHoursFrom: e.target.value });
+                  }}
+                  className="mt-0.5 w-full bg-transparent text-[12px] font-medium text-ink focus:outline-none"
+                />
+              </label>
+              <label className="rounded-lg border border-line px-2.5 py-2">
+                <span className="block text-[9px] font-semibold tracking-[0.06em] text-faint uppercase">
                   Until
-                </p>
-                <p className="mt-0.5 text-[12px] font-medium text-ink">07:30</p>
-              </div>
+                </span>
+                <input
+                  type="time"
+                  value={untilTime}
+                  onChange={(e) => {
+                    setUntilTime(e.target.value);
+                    onUpdate({ ...preferences, quietHoursUntil: e.target.value });
+                  }}
+                  className="mt-0.5 w-full bg-transparent text-[12px] font-medium text-ink focus:outline-none"
+                />
+              </label>
             </div>
           </div>
         </SettingsSectionCard>
@@ -428,12 +479,12 @@ export function SettingsView({
               },
               {
                 label: "Drafts",
-                value: INITIAL_DRAFTS.length,
+                value: draftsCount ?? INITIAL_DRAFTS.length,
                 note: "saved privately",
               },
               {
                 label: "Guides",
-                value: CIRCLE_GUIDES.length,
+                value: savedGuidesCount ?? CIRCLE_GUIDES.length,
                 note: "saved to read",
               },
             ].map((C?: any) => (
@@ -462,9 +513,27 @@ export function SettingsView({
         <SettingsSectionCard
           icon={DownloadSimple}
           title="Your data"
-          description="Export or clear everything Thursday keeps."
+          description="Export, import, sync across devices via Railway, or start fresh."
+          action={
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-semibold",
+                backendLive
+                  ? "bg-forest-soft text-forest"
+                  : "bg-surface-muted text-muted",
+              )}
+            >
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  backendLive ? "bg-forest" : "bg-faint",
+                )}
+              />
+              {backendLive ? "Railway synced" : "Local mode"}
+            </span>
+          }
         >
-          <div className="grid gap-2 px-4 py-3.5 sm:grid-cols-2 sm:px-5">
+          <div className="grid gap-2 px-4 py-3.5 sm:grid-cols-3 sm:px-5">
             <button
               type="button"
               onClick={onExport}
@@ -482,6 +551,31 @@ export function SettingsView({
                 </span>
               </span>
             </button>
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] border border-line p-2.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted">
+              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-line bg-surface text-muted">
+                <UploadSimple size={13} strokeWidth={2} />
+              </span>
+              <span>
+                <span className="block text-[11.5px] font-semibold text-ink">
+                  Import backup
+                </span>
+                <span className="mt-0.5 block text-[10px] leading-[1.5] text-muted">
+                  Restore a previously exported Thursday JSON workspace file.
+                </span>
+              </span>
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="sr-only"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const text = await file.text();
+                  onImportWorkspace?.(text);
+                  e.target.value = "";
+                }}
+              />
+            </label>
             <button
               type="button"
               onClick={() => z(true)}
@@ -500,6 +594,74 @@ export function SettingsView({
                 </span>
               </span>
             </button>
+          </div>
+          <div className="flex flex-col gap-2 border-t border-line bg-surface-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold text-ink">
+                Cross-device Railway sync code
+              </p>
+              <p className="text-[10px] text-muted">
+                Save your workspace to Railway PostgreSQL or enter a code from another device.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={syncCode}
+                onChange={(e) => setSyncCode(e.target.value)}
+                aria-label="Sync code"
+                className="h-7.5 w-32 rounded-[6px] border border-line-strong bg-surface px-2.5 font-mono text-[11px] text-ink focus:border-forest focus:outline-none"
+              />
+              <button
+                type="button"
+                disabled={syncBusy}
+                onClick={async () => {
+                  try {
+                    setSyncBusy(true);
+                    const res = await pushWorkspaceToRailway(syncCode);
+                    setSyncCode(res.syncKey);
+                    onToast(
+                      "Workspace synced to Railway",
+                      `Saved under code ${res.syncKey}.`,
+                    );
+                  } catch (err) {
+                    onToast(
+                      "Could not sync right now",
+                      err instanceof Error ? err.message : "Try again shortly.",
+                    );
+                  } finally {
+                    setSyncBusy(false);
+                  }
+                }}
+                className="h-7.5 rounded-[6px] bg-forest px-2.5 text-[10.5px] font-semibold text-white hover:bg-forest-hover disabled:opacity-50"
+              >
+                Backup
+              </button>
+              <button
+                type="button"
+                disabled={syncBusy}
+                onClick={async () => {
+                  try {
+                    setSyncBusy(true);
+                    const res = await pullWorkspaceFromRailway(syncCode);
+                    onToast(
+                      "Workspace restored from Railway",
+                      `Loaded ${res.restoredKeys} items for ${res.syncKey}.`,
+                    );
+                    onReloadFromStorage?.();
+                  } catch (err) {
+                    onToast(
+                      "Could not restore",
+                      err instanceof Error ? err.message : "Check your sync code.",
+                    );
+                  } finally {
+                    setSyncBusy(false);
+                  }
+                }}
+                className="h-7.5 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted disabled:opacity-50"
+              >
+                Restore
+              </button>
+            </div>
           </div>
           {R ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-line bg-clay-wash px-4 py-2.5 sm:px-5">
