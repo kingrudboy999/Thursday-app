@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useAmbientAudio } from "../lib/audio";
 import { cn } from "../lib/cn";
 import {
@@ -7,12 +13,17 @@ import {
   CaretRight,
   ChatCircle,
   DotsThree,
+  EyeSlash,
   Heart,
   Image,
+  LinkSimple,
   MapPin,
   MusicNotes,
   PaperPlaneTilt,
   Pause,
+  PencilSimple,
+  Phone,
+  PhoneSlash,
   Play,
   Plus,
   PushPin,
@@ -20,6 +31,8 @@ import {
   SealCheck,
   Smiley,
   Sparkle,
+  Trash,
+  UserCircle,
   UsersThree,
 } from "../lib/icons";
 import { formatCount } from "../lib/social";
@@ -147,11 +160,50 @@ export function MediaFrame({
     </button>
   );
 }
+export const PostActionsContext = createContext<any>({});
+export function RichText({
+  text,
+  onOpenTopic,
+  onOpenHandle,
+  className,
+}: any) {
+  if (!text) return null;
+  const parts = String(text).split(/((?:^|\s)[#@][a-zA-Z0-9_]+)/g);
+  return (
+    <span className={className}>
+      {parts.map((part: string, i: number) => {
+        const trimmed = part.trimStart();
+        if (!/^[#@][a-zA-Z0-9_]+$/.test(trimmed)) return part;
+        const symbol = trimmed[0];
+        const value = trimmed.slice(1);
+        const leading = part.slice(0, part.length - trimmed.length);
+        return (
+          <span key={`${part}-${i}`}>
+            {leading}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (symbol === "#") onOpenTopic?.(value.toLowerCase());
+                else onOpenHandle?.(value.toLowerCase());
+              }}
+              className="font-medium text-forest hover:underline"
+            >
+              {trimmed}
+            </button>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 export function PostCard({
   post,
   author,
   people,
   circles,
+  meId = "me",
+  onlineIds = [],
   onOpen,
   onLike,
   onSave,
@@ -160,16 +212,41 @@ export function PostCard({
   onComment,
   onVote,
   onOpenCircle,
+  onEdit,
+  onDelete,
+  onPin,
+  onShare,
+  onOpenTopic,
+  onOpenHandle,
+  onSaveEdit,
 }: any) {
+  const ctx = useContext(PostActionsContext) || {};
+  const resolvedMeId = ctx.meId ?? meId;
+  const resolvedOnlineIds = ctx.onlineIds ?? onlineIds;
+  const handleTopic = onOpenTopic ?? ctx.onOpenTopic;
+  const handleHandle = onOpenHandle ?? ctx.onOpenHandle;
+  const handleEdit = onEdit ?? ctx.onEdit;
+  const handleDelete = onDelete ?? ctx.onDeletePost;
+  const handlePin = onPin ?? ctx.onPinPost;
+  const handleShare = onShare ?? ctx.onSharePost;
+  const handleSaveEdit = onSaveEdit ?? ctx.onSaveEdit;
   const [v, q] = useState<any>(false),
     [_, j] = useState<any>(0),
     ambient = useAmbientAudio(),
     musicKey = `post_${post.id}`,
     C = ambient.activeKey === musicKey,
     [J, te] = useState<any>(false),
+    [menuOpen, setMenuOpen] = useState<boolean>(false),
+    menuRef = useRef<any>(null),
+    [copied, setCopied] = useState<boolean>(false),
+    [editing, setEditing] = useState<boolean>(false),
+    [draftText, setDraftText] = useState<string>(post.text || ""),
+    [savingEdit, setSavingEdit] = useState<boolean>(false),
+    isAuthor = post.authorId === resolvedMeId,
     Ne = post.text.length > 220,
     he = Ne && !v ? `${post.text.slice(0, 215).trimEnd()}…` : post.text,
-    K = post.images[_],
+    images = post.images ?? [],
+    K = images[Math.min(_, Math.max(0, images.length - 1))],
     ae = post.circleId
       ? circles?.find((pe?: any) => pe.id === post.circleId)
       : undefined,
@@ -177,6 +254,31 @@ export function PostCard({
       post.poll?.options.reduce((pe?: any, le?: any) => pe + le.votes, 0) ?? 0,
     ye = post.poll?.votedOptionId,
     Ve = !!post.poll && !ye;
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e?: any) => {
+      if (menuRef.current && e?.target && menuRef.current.contains(e.target)) return;
+      setMenuOpen(false);
+    };
+    const esc = (e?: any) => e?.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [menuOpen]);
+
+  const copyLink = async () => {
+    const url = `${window.location.origin}${window.location.pathname}#post=${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {}
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+    setMenuOpen(false);
+  };
+
   return (
     <article className="animate-rise overflow-hidden border-b border-line bg-surface first:rounded-t-2xl last:rounded-b-2xl last:border-b-0 sm:border-x">
       <div className="flex items-start gap-2.5 px-4 pt-4 sm:px-5">
@@ -185,7 +287,11 @@ export function PostCard({
           onClick={onOpenAuthor}
           aria-label={`View ${author.name}'s profile`}
         >
-          <Avatar person={author} size="md" />
+          <Avatar
+            person={author}
+            size="md"
+            online={resolvedOnlineIds.includes(author.id)}
+          />
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -202,13 +308,116 @@ export function PostCard({
               </button>
               <AuthorChip person={author} time={post.time} className="mt-0.5" />
             </div>
-            <button
-              type="button"
-              aria-label="Post options"
-              className="-mt-1 -mr-1 inline-flex h-7 w-7 items-center justify-center rounded-full text-faint transition-colors hover:bg-surface-muted hover:text-ink"
-            >
-              <DotsThree size={15} strokeWidth={2} aria-hidden="true" />
-            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Post options"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className={cn(
+                  "-mt-1 -mr-1 inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-surface-muted hover:text-ink",
+                  menuOpen ? "bg-surface-muted text-ink" : "text-faint",
+                )}
+              >
+                <DotsThree size={15} strokeWidth={2} aria-hidden="true" />
+              </button>
+              {menuOpen ? (
+                <div
+                  role="menu"
+                  className="animate-pop absolute top-8 right-0 z-30 w-[186px] overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_44px_rgba(24,28,24,0.18)]"
+                >
+                  {[
+                    {
+                      label: copied ? "Link copied" : "Copy link",
+                      icon: LinkSimple,
+                      onClick: copyLink,
+                    },
+                    {
+                      label: post.saved ? "Remove from saved" : "Save post",
+                      icon: BookmarkSimple,
+                      onClick: () => {
+                        onSave?.();
+                        setMenuOpen(false);
+                      },
+                    },
+                    {
+                      label: "Share post",
+                      icon: PaperPlaneTilt,
+                      onClick: () => {
+                        handleShare?.(post);
+                        setMenuOpen(false);
+                      },
+                    },
+                    ...(isAuthor
+                      ? [
+                          {
+                            label: "Edit post",
+                            icon: PencilSimple,
+                            onClick: () => {
+                              setDraftText(post.text || "");
+                              setEditing(true);
+                              setMenuOpen(false);
+                              handleEdit?.(post);
+                            },
+                          },
+                          {
+                            label: post.pinned ? "Unpin from profile" : "Pin to profile",
+                            icon: PushPin,
+                            onClick: () => {
+                              handlePin?.(post.id ?? post);
+                              setMenuOpen(false);
+                            },
+                          },
+                          {
+                            label: "Delete post",
+                            icon: Trash,
+                            danger: true,
+                            onClick: () => {
+                              handleDelete?.(post.id ?? post);
+                              setMenuOpen(false);
+                            },
+                          },
+                        ]
+                      : [
+                          {
+                            label: "View profile",
+                            icon: UserCircle,
+                            onClick: () => {
+                              onOpenAuthor?.();
+                              setMenuOpen(false);
+                            },
+                          },
+                          {
+                            label: "Not interested",
+                            icon: EyeSlash,
+                            onClick: () => setMenuOpen(false),
+                          },
+                        ]),
+                  ].map((item: any) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      role="menuitem"
+                      onClick={item.onClick}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-medium transition-colors",
+                        item.danger
+                          ? "text-clay hover:bg-clay-wash"
+                          : "text-ink-soft hover:bg-surface-muted hover:text-ink",
+                      )}
+                    >
+                      <item.icon
+                        size={14}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -233,8 +442,46 @@ export function PostCard({
         </div>
       ) : null}
       <div className="px-4 pt-2.5 sm:px-5">
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              autoFocus
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              rows={3}
+              className="w-full resize-none rounded-[10px] border border-line bg-canvas px-3 py-2 text-[13px] leading-[1.6] text-ink focus:border-forest focus:bg-surface focus:outline-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="h-7 rounded-[7px] px-2.5 text-[11.5px] font-semibold text-muted hover:bg-surface-muted hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!draftText.trim() || savingEdit}
+                onClick={async () => {
+                  if (!draftText.trim()) return;
+                  setSavingEdit(true);
+                  await handleSaveEdit?.(post, draftText.trim());
+                  setSavingEdit(false);
+                  setEditing(false);
+                }}
+                className="h-7 rounded-[7px] bg-forest px-2.5 text-[11.5px] font-semibold text-white disabled:opacity-50"
+              >
+                {savingEdit ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </div>
+        ) : (
         <p className="text-[13px] leading-[1.65] text-ink-soft">
-          {he}
+          <RichText
+            text={he}
+            onOpenTopic={handleTopic}
+            onOpenHandle={handleHandle}
+          />
           {Ne && !v ? (
             <button
               type="button"
@@ -245,6 +492,7 @@ export function PostCard({
             </button>
           ) : null}
         </p>
+        )}
         {post.place || post.taggedIds?.length ? (
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
             {post.place ? (
@@ -258,9 +506,14 @@ export function PostCard({
                 {post.taggedIds.map((tid: string) => {
                   const personObj = people?.find((p: any) => p.id === tid);
                   return personObj ? (
-                    <span key={tid} className="font-medium">
+                    <button
+                      key={tid}
+                      type="button"
+                      onClick={() => handleHandle?.(personObj.handle)}
+                      className="font-medium hover:underline"
+                    >
                       @{personObj.handle}
-                    </span>
+                    </button>
                   ) : null;
                 })}
               </span>
@@ -416,17 +669,17 @@ export function PostCard({
           <span className="pointer-events-none absolute bottom-2.5 left-3 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-medium text-white/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
             Double-tap to like
           </span>
-          {post.images.length > 1 ? (
+          {images.length > 1 ? (
             <>
               <span className="absolute top-2.5 right-2.5 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur tabular-nums">
-                {_ + 1}/{post.images.length}
+                {Math.min(_, images.length - 1) + 1}/{images.length}
               </span>
               <button
                 type="button"
                 onClick={() =>
                   j(
                     (pe?: any) =>
-                      (pe - 1 + post.images.length) % post.images.length,
+                      (pe - 1 + images.length) % images.length,
                   )
                 }
                 aria-label="Previous photo"
@@ -436,14 +689,14 @@ export function PostCard({
               </button>
               <button
                 type="button"
-                onClick={() => j((pe?: any) => (pe + 1) % post.images.length)}
+                onClick={() => j((pe?: any) => (pe + 1) % images.length)}
                 aria-label="Next photo"
                 className="absolute top-1/2 right-2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
               >
                 <CaretRight size={14} strokeWidth={2.2} aria-hidden="true" />
               </button>
               <div className="absolute bottom-2.5 left-1/2 flex -translate-x-1/2 items-center gap-1">
-                {post.images.map((pe?: any, le?: any) => (
+                {images.map((pe?: any, le?: any) => (
                   <button
                     key={le}
                     type="button"
@@ -451,7 +704,7 @@ export function PostCard({
                     aria-label={`Go to photo ${le + 1}`}
                     className={cn(
                       "h-1.5 rounded-full bg-white transition-all",
-                      le === _
+                      le === Math.min(_, Math.max(0, images.length - 1))
                         ? "w-4 opacity-100"
                         : "w-1.5 opacity-55 hover:opacity-80",
                     )}
@@ -512,7 +765,7 @@ export function PostCard({
             <span className="mt-[3px] h-1 w-1 shrink-0 rounded-full bg-line-strong" />
             <span className="text-[11.5px] leading-[1.5] text-muted">
               <span className="font-semibold text-ink-soft">
-                {post.comments[0].authorId === "me"
+                {post.comments[0].authorId === resolvedMeId
                   ? "You"
                   : (people
                       ?.find((pe?: any) => pe.id === post.comments[0].authorId)
@@ -859,6 +1112,50 @@ export function ToastBanner({ title, description, onDismiss, action }: any) {
       >
         <span className="text-[15px] leading-none">×</span>
       </button>
+    </div>
+  );
+}
+export function IncomingCallBanner({ call, people, onAccept, onDecline }: any) {
+  if (!call) return null;
+  const caller = people?.find((p: any) => p.id === call.fromUserId);
+  return (
+    <div
+      role="alertdialog"
+      aria-label="Incoming call"
+      className="animate-pop fixed inset-x-3 top-3 z-[90] mx-auto flex max-w-[420px] items-center gap-3 rounded-[14px] border border-line bg-surface p-3 shadow-[0_18px_50px_rgba(24,28,24,0.22)] sm:right-6 sm:left-auto sm:top-5"
+    >
+      {caller ? <Avatar person={caller} size="lg" /> : null}
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.09em] text-forest uppercase">
+          <Phone size={10} strokeWidth={2.4} aria-hidden="true" />
+          {call.kind === "video" ? "Video call" : "Voice call"}
+        </p>
+        <p className="mt-0.5 truncate text-[13px] font-semibold text-ink">
+          {caller?.name ?? "Someone in your circle"}
+        </p>
+        <p className="truncate text-[11px] text-muted">
+          is calling you right now
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onDecline?.(call)}
+          aria-label="Decline call"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-line text-clay transition-colors hover:bg-clay-wash"
+        >
+          <PhoneSlash size={14} strokeWidth={2} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onAccept?.(call)}
+          aria-label="Accept call"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-forest px-3 text-[11.5px] font-semibold text-white transition-colors hover:bg-forest-hover"
+        >
+          <Phone size={12} strokeWidth={2.2} aria-hidden="true" />
+          Join
+        </button>
+      </div>
     </div>
   );
 }
