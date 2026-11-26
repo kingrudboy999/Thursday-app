@@ -228,7 +228,7 @@ export function AuthView({
                 <img
                   src="https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1100&h=620&fit=crop"
                   alt="Thursday ceramics studio table"
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                 <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
@@ -374,7 +374,7 @@ export function AuthView({
                                 <img
                                   src={preset}
                                   alt=""
-                                  className="h-full w-full object-cover"
+                                  className="h-full w-full object-contain"
                                 />
                               </button>
                             ))}

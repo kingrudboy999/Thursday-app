@@ -135,10 +135,12 @@ export function ProfileView({
     <div className="mx-auto w-full max-w-[820px] px-4 pt-5 pb-10 sm:px-6 lg:px-8">
       <section className="animate-rise overflow-hidden rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgba(16,19,24,0.04)]">
         <div className="relative">
+          {/* A cover keeps its banner proportions, but the whole image is
+              shown inside it instead of being zoomed and cropped. */}
           <img
             src={person.cover}
             alt=""
-            className="h-[132px] w-full object-cover sm:h-[168px]"
+            className="h-[132px] w-full object-contain sm:h-[168px]"
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-ink/25 to-transparent" />
@@ -425,13 +427,13 @@ export function ProfileView({
                   key={`${le.image}-${Ee}`}
                   type="button"
                   onClick={() => onOpenPost(le.post)}
-                  className="group relative aspect-square overflow-hidden rounded-[6px]"
+                  className="group relative aspect-square overflow-hidden rounded-[6px] bg-canvas-deep/40"
                   aria-label="Open post media"
                 >
                   <img
                     src={le.image}
                     alt=""
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    className="h-full w-full object-contain"
                     loading="lazy"
                   />
                 </button>

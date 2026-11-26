@@ -268,7 +268,7 @@ export function CirclesView({
                 <img
                   src={K.image}
                   alt=""
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="h-full w-full object-contain"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
@@ -356,7 +356,7 @@ export function CirclesView({
               <img
                 src={te.image}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
               <button
@@ -601,7 +601,7 @@ export function GatheringsView({
               <img
                 src={q.image}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
               <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-[#101318] backdrop-blur">
@@ -873,7 +873,7 @@ export function GatheringsView({
               <img
                 src={_.image}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-black/5" />
               <button

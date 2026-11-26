@@ -392,7 +392,7 @@ export function FeedView({
                   <img
                     src={h.poster}
                     alt=""
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-contain"
                     loading="lazy"
                   />
                   <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent" />
@@ -659,7 +659,7 @@ export function FeedView({
               <img
                 src={h.image}
                 alt=""
-                className="h-14 w-full object-cover"
+                className="h-14 w-full object-contain"
                 loading="lazy"
               />
               <span className="block px-2 py-1.5">

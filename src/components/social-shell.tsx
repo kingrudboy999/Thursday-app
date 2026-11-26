@@ -1539,7 +1539,7 @@ export function ComposerModal({
                 <img
                   src={y}
                   alt="Selected attachment"
-                  className="h-44 w-full object-cover"
+                  className="h-44 w-full object-contain"
                 />
                 <button
                   type="button"
@@ -1562,7 +1562,7 @@ export function ComposerModal({
                     <img
                       src={photoOptions[J.value]}
                       alt={J.label}
-                      className="h-16 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="h-16 w-full object-contain"
                       loading="lazy"
                     />
                   </button>
@@ -1625,11 +1625,13 @@ export function PostDetailModal({
     <Modal open={!!post} onClose={onClose} width="lg" bare>
       <div className="flex max-h-[88vh] flex-col sm:flex-row">
         {j ? (
-          <div className="relative flex max-h-[42vh] shrink-0 items-center justify-center overflow-hidden bg-[#171a16] sm:max-h-none sm:w-[47%]">
+          <div className="relative flex max-h-[46vh] shrink-0 items-center justify-center overflow-hidden bg-[#171a16] sm:max-h-[70vh] sm:w-[47%]">
+            {/* Complete image, never cropped. It used to switch to
+                `object-cover` from `sm` up, which zoomed in on desktop. */}
             <img
               src={j}
               alt={post.imageAlt ?? ""}
-              className="h-full max-h-[500px] w-full object-contain sm:object-cover"
+              className="block max-h-[inherit] w-full object-contain"
             />
             <button
               type="button"
@@ -1962,7 +1964,7 @@ export function StoryViewerModal({
     };
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex flex-col overflow-hidden bg-[#050806]"
+      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-[#050806]"
       role="dialog"
       aria-modal="true"
       aria-label={`Story from ${y.name}`}
@@ -1984,10 +1986,13 @@ export function StoryViewerModal({
         className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
       />
       <div className="absolute inset-0 bg-[#050806]/45" />
+      {/* The photo itself is never stretched or cropped. It sits in its own
+          layer sized to its natural proportions, so no part of the image is
+          ever lost. The blurred copy behind it is ambience, not the photo. */}
       <img
         src={T.image}
         alt={T.caption}
-        className="story-image absolute inset-0 z-[1] h-full w-full object-cover"
+        className="story-image relative z-[1] block h-auto max-h-[100dvh] w-full max-w-full object-contain"
         aria-hidden="true"
       />
       {/* WhatsApp-style tap zones: right half advances, left half goes back,

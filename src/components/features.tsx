@@ -86,7 +86,7 @@ export function StoryHighlightsStrip({ highlights, onOpen, onAdd }: any) {
               <img
                 src={d.image}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
                 loading="lazy"
               />
             </span>
@@ -171,7 +171,7 @@ export function DraftsModal({ open, onClose, drafts, onPublish, onDelete }: any)
                     <img
                       src={A.image}
                       alt=""
-                      className="mt-2 h-20 w-full rounded-md object-cover"
+                      className="mt-2 h-20 w-full rounded-md object-contain"
                     />
                   ) : null}
                   <div className="mt-2 flex items-center justify-between">
@@ -414,7 +414,7 @@ export function GuideCard({ guide, onOpen }: any) {
       <img
         src={guide.image}
         alt=""
-        className="h-14 w-14 shrink-0 rounded-lg object-cover"
+        className="h-14 w-14 shrink-0 rounded-lg object-contain"
         loading="lazy"
       />
       <div className="min-w-0 flex-1">
@@ -468,7 +468,7 @@ export function GuideReaderModal({
       />
       <div className="animate-pop relative max-h-[86vh] w-full max-w-[520px] overflow-y-auto rounded-t-2xl border border-line bg-surface sm:rounded-2xl">
         <div className="relative h-44 overflow-hidden">
-          <img src={guide.image} alt="" className="h-full w-full object-cover" />
+          <img src={guide.image} alt="" className="h-full w-full object-contain" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <button
             type="button"
@@ -648,7 +648,7 @@ export function CreateHighlightModal({ open, onClose, onCreate }: any) {
                     image === p ? "border-forest" : "border-transparent opacity-75",
                   )}
                 >
-                  <img src={p} alt="" className="h-full w-full object-cover" />
+                  <img src={p} alt="" className="h-full w-full object-contain" />
                 </button>
               ))}
               <label className="inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed border-line-strong text-muted hover:border-forest hover:text-forest">
@@ -811,7 +811,7 @@ export function CreateCircleModal({ open, onClose, onCreate }: any) {
                     image === p ? "border-forest" : "border-transparent opacity-75",
                   )}
                 >
-                  <img src={p} alt="" className="h-full w-full object-cover" />
+                  <img src={p} alt="" className="h-full w-full object-contain" />
                 </button>
               ))}
               <label className="inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed border-line-strong text-muted hover:border-forest hover:text-forest">
@@ -1024,7 +1024,7 @@ export function CreateGatheringModal({ open, onClose, circles, onCreate }: any) 
                   image === p ? "border-forest" : "border-transparent opacity-75",
                 )}
               >
-                <img src={p} alt="" className="h-full w-full object-cover" />
+                <img src={p} alt="" className="h-full w-full object-contain" />
               </button>
             ))}
             <label className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed border-line-strong text-muted hover:border-forest hover:text-forest">
@@ -1210,10 +1210,12 @@ export function StoryComposerModal({ open, onClose, onShare, me }: any) {
         // returns to a centred card.
         <div className="fixed inset-0 z-[75] flex items-stretch justify-center bg-[#050806]/95 sm:items-center sm:p-6">
           <div className="story-composer relative flex h-full w-full flex-col overflow-hidden bg-[#0b0f0c] sm:max-h-[760px] sm:max-w-[420px] sm:rounded-2xl sm:border sm:border-white/10">
+            {/* Preview only: the chosen photo is shown whole behind the
+                controls, never zoomed to fill the screen. */}
             <img
               src={A}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-80"
+              className="absolute inset-0 h-full w-full object-contain opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
             <div className="relative z-10 flex items-center justify-between p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3">
@@ -1269,7 +1271,7 @@ export function StoryComposerModal({ open, onClose, onShare, me }: any) {
                     <img
                       src={z}
                       alt=""
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                     />
                   </button>
                 ))}

@@ -250,11 +250,13 @@ export function ExploreView({
                   className="group relative block w-full overflow-hidden rounded-xl border border-line bg-surface text-left break-inside-avoid"
                   aria-label={`View moment by ${author?.name ?? "someone"}`}
                 >
+                  {/* Cards keep a tidy rhythm, but the photo inside is shown
+                      whole rather than zoomed to fill a fixed height. */}
                   <img
                     src={m.image}
                     alt={m.title}
                     className={cn(
-                      "w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]",
+                      "w-full object-contain",
                       m.tall
                         ? "h-[280px] sm:h-[320px]"
                         : "h-[150px] sm:h-[178px]",

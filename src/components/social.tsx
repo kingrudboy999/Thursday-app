@@ -96,6 +96,50 @@ export function Avatar({
   );
 }
 /**
+ * Shared media shown in full.
+ *
+ * Nothing here crops. Previously post photos were forced into an `aspect-[5/4]`
+ * box with `object-cover`, stories were stretched to fill the whole screen and
+ * reels were pinned to `100dvh` — all of which zoomed in and quietly cut off the
+ * edges of whatever someone uploaded. These elements size themselves to the
+ * media instead: a wide photo is short and complete, a tall one is tall and
+ * complete, and nothing is ever letterboxed or cropped.
+ */
+export function FitImage({
+  src,
+  alt = "",
+  className,
+  maxHeightClass = "max-h-[78vh]",
+  ...rest
+}: any) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={cn(
+        "img-reveal mx-auto block h-auto w-auto max-w-full",
+        maxHeightClass,
+        className,
+      )}
+      {...rest}
+    />
+  );
+}
+
+/**
+ * The same contract for video: never crop, never force a letterbox. The player
+ * takes the clip's own proportions.
+ */
+export function FitVideo({ className, ...rest }: any) {
+  return (
+    <video
+      className={cn("block h-auto w-full object-contain", className)}
+      {...rest}
+    />
+  );
+}
+
+/**
  * A story ring segmented like WhatsApp.
  *
  * One story is a complete green circle. Two stories split it into two equal
@@ -727,7 +771,7 @@ export function PostCard({
       ) : null}
       {K ? (
         <div
-          className="group relative mt-3 select-none overflow-hidden border-y border-line"
+          className="group relative mt-3 select-none overflow-hidden border-y border-line bg-canvas-deep/40"
           onDoubleClick={() => {
             post.liked || onLike();
             te(true);
@@ -740,10 +784,13 @@ export function PostCard({
             className="block w-full"
             aria-label="Open post"
           >
+            {/* The photo keeps its own proportions. It used to be forced into a
+                5:4 box with object-cover, which zoomed in and cut off the edges
+                of anything that was not roughly that shape. */}
             <img
               src={K}
               alt={post.imageAlt ?? ""}
-              className="img-reveal aspect-[5/4] w-full object-cover transition-transform duration-500 group-hover:scale-[1.012]"
+              className="img-reveal mx-auto block h-auto max-h-[78vh] w-auto max-w-full"
               loading="lazy"
             />
           </button>

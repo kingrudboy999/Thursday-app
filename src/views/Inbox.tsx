@@ -991,10 +991,13 @@ export function InboxView({
                                 }
                                 className="block w-full"
                               >
+                                {/* The photo is shown whole. It used to be clamped
+                                    to 150px tall with object-cover, which zoomed in
+                                    and cut off everything outside the slot. */}
                                 <img
                                   src={E.attachment.url}
                                   alt={E.attachment.caption || "Shared photo"}
-                                  className="h-[150px] w-full max-w-[220px] rounded-[8px] object-cover"
+                                  className="block h-auto max-h-[320px] w-auto max-w-[220px] rounded-[8px]"
                                   loading="lazy"
                                 />
                                 {/* No filename or caption line under sent photos.
@@ -1254,7 +1257,7 @@ export function InboxView({
                             <img
                               src={E.url}
                               alt={E.label}
-                              className="h-10 w-full object-cover"
+                              className="h-10 w-full object-contain"
                             />
                           </button>
                         ))}
@@ -1474,7 +1477,7 @@ export function InboxView({
                       <img
                         src={E}
                         alt=""
-                        className="aspect-square w-full object-cover"
+                        className="aspect-square w-full object-contain"
                       />
                     </button>
                   ))}
