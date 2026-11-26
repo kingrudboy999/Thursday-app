@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { readFileAsDataUrl } from "../lib/audio";
 import { cn } from "../lib/cn";
 import {
   Bell,
@@ -936,19 +937,74 @@ export function ComposerModal({
   open,
   onClose,
   me,
+  people = [],
+  circles = [],
+  drafts,
   onSubmit,
   photoOptions,
   onSaveDraft,
+  onDeleteDraft,
 }: any) {
   const [A, T] = useState<any>(""),
     [y, g] = useState<any>(null),
     [R, z] = useState<any>("Anyone"),
     [v, q] = useState<any>(""),
     [_, j] = useState<any>(false),
-    [C, U] = useState<any>(false);
+    [C, U] = useState<any>(false),
+    [place, setPlace] = useState<string>(""),
+    [showPlace, setShowPlace] = useState<boolean>(false),
+    [taggedIds, setTaggedIds] = useState<string[]>([]),
+    [showTags, setShowTags] = useState<boolean>(false),
+    [showPoll, setShowPoll] = useState<boolean>(false),
+    [pollQuestion, setPollQuestion] = useState<string>(""),
+    [pollOptA, setPollOptA] = useState<string>(""),
+    [pollOptB, setPollOptB] = useState<string>(""),
+    [pollOptC, setPollOptC] = useState<string>(""),
+    [music, setMusic] = useState<any>(null),
+    [circleId, setCircleId] = useState<string>("");
   useEffect(() => {
-    open && (T(""), g(null), z("Anyone"), q(""));
+    if (open) {
+      T("");
+      g(null);
+      z("Anyone");
+      q("");
+      setPlace("");
+      setShowPlace(false);
+      setTaggedIds([]);
+      setShowTags(false);
+      setShowPoll(false);
+      setPollQuestion("");
+      setPollOptA("");
+      setPollOptB("");
+      setPollOptC("");
+      setMusic(null);
+      setCircleId("");
+    }
   }, [open]);
+  const buildExtras = () => {
+    const validPollOpts = [pollOptA, pollOptB, pollOptC]
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const poll =
+      showPoll && validPollOpts.length >= 2
+        ? {
+            question: pollQuestion.trim() || A.trim() || "Circle poll",
+            closes: "2 days left",
+            options: validPollOpts.map((label, idx) => ({
+              id: `opt_${Date.now()}_${idx}`,
+              label,
+              votes: 0,
+            })),
+          }
+        : undefined;
+    return {
+      place: place.trim() || undefined,
+      taggedIds: taggedIds.length ? taggedIds : undefined,
+      poll,
+      music: music || undefined,
+      circleId: circleId || undefined,
+    };
+  };
   return (
     <Modal
       open={open}
@@ -984,6 +1040,31 @@ export function ComposerModal({
                 aria-hidden="true"
               />
             </div>
+            {circles?.length ? (
+              <div className="relative hidden sm:block">
+                <select
+                  value={circleId}
+                  onChange={(e) => setCircleId(e.target.value)}
+                  aria-label="Circle"
+                  className="h-7 appearance-none rounded-[6px] border border-line bg-surface pr-6 pl-2 text-[10.5px] font-medium text-muted focus:border-forest focus:outline-none"
+                >
+                  <option value="">No circle</option>
+                  {circles
+                    .filter((c: any) => c.joined)
+                    .map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+                <CaretDown
+                  size={10}
+                  strokeWidth={2}
+                  className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-faint"
+                  aria-hidden="true"
+                />
+              </div>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden text-[10.5px] text-faint tabular-nums sm:block">
@@ -992,8 +1073,12 @@ export function ComposerModal({
             <button
               type="button"
               onClick={() => {
-                (!A.trim() && !y) ||
-                  (onSaveDraft?.(A.trim(), y ?? undefined), onClose());
+                if (!A.trim() && !y) {
+                  q("Write a few words or attach a photo to save a draft.");
+                  return;
+                }
+                onSaveDraft?.(A.trim(), y ?? undefined, buildExtras());
+                onClose();
               }}
               className="mr-1 text-[10.5px] font-semibold text-muted hover:text-ink"
             >
@@ -1002,11 +1087,11 @@ export function ComposerModal({
             <button
               type="button"
               onClick={() => {
-                if (!A.trim() && !y) {
+                if (!A.trim() && !y && !music && !showPoll) {
                   q("Add a few words or a photo before posting.");
                   return;
                 }
-                onSubmit(A.trim(), y ?? undefined);
+                onSubmit(A.trim(), y ?? undefined, buildExtras());
                 onClose();
               }}
               className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-forest px-3.5 text-[12px] font-semibold text-white transition-colors hover:bg-forest-hover"
@@ -1031,40 +1116,183 @@ export function ComposerModal({
                 q("");
               }}
               rows={5}
-              placeholder="What's on your mind, Nora?"
+              placeholder={`What's on your mind, ${me.name?.split(" ")[0] || "Nora"}?`}
               aria-label="Post text"
               className="w-full resize-none bg-transparent text-[13px] leading-[1.65] text-ink outline-none placeholder:text-faint"
             />
-            <div className="mt-1 flex items-center gap-1 border-t border-line pt-2.5">
-              <button
-                type="button"
-                onClick={() => g(y ? null : photoOptions.studio)}
+            <div className="mt-1 flex flex-wrap items-center gap-1 border-t border-line pt-2.5">
+              <label
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
                   y
                     ? "bg-forest-soft text-forest"
                     : "text-muted hover:bg-surface-muted hover:text-ink",
                 )}
-                aria-pressed={!!y}
               >
                 <Image size={13} strokeWidth={1.8} aria-hidden="true" />
                 Photo
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      const dataUrl = await readFileAsDataUrl(f, 1280);
+                      if (dataUrl) g(dataUrl);
+                    }
+                  }}
+                />
+              </label>
               <button
                 type="button"
-                className="inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium text-muted hover:bg-surface-muted hover:text-ink"
+                onClick={() => setShowPlace((s) => !s)}
+                aria-pressed={showPlace || !!place}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  showPlace || place
+                    ? "bg-forest-soft text-forest"
+                    : "text-muted hover:bg-surface-muted hover:text-ink",
+                )}
               >
                 <MapPin size={13} strokeWidth={1.8} aria-hidden="true" />
-                Place
+                {place ? place.split(",")[0] : "Place"}
               </button>
               <button
                 type="button"
-                className="inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium text-muted hover:bg-surface-muted hover:text-ink"
+                onClick={() => setShowTags((s) => !s)}
+                aria-pressed={showTags || taggedIds.length > 0}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  showTags || taggedIds.length > 0
+                    ? "bg-forest-soft text-forest"
+                    : "text-muted hover:bg-surface-muted hover:text-ink",
+                )}
               >
                 <UsersThree size={13} strokeWidth={1.8} aria-hidden="true" />
-                Tag people
+                {taggedIds.length ? `Tagged (${taggedIds.length})` : "Tag people"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPoll((s) => !s)}
+                aria-pressed={showPoll}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  showPoll
+                    ? "bg-forest-soft text-forest"
+                    : "text-muted hover:bg-surface-muted hover:text-ink",
+                )}
+              >
+                <Sparkle size={12} strokeWidth={1.8} aria-hidden="true" />
+                Poll
               </button>
             </div>
+            {showPlace ? (
+              <div className="mt-2 rounded-[8px] border border-line bg-surface-muted/60 p-2">
+                <input
+                  value={place}
+                  onChange={(e) => setPlace(e.target.value)}
+                  placeholder="Add a city, café, or studio…"
+                  className="h-7.5 w-full rounded-[6px] border border-line bg-surface px-2.5 text-[11.5px] text-ink focus:border-forest focus:outline-none"
+                />
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {[
+                    me.location || "Berkeley, CA",
+                    "San Francisco, CA",
+                    "Lagos, NG",
+                    "Lisbon, PT",
+                  ].map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setPlace(loc)}
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                        place === loc
+                          ? "border-forest/40 bg-forest-wash text-forest"
+                          : "border-line bg-surface text-muted hover:text-ink",
+                      )}
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {showTags && people.length > 1 ? (
+              <div className="mt-2 flex flex-wrap gap-1 rounded-[8px] border border-line bg-surface-muted/60 p-2">
+                {people
+                  .filter((p: any) => p.id !== me.id)
+                  .map((p: any) => {
+                    const active = taggedIds.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() =>
+                          setTaggedIds((curr) =>
+                            curr.includes(p.id)
+                              ? curr.filter((x) => x !== p.id)
+                              : [...curr, p.id],
+                          )
+                        }
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-medium transition-colors",
+                          active
+                            ? "border-forest/40 bg-forest-wash text-forest"
+                            : "border-line bg-surface text-muted hover:text-ink",
+                        )}
+                      >
+                        @{p.handle}
+                      </button>
+                    );
+                  })}
+              </div>
+            ) : null}
+            {showPoll ? (
+              <div className="mt-2 space-y-1.5 rounded-[8px] border border-line bg-surface-muted/60 p-2.5">
+                <input
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  placeholder="Poll question (optional)"
+                  className="h-7.5 w-full rounded-[6px] border border-line bg-surface px-2.5 text-[11.5px] text-ink focus:border-forest focus:outline-none"
+                />
+                <div className="grid grid-cols-2 gap-1.5">
+                  <input
+                    value={pollOptA}
+                    onChange={(e) => setPollOptA(e.target.value)}
+                    placeholder="Option 1"
+                    className="h-7.5 rounded-[6px] border border-line bg-surface px-2.5 text-[11px] text-ink focus:border-forest focus:outline-none"
+                  />
+                  <input
+                    value={pollOptB}
+                    onChange={(e) => setPollOptB(e.target.value)}
+                    placeholder="Option 2"
+                    className="h-7.5 rounded-[6px] border border-line bg-surface px-2.5 text-[11px] text-ink focus:border-forest focus:outline-none"
+                  />
+                </div>
+                <input
+                  value={pollOptC}
+                  onChange={(e) => setPollOptC(e.target.value)}
+                  placeholder="Option 3 (optional)"
+                  className="h-7.5 w-full rounded-[6px] border border-line bg-surface px-2.5 text-[11px] text-ink focus:border-forest focus:outline-none"
+                />
+              </div>
+            ) : null}
+            {music ? (
+              <div className="mt-2 flex items-center justify-between rounded-[8px] border border-forest/25 bg-forest-wash px-2.5 py-1.5 text-[11px] text-forest">
+                <span className="truncate font-medium">
+                  ♫ {music.title} · {music.artist}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMusic(null)}
+                  className="ml-2 text-forest/70 hover:text-forest"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : null}
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
@@ -1073,7 +1301,7 @@ export function ComposerModal({
               >
                 {"Drafts "}
                 <span className="rounded bg-canvas-deep px-1 text-[9px] text-faint">
-                  {INITIAL_DRAFTS.length}
+                  {drafts ? drafts.length : INITIAL_DRAFTS.length}
                 </span>
               </button>
               <button
@@ -1083,7 +1311,7 @@ export function ComposerModal({
               >
                 Audio library
               </button>
-              <CloseFriendsPill people={[me]} />
+              <CloseFriendsPill people={people.length ? people : [me]} />
             </div>
             {y ? (
               <div className="relative mt-2.5 overflow-hidden rounded-[10px] border border-line">
@@ -1136,13 +1364,21 @@ export function ComposerModal({
       <DraftsModal
         open={_}
         onClose={() => j(false)}
+        drafts={drafts}
         onPublish={(J?: any) => {
-          onSubmit(J.text, J.image);
+          onSubmit(J.text, J.image, {
+            place: J.place,
+            circleId: J.circleId,
+          });
           onClose();
         }}
-        onDelete={() => {}}
+        onDelete={(id?: string) => onDeleteDraft?.(id)}
       />
-      <AudioLibraryModal open={C} onClose={() => U(false)} />
+      <AudioLibraryModal
+        open={C}
+        onClose={() => U(false)}
+        onSelect={(track: any) => setMusic(track)}
+      />
     </Modal>
   );
 }
@@ -1899,9 +2135,18 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
   const [x, w] = useState<any>(me.name),
     [A, T] = useState<any>(me.bio),
     [y, g] = useState<any>(me.location),
-    [R, z] = useState<any>(me.website);
+    [R, z] = useState<any>(me.website),
+    [avatar, setAvatar] = useState<string>(me.avatar),
+    [cover, setCover] = useState<string>(me.cover);
   useEffect(() => {
-    open && (w(me.name), T(me.bio), g(me.location), z(me.website));
+    if (open) {
+      w(me.name);
+      T(me.bio);
+      g(me.location);
+      z(me.website);
+      setAvatar(me.avatar);
+      setCover(me.cover);
+    }
   }, [open, me]);
   return (
     <Modal
@@ -1927,6 +2172,8 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
                   bio: A.trim(),
                   location: y.trim(),
                   website: R.trim(),
+                  avatar,
+                  cover,
                 }),
                 onClose());
             }}
@@ -1938,13 +2185,46 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
       }
     >
       <div className="space-y-3.5 px-4 py-4 sm:px-5">
-        <div className="flex items-center gap-3 rounded-[10px] border border-line bg-surface-muted/60 p-3">
-          <Avatar person={me} size="lg" />
-          <div>
-            <p className="text-[12px] font-medium text-ink">{x || me.name}</p>
-            <p className="mt-0.5 text-[10px] text-faint">
-              Changing your photo is coming soon
-            </p>
+        <div className="flex items-center justify-between gap-3 rounded-[10px] border border-line bg-surface-muted/60 p-3">
+          <div className="flex items-center gap-3">
+            <Avatar person={{ ...me, avatar }} size="lg" />
+            <div>
+              <p className="text-[12px] font-medium text-ink">{x || me.name}</p>
+              <p className="mt-0.5 text-[10px] text-faint">@{me.handle}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted">
+              <Image size={11} strokeWidth={2} />
+              Photo
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    const dataUrl = await readFileAsDataUrl(f, 512);
+                    if (dataUrl) setAvatar(dataUrl);
+                  }
+                }}
+              />
+            </label>
+            <label className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-muted hover:bg-surface-muted hover:text-ink">
+              Cover
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    const dataUrl = await readFileAsDataUrl(f, 1280);
+                    if (dataUrl) setCover(dataUrl);
+                  }
+                }}
+              />
+            </label>
           </div>
         </div>
         {[
