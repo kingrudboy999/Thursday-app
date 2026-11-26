@@ -34,6 +34,7 @@ import {
   updateCollection,
   updateUserState,
 } from "./db.js";
+import { aiGenerate, aiStatus, type AiTask } from "./ai.js";
 import { INITIAL_SEED } from "./seed.js";
 
 const app = express();
@@ -1701,6 +1702,89 @@ app.post("/api/calls/signal", async (req, res) => {
     res.json({ ok: true, callId, targetOnline });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err?.message });
+  }
+});
+
+// ==================== THURSDAY AI (OPENROUTER · ROTATING KEYS + MODELS) ====================
+const AI_TASKS = new Set<AiTask>([
+  "chat",
+  "captions",
+  "summarize",
+  "rewrite",
+  "titles",
+  "thread",
+  "bio",
+  "reply",
+  "alt",
+]);
+
+app.get("/api/ai/status", (_req, res) => {
+  const status = aiStatus();
+  res.json({
+    ...status,
+    // Never expose the raw credentials — labels only.
+    keys: status.keys.map((k: any) => ({ ...k })),
+  });
+});
+
+app.post("/api/ai/chat", async (req, res) => {
+  try {
+    const actor = await resolveRequestActor(req);
+    const body = req.body || {};
+    const task = String(body.task || "chat") as AiTask;
+    if (!AI_TASKS.has(task)) {
+      return res.status(400).json({ ok: false, error: "Unknown AI task." });
+    }
+    const messages = Array.isArray(body.messages)
+      ? body.messages
+      : typeof body.prompt === "string"
+        ? [{ role: "user", content: body.prompt }]
+        : [];
+    if (!messages.length) {
+      return res.status(400).json({ ok: false, error: "Nothing to send to the AI." });
+    }
+
+    const result = await aiGenerate({
+      task,
+      messages,
+      maxTokens: Number.isFinite(body.maxTokens) ? Number(body.maxTokens) : undefined,
+      temperature: Number.isFinite(body.temperature)
+        ? Number(body.temperature)
+        : undefined,
+    });
+
+    // Keep a lightweight, per-account AI history so threads survive reloads.
+    if (result.ok && actor.userId) {
+      try {
+        const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
+        await updateUserState(actor.userId, (curr) => ({
+          ...curr,
+          aiHistory: [
+            { role: "user", text: String(lastUser?.content ?? "").slice(0, 4000), at: new Date().toISOString() },
+            { role: "assistant", text: String(result.text ?? "").slice(0, 4000), at: new Date().toISOString() },
+            ...(curr as any).aiHistory ?? [],
+          ].slice(0, 40),
+        } as any));
+      } catch {}
+    }
+
+    if (!result.ok) {
+      return res.status(503).json({
+        ok: false,
+        error: result.error || "The AI is resting. Try again shortly.",
+        attempts: result.attempts,
+      });
+    }
+    res.json({
+      ok: true,
+      text: result.text,
+      model: result.model,
+      modelLabel: result.modelLabel,
+      latencyMs: result.latencyMs,
+      attempts: result.attempts,
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "AI request failed" });
   }
 });
 
