@@ -31,6 +31,14 @@
   --color-sage-soft: #eef3ee;
 }
 
+@keyframes ai-typing {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+.ai-typing-dot {
+  animation: 1.15s ease-in-out infinite ai-typing;
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
