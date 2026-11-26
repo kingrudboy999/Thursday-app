@@ -79,12 +79,12 @@ export function SettingsSectionCard({
     <section className="animate-rise overflow-hidden rounded-xl border border-line bg-surface">
       <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5">
         <div className="flex items-start gap-2.5">
-          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-line bg-surface-muted text-muted">
+          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-line bg-surface-muted text-muted">
             <IconComp size={14} strokeWidth={1.9} aria-hidden="true" />
           </span>
           <div>
-            <h2 className="text-[13.5px] font-semibold text-ink">{title}</h2>
-            <p className="mt-0.5 text-[11.5px] leading-[1.5] text-muted">
+            <h2 className="text-[14px] font-semibold text-ink">{title}</h2>
+            <p className="mt-0.5 text-[12px] leading-[1.5] text-muted">
               {description}
             </p>
           </div>
@@ -167,7 +167,7 @@ export function SettingsView({
       <header className="animate-rise mb-4">
         <div className="mb-2 flex items-center gap-2">
           <span className="h-1 w-1 rounded-full bg-forest" />
-          <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+          <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
             Your space
           </p>
         </div>
@@ -176,7 +176,7 @@ export function SettingsView({
             <h1 className="text-[23px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[26px]">
               Settings
             </h1>
-            <p className="mt-0.5 text-[12.5px] text-muted">
+            <p className="mt-0.5 text-[13px] text-muted">
               Make Thursday feel like yours. Changes save on this device
               automatically.
             </p>
@@ -185,7 +185,7 @@ export function SettingsView({
             <button
               type="button"
               onClick={onEditProfile}
-              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted"
+              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted"
             >
               <UserCircle size={12} strokeWidth={2} />
               Edit profile
@@ -193,7 +193,7 @@ export function SettingsView({
             <button
               type="button"
               onClick={onBackHome}
-              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-forest px-3 text-[11.5px] font-semibold text-white transition-colors hover:bg-forest-hover"
+              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-forest px-3 text-[12px] font-semibold text-white transition-colors hover:bg-forest-hover"
             >
               Back to feed
             </button>
@@ -206,7 +206,7 @@ export function SettingsView({
           title="Account"
           description="The identity your circle sees across Thursday."
           action={
-            <span className="inline-flex items-center gap-1 text-[8.5px] font-medium text-forest">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-forest">
               <span className="h-1 w-1 animate-pulse rounded-full bg-forest" />
               Live account
             </span>
@@ -226,17 +226,17 @@ export function SettingsView({
                 onClick={() => onOpenPerson(me.id)}
                 className="flex items-center gap-1 text-left"
               >
-                <span className="truncate text-[13.5px] font-semibold text-ink">
+                <span className="truncate text-[14px] font-semibold text-ink">
                   {me.name}
                 </span>
                 {me.verified ? <VerifiedBadge /> : null}
               </button>
-              <p className="mt-0.5 text-[11px] text-muted">
+              <p className="mt-0.5 text-[12px] text-muted">
                 @{me.handle}
                 {" · "}
                 {me.location}
               </p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-faint">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-faint">
                 <span className="inline-flex items-center gap-1">
                   <UsersThree size={9} strokeWidth={2} /> {stats.circles}
                   {" circles"}
@@ -254,7 +254,7 @@ export function SettingsView({
             <button
               type="button"
               onClick={onEditProfile}
-              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-[6px] border border-line-strong bg-surface px-2 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted"
+              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-[8px] border border-line-strong bg-surface px-2 text-[11.5px] font-semibold text-ink-soft hover:bg-surface-muted"
             >
               {"Edit "}
               <ArrowUpRight size={10} strokeWidth={2.2} />
@@ -302,14 +302,14 @@ export function SettingsView({
                   }}
                   aria-pressed={J}
                   className={cn(
-                    "rounded-[11px] border p-2.5 text-left transition-colors",
+                    "rounded-[12px] border p-2.5 text-left transition-colors",
                     J
                       ? "border-forest/45 bg-forest-wash ring-1 ring-forest/10"
                       : "border-line hover:border-line-strong hover:bg-surface-muted",
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink">
                       <U size={12} strokeWidth={2} /> {C.label}
                     </span>
                     {J ? (
@@ -318,7 +318,7 @@ export function SettingsView({
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-[10.5px] leading-[1.5] text-muted">
+                  <p className="mt-1 text-[11.5px] leading-[1.5] text-muted">
                     {C.description}
                   </p>
                   <div className="mt-2 flex gap-1">
@@ -338,8 +338,8 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-3 sm:px-5">
             <div>
-              <p className="text-[12px] font-medium text-ink">Reduce motion</p>
-              <p className="mt-0.5 text-[10.5px] text-muted">
+              <p className="text-[13px] font-medium text-ink">Reduce motion</p>
+              <p className="mt-0.5 text-[11.5px] text-muted">
                 Turn off entrance animations and easing across the app.
               </p>
             </div>
@@ -369,7 +369,7 @@ export function SettingsView({
                 });
                 onToast("Notification preferences reset");
               }}
-              className="shrink-0 text-[10px] font-semibold text-forest hover:opacity-70"
+              className="shrink-0 text-[11.5px] font-semibold text-forest hover:opacity-70"
             >
               Reset
             </button>
@@ -382,10 +382,10 @@ export function SettingsView({
                 className="flex items-start justify-between gap-4 px-4 py-2.5 sm:px-5"
               >
                 <div className="min-w-0">
-                  <p className="text-[11.5px] font-medium text-ink">
+                  <p className="text-[12px] font-medium text-ink">
                     {C.title}
                   </p>
-                  <p className="mt-0.5 text-[10.5px] leading-[1.5] text-muted">
+                  <p className="mt-0.5 text-[11.5px] leading-[1.5] text-muted">
                     {C.description}
                   </p>
                 </div>
@@ -410,10 +410,10 @@ export function SettingsView({
                 className="flex items-start justify-between gap-4 px-4 py-2.5 sm:px-5"
               >
                 <div className="min-w-0">
-                  <p className="text-[11.5px] font-medium text-ink">
+                  <p className="text-[12px] font-medium text-ink">
                     {C.title}
                   </p>
-                  <p className="mt-0.5 text-[10.5px] leading-[1.5] text-muted">
+                  <p className="mt-0.5 text-[11.5px] leading-[1.5] text-muted">
                     {C.description}
                   </p>
                 </div>
@@ -432,7 +432,7 @@ export function SettingsView({
               className="mt-0.5 shrink-0 text-forest"
               aria-hidden="true"
             />
-            <p className="text-[10.5px] leading-[1.55] text-forest/90">
+            <p className="text-[11.5px] leading-[1.55] text-forest/90">
               Thursday stores your data in this browser only. There are no
               trackers, ad networks, or third-party readers in this build.
             </p>
@@ -455,7 +455,7 @@ export function SettingsView({
             />
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="rounded-lg border border-line px-2.5 py-2">
-                <span className="block text-[9px] font-semibold tracking-[0.06em] text-faint uppercase">
+                <span className="block text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
                   From
                 </span>
                 <input
@@ -465,11 +465,11 @@ export function SettingsView({
                     setFromTime(e.target.value);
                     onUpdate({ ...preferences, quietHoursFrom: e.target.value });
                   }}
-                  className="mt-0.5 w-full bg-transparent text-[12px] font-medium text-ink focus:outline-none"
+                  className="mt-0.5 w-full bg-transparent text-[13px] font-medium text-ink focus:outline-none"
                 />
               </label>
               <label className="rounded-lg border border-line px-2.5 py-2">
-                <span className="block text-[9px] font-semibold tracking-[0.06em] text-faint uppercase">
+                <span className="block text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
                   Until
                 </span>
                 <input
@@ -479,7 +479,7 @@ export function SettingsView({
                     setUntilTime(e.target.value);
                     onUpdate({ ...preferences, quietHoursUntil: e.target.value });
                   }}
-                  className="mt-0.5 w-full bg-transparent text-[12px] font-medium text-ink focus:outline-none"
+                  className="mt-0.5 w-full bg-transparent text-[13px] font-medium text-ink focus:outline-none"
                 />
               </label>
             </div>
@@ -512,13 +512,13 @@ export function SettingsView({
                 key={C.label}
                 className="rounded-lg border border-line bg-surface-muted px-2.5 py-2"
               >
-                <p className="text-[15px] font-semibold text-ink tabular-nums">
+                <p className="text-[14px] font-semibold text-ink tabular-nums">
                   {C.value}
                 </p>
-                <p className="mt-0.5 text-[10px] font-medium text-ink-soft">
+                <p className="mt-0.5 text-[11.5px] font-medium text-ink-soft">
                   {C.label}
                 </p>
-                <p className="text-[9px] leading-tight text-faint">{C.note}</p>
+                <p className="text-[11px] leading-tight text-faint">{C.note}</p>
               </div>
             ))}
           </div>
@@ -529,7 +529,7 @@ export function SettingsView({
           description="Blocked people can't message you, and their posts and stories stay out of your feed."
         >
           {blockedPeople.length === 0 ? (
-            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[11.5px] text-muted">
+            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[12px] text-muted">
               You haven't blocked anyone.
             </p>
           ) : (
@@ -542,16 +542,16 @@ export function SettingsView({
                   <div className="flex min-w-0 items-center gap-2">
                     <Avatar person={person} size="sm" />
                     <div className="min-w-0">
-                      <p className="truncate text-[11.5px] font-semibold text-ink">
+                      <p className="truncate text-[12px] font-semibold text-ink">
                         {person.name || "Someone"}
                       </p>
-                      <p className="truncate text-[10px] text-faint">@{person.handle}</p>
+                      <p className="truncate text-[11.5px] text-faint">@{person.handle}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => onUnblock?.(person.id)}
-                    className="h-7 shrink-0 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface"
+                    className="h-7 shrink-0 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-surface"
                   >
                     Unblock
                   </button>
@@ -561,7 +561,7 @@ export function SettingsView({
           )}
           {mutedPeople.length > 0 ? (
             <div className="mt-3">
-              <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-faint uppercase">
+              <p className="mb-1.5 text-[11.5px] font-semibold tracking-wide text-faint uppercase">
                 Muted · {mutedPeople.length}
               </p>
               <ul className="space-y-1.5">
@@ -570,13 +570,13 @@ export function SettingsView({
                     key={person.id}
                     className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface-muted px-2.5 py-2"
                   >
-                    <span className="truncate text-[11.5px] text-ink-soft">
+                    <span className="truncate text-[12px] text-ink-soft">
                       {person.name || "Someone"}
                     </span>
                     <button
                       type="button"
                       onClick={() => onUnmute?.(person.id)}
-                      className="h-7 shrink-0 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface"
+                      className="h-7 shrink-0 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-surface"
                     >
                       Unmute
                     </button>
@@ -597,7 +597,7 @@ export function SettingsView({
                 setPwOpen(!pwOpen);
                 setPwMsg(null);
               }}
-              className="h-7 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted"
+              className="h-7 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-surface-muted"
             >
               {pwOpen ? "Cancel" : "Change"}
             </button>
@@ -611,7 +611,7 @@ export function SettingsView({
                 onChange={(e) => setPwCurrent(e.target.value)}
                 placeholder="Current password"
                 autoComplete="current-password"
-                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-forest"
+                className="h-8 w-full rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] text-ink outline-none focus:border-forest"
               />
               <input
                 type="password"
@@ -619,12 +619,12 @@ export function SettingsView({
                 onChange={(e) => setPwNext(e.target.value)}
                 placeholder="New password (at least 8 characters)"
                 autoComplete="new-password"
-                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-forest"
+                className="h-8 w-full rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] text-ink outline-none focus:border-forest"
               />
               {pwMsg ? (
                 <p
                   className={cn(
-                    "rounded-[6px] px-2.5 py-1.5 text-[11px] font-medium",
+                    "rounded-[8px] px-2.5 py-1.5 text-[12px] font-medium",
                     pwMsg.ok ? "bg-forest-soft text-forest" : "bg-red-50 text-red-700",
                   )}
                 >
@@ -647,13 +647,13 @@ export function SettingsView({
                     setPwMsg({ ok: false, text: res?.error || "Could not change your password." });
                   }
                 }}
-                className="h-8 rounded-[6px] bg-forest px-3 text-[11.5px] font-semibold text-white hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 rounded-[8px] bg-forest px-3 text-[12px] font-semibold text-white hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {pwBusy ? "Saving…" : "Update password"}
               </button>
             </div>
           ) : (
-            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[11.5px] text-muted">
+            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[12px] text-muted">
               You sign in with a password. Changing it signs out other devices.
             </p>
           )}
@@ -669,7 +669,7 @@ export function SettingsView({
                 setDelOpen(!delOpen);
                 setDelMsg("");
               }}
-              className="h-7 rounded-[6px] border border-red-200 bg-red-50 px-2.5 text-[10.5px] font-semibold text-red-700 hover:bg-red-100"
+              className="h-7 rounded-[8px] border border-red-200 bg-red-50 px-2.5 text-[11.5px] font-semibold text-red-700 hover:bg-red-100"
             >
               {delOpen ? "Cancel" : "Delete"}
             </button>
@@ -677,7 +677,7 @@ export function SettingsView({
         >
           {delOpen ? (
             <div className="space-y-2">
-              <p className="rounded-[6px] bg-red-50 px-2.5 py-2 text-[11px] leading-snug font-medium text-red-700">
+              <p className="rounded-[8px] bg-red-50 px-2.5 py-2 text-[12px] leading-snug font-medium text-red-700">
                 This erases everything and cannot be reversed. Your messages leave everyone
                 else's inbox too.
               </p>
@@ -687,17 +687,17 @@ export function SettingsView({
                 onChange={(e) => setDelPassword(e.target.value)}
                 placeholder="Your password"
                 autoComplete="current-password"
-                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-red-400"
+                className="h-8 w-full rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] text-ink outline-none focus:border-red-400"
               />
               <input
                 type="text"
                 value={delConfirm}
                 onChange={(e) => setDelConfirm(e.target.value)}
                 placeholder='Type "delete" to confirm'
-                className="h-8 w-full rounded-[6px] border border-line-strong bg-surface px-2.5 text-[11.5px] text-ink outline-none focus:border-red-400"
+                className="h-8 w-full rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] text-ink outline-none focus:border-red-400"
               />
               {delMsg ? (
-                <p className="rounded-[6px] bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700">
+                <p className="rounded-[8px] bg-red-50 px-2.5 py-1.5 text-[12px] font-medium text-red-700">
                   {delMsg}
                 </p>
               ) : null}
@@ -713,13 +713,13 @@ export function SettingsView({
                     setDelMsg(res?.error || "Could not delete your account.");
                   }
                 }}
-                className="h-8 rounded-[6px] bg-red-600 px-3 text-[11.5px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 rounded-[8px] bg-red-600 px-3 text-[12px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {delBusy ? "Deleting…" : "Permanently delete"}
               </button>
             </div>
           ) : (
-            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[11.5px] text-muted">
+            <p className="rounded-lg border border-line bg-surface-muted px-3 py-2.5 text-[12px] text-muted">
               Your data is yours. You can remove it at any time.
             </p>
           )}
@@ -738,7 +738,7 @@ export function SettingsView({
           action={
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-semibold",
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
                 backendLive
                   ? "bg-forest-soft text-forest"
                   : "bg-surface-muted text-muted",
@@ -758,29 +758,29 @@ export function SettingsView({
             <button
               type="button"
               onClick={onExport}
-              className="flex items-start gap-2.5 rounded-[10px] border border-line p-2.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted"
+              className="flex items-start gap-2.5 rounded-[12px] border border-line p-2.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted"
             >
-              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-line bg-surface text-muted">
+              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-line bg-surface text-muted">
                 <DownloadSimple size={13} strokeWidth={2} />
               </span>
               <span>
-                <span className="block text-[11.5px] font-semibold text-ink">
+                <span className="block text-[12px] font-semibold text-ink">
                   Export my workspace
                 </span>
-                <span className="mt-0.5 block text-[10px] leading-[1.5] text-muted">
+                <span className="mt-0.5 block text-[11.5px] leading-[1.5] text-muted">
                   A JSON file with your posts, messages, circles, and settings.
                 </span>
               </span>
             </button>
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] border border-line p-2.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted">
-              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-line bg-surface text-muted">
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-[12px] border border-line p-2.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted">
+              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-line bg-surface text-muted">
                 <UploadSimple size={13} strokeWidth={2} />
               </span>
               <span>
-                <span className="block text-[11.5px] font-semibold text-ink">
+                <span className="block text-[12px] font-semibold text-ink">
                   Import backup
                 </span>
-                <span className="mt-0.5 block text-[10px] leading-[1.5] text-muted">
+                <span className="mt-0.5 block text-[11.5px] leading-[1.5] text-muted">
                   Restore a previously exported Thursday JSON workspace file.
                 </span>
               </span>
@@ -800,16 +800,16 @@ export function SettingsView({
             <button
               type="button"
               onClick={() => z(true)}
-              className="flex items-start gap-2.5 rounded-[10px] border border-line p-2.5 text-left transition-colors hover:border-clay/30 hover:bg-clay-wash"
+              className="flex items-start gap-2.5 rounded-[12px] border border-line p-2.5 text-left transition-colors hover:border-clay/30 hover:bg-clay-wash"
             >
-              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-clay/20 bg-clay-wash text-clay">
+              <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-clay/20 bg-clay-wash text-clay">
                 <ArrowCounterClockwise size={13} strokeWidth={2} />
               </span>
               <span>
-                <span className="block text-[11.5px] font-semibold text-clay">
+                <span className="block text-[12px] font-semibold text-clay">
                   Reset workspace
                 </span>
-                <span className="mt-0.5 block text-[10px] leading-[1.5] text-muted">
+                <span className="mt-0.5 block text-[11.5px] leading-[1.5] text-muted">
                   Clear local changes and start fresh with the original Thursday
                   setup.
                 </span>
@@ -818,10 +818,10 @@ export function SettingsView({
           </div>
           <div className="flex flex-col gap-2 border-t border-line bg-surface-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-ink">
+              <p className="text-[12px] font-semibold text-ink">
                 Cross-device Railway sync code
               </p>
-              <p className="text-[10px] text-muted">
+              <p className="text-[11.5px] text-muted">
                 Save your workspace to Railway PostgreSQL or enter a code from another device.
               </p>
             </div>
@@ -830,7 +830,7 @@ export function SettingsView({
                 value={syncCode}
                 onChange={(e) => setSyncCode(e.target.value)}
                 aria-label="Sync code"
-                className="h-7.5 w-32 rounded-[6px] border border-line-strong bg-surface px-2.5 font-mono text-[11px] text-ink focus:border-forest focus:outline-none"
+                className="h-7.5 w-32 rounded-[8px] border border-line-strong bg-surface px-2.5 font-mono text-[12px] text-ink focus:border-forest focus:outline-none"
               />
               <button
                 type="button"
@@ -853,7 +853,7 @@ export function SettingsView({
                     setSyncBusy(false);
                   }
                 }}
-                className="h-7.5 rounded-[6px] bg-forest px-2.5 text-[10.5px] font-semibold text-white hover:bg-forest-hover disabled:opacity-50"
+                className="h-7.5 rounded-[8px] bg-forest px-2.5 text-[11.5px] font-semibold text-white hover:bg-forest-hover disabled:opacity-50"
               >
                 Backup
               </button>
@@ -878,7 +878,7 @@ export function SettingsView({
                     setSyncBusy(false);
                   }
                 }}
-                className="h-7.5 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted disabled:opacity-50"
+                className="h-7.5 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-surface-muted disabled:opacity-50"
               >
                 Restore
               </button>
@@ -892,7 +892,7 @@ export function SettingsView({
                 className="shrink-0 text-clay"
                 aria-hidden="true"
               />
-              <p className="min-w-0 flex-1 text-[10.5px] leading-[1.5] text-clay">
+              <p className="min-w-0 flex-1 text-[11.5px] leading-[1.5] text-clay">
                 This removes every post, message, and preference stored in this
                 browser. It cannot be undone.
               </p>
@@ -900,7 +900,7 @@ export function SettingsView({
                 <button
                   type="button"
                   onClick={() => z(false)}
-                  className="h-6.5 rounded-[5px] border border-line-strong bg-surface px-2 text-[10px] font-semibold text-muted hover:text-ink"
+                  className="h-6.5 rounded-[8px] border border-line-strong bg-surface px-2 text-[11.5px] font-semibold text-muted hover:text-ink"
                 >
                   Keep it
                 </button>
@@ -910,7 +910,7 @@ export function SettingsView({
                     z(false);
                     onReset();
                   }}
-                  className="inline-flex h-6.5 items-center gap-1 rounded-[5px] bg-clay px-2 text-[10px] font-semibold text-white hover:opacity-90"
+                  className="inline-flex h-6.5 items-center gap-1 rounded-[8px] bg-clay px-2 text-[11.5px] font-semibold text-white hover:opacity-90"
                 >
                   <Trash size={9} strokeWidth={2.2} />
                   {" Reset everything"}
@@ -927,7 +927,7 @@ export function SettingsView({
             <button
               type="button"
               onClick={() => onSignOut?.()}
-              className="inline-flex h-6.5 items-center gap-1 rounded-[6px] border border-clay/30 bg-clay-wash px-2 text-[10px] font-semibold text-clay transition-colors hover:bg-clay/10"
+              className="inline-flex h-6.5 items-center gap-1 rounded-[8px] border border-clay/30 bg-clay-wash px-2 text-[11.5px] font-semibold text-clay transition-colors hover:bg-clay/10"
             >
               <SignOut size={10} strokeWidth={2.2} />
               {" Sign out"}
@@ -935,7 +935,7 @@ export function SettingsView({
           }
         >
           <div className="px-4 py-3.5 sm:px-5">
-            <p className="text-[11px] leading-[1.6] text-muted">
+            <p className="text-[12px] leading-[1.6] text-muted">
               Signing out ends this device's session on the Railway backend.
               Your posts, circles, and messages stay safe in PostgreSQL and will
               be right here when you return.
@@ -957,8 +957,8 @@ export function SettingsView({
               ["Open settings", "G then S"],
             ].map(([C, U]) => (
               <div key={C} className="flex items-center justify-between gap-3">
-                <span className="text-[10.5px] text-muted">{C}</span>
-                <kbd className="rounded border border-line bg-surface-muted px-1.5 py-0.5 text-[8.5px] font-medium text-faint">
+                <span className="text-[11.5px] text-muted">{C}</span>
+                <kbd className="rounded border border-line bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium text-faint">
                   {U}
                 </kbd>
               </div>
@@ -966,11 +966,11 @@ export function SettingsView({
           </div>
         </SettingsSectionCard>
         <div className="flex flex-col items-center justify-between gap-1.5 px-1 pt-1 sm:flex-row">
-          <p className="flex items-center gap-1.5 text-[10px] text-faint">
+          <p className="flex items-center gap-1.5 text-[11.5px] text-faint">
             <Sparkle size={10} strokeWidth={2} aria-hidden="true" />
             Thursday 1.0 · An independent, quiet social space
           </p>
-          <div className="flex items-center gap-3 text-[10px] text-faint">
+          <div className="flex items-center gap-3 text-[11.5px] text-faint">
             <button
               type="button"
               onClick={() =>

@@ -100,7 +100,7 @@ export function NotificationsView({
             </span>
           </span>
           <span className="min-w-0 flex-1 pt-0.5">
-            <span className="block text-[12.5px] leading-[1.55] text-ink-soft">
+            <span className="block text-[13px] leading-[1.55] text-ink-soft">
               <span className="font-semibold text-ink">{j?.name}</span>
               {_.length > 1 ? (
                 <span className="font-medium text-ink">
@@ -111,7 +111,7 @@ export function NotificationsView({
               ) : null}{" "}
               {v.text}
             </span>
-            <span className="mt-1 block text-[10.5px] text-faint">
+            <span className="mt-1 block text-[11.5px] text-faint">
               {v.time}
             </span>
           </span>
@@ -119,7 +119,7 @@ export function NotificationsView({
             <img
               src={v.postImage}
               alt=""
-              className="h-10 w-10 shrink-0 rounded-[6px] border border-line object-cover"
+              className="h-10 w-10 shrink-0 rounded-[8px] border border-line object-cover"
               loading="lazy"
             />
           ) : v.type === "follow" ? (
@@ -131,7 +131,7 @@ export function NotificationsView({
               }}
               aria-pressed={j ? followingIds.includes(j.id) : false}
               className={cn(
-                "h-7 shrink-0 rounded-[7px] border px-2.5 text-[11px] font-semibold leading-7 transition-colors",
+                "h-7 shrink-0 rounded-[8px] border px-2.5 text-[12px] font-semibold leading-7 transition-colors",
                 j && followingIds.includes(j.id)
                   ? "border-line-strong bg-surface text-muted"
                   : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -152,14 +152,14 @@ export function NotificationsView({
         <div>
           <div className="mb-2 flex items-center gap-2">
             <span className="h-1 w-1 rounded-full bg-forest" />
-            <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+            <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
               Activity
             </p>
           </div>
           <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
             Notifications
           </h1>
-          <p className="mt-1 text-[13px] text-muted">
+          <p className="mt-1 text-[14px] text-muted">
             Everything happening with you and the people you follow.
           </p>
         </div>
@@ -167,7 +167,7 @@ export function NotificationsView({
           type="button"
           onClick={onMarkAllRead}
           disabled={T === 0}
-          className="inline-flex h-8 items-center gap-1.5 self-start rounded-[7px] border border-line bg-surface px-2.5 text-[11.5px] font-semibold text-muted transition-colors hover:border-line-strong hover:text-ink disabled:opacity-45 sm:self-auto"
+          className="inline-flex h-8 items-center gap-1.5 self-start rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-muted transition-colors hover:border-line-strong hover:text-ink disabled:opacity-45 sm:self-auto"
         >
           <Check size={12} strokeWidth={2.2} aria-hidden="true" />
           {T ? "Mark all read" : "All caught up"}
@@ -202,19 +202,19 @@ export function NotificationsView({
               type="button"
               onClick={() => w(v.value)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[11.5px] font-medium transition-colors",
+                "inline-flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-medium transition-colors",
                 x === v.value
                   ? "bg-canvas-deep text-ink"
                   : "text-muted hover:bg-surface-muted hover:text-ink",
               )}
             >
               {v.label}
-              <span className="text-[10px] text-faint tabular-nums">
+              <span className="text-[11.5px] text-faint tabular-nums">
                 {v.count}
               </span>
             </button>
           ))}
-          <span className="ml-auto hidden items-center gap-1.5 text-[10.5px] text-faint sm:flex">
+          <span className="ml-auto hidden items-center gap-1.5 text-[11.5px] text-faint sm:flex">
             <BellRinging size={11} strokeWidth={1.9} aria-hidden="true" />
             {T}
             {" unread"}
@@ -224,7 +224,7 @@ export function NotificationsView({
           <div>
             {Ay.length ? (
               <>
-                <p className="border-b border-line bg-surface-muted/60 px-4 py-1.5 text-[10px] font-semibold tracking-[0.1em] text-faint uppercase sm:px-5">
+                <p className="border-b border-line bg-surface-muted/60 px-4 py-1.5 text-[11.5px] font-semibold tracking-[0.1em] text-faint uppercase sm:px-5">
                   Today
                 </p>
                 <div className="divide-y divide-line/70">{Ay.map(z)}</div>
@@ -232,7 +232,7 @@ export function NotificationsView({
             ) : null}
             {Ag.length ? (
               <>
-                <p className="border-y border-line bg-surface-muted/60 px-4 py-1.5 text-[10px] font-semibold tracking-[0.1em] text-faint uppercase sm:px-5">
+                <p className="border-y border-line bg-surface-muted/60 px-4 py-1.5 text-[11.5px] font-semibold tracking-[0.1em] text-faint uppercase sm:px-5">
                   Earlier
                 </p>
                 <div className="divide-y divide-line/70">{Ag.map(z)}</div>
@@ -247,7 +247,7 @@ export function NotificationsView({
           />
         )}
       </div>
-      <p className="mt-3 text-center text-[10.5px] text-faint">
+      <p className="mt-3 text-center text-[11.5px] text-faint">
         Notifications are delivered quietly. Thursday never sends marketing
         email.
       </p>

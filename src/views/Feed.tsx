@@ -126,21 +126,21 @@ export function FeedView({
           <div>
             <div className="mb-2 flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-forest" />
-              <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+              <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                 {todayLabel}
               </p>
             </div>
             <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
               {greetingLabel}
             </h1>
-            <p className="mt-1 text-[13px] text-muted">
+            <p className="mt-1 text-[14px] text-muted">
               Here's what your circle is sharing today.
             </p>
           </div>
           <button
             type="button"
             onClick={onCompose}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-forest bg-forest px-3 text-[12.5px] font-semibold text-white shadow-[0_1px_2px_rgba(29,33,28,0.12)] transition-colors hover:bg-forest-hover lg:hidden"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[12px] border border-forest bg-forest px-3 text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(29,33,28,0.12)] transition-colors hover:bg-forest-hover lg:hidden"
           >
             <Plus size={14} strokeWidth={2.3} aria-hidden="true" />
             Post
@@ -160,17 +160,17 @@ export function FeedView({
               <Sparkle size={13} strokeWidth={2} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11.5px] font-semibold text-ink">
+              <p className="truncate text-[12px] font-semibold text-ink">
                 {WEEKLY_PROMPT_BANNER.title}
               </p>
-              <p className="truncate text-[10.5px] text-muted">
+              <p className="truncate text-[11.5px] text-muted">
                 {WEEKLY_PROMPT_BANNER.body}
               </p>
             </div>
             <button
               type="button"
               onClick={onCompose}
-              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-[6px] border border-forest/20 bg-surface px-2 text-[10.5px] font-semibold text-forest transition-colors hover:bg-forest-soft"
+              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-[8px] border border-forest/20 bg-surface px-2 text-[11.5px] font-semibold text-forest transition-colors hover:bg-forest-soft"
             >
               Reply
               <ArrowRight size={10} strokeWidth={2.2} aria-hidden="true" />
@@ -187,7 +187,7 @@ export function FeedView({
                     onClick={() => ye(h.value)}
                     aria-current={$ === h.value ? "page" : undefined}
                     className={cn(
-                      "relative shrink-0 py-2.5 text-[12.5px] font-semibold transition-colors",
+                      "relative shrink-0 py-2.5 text-[13px] font-semibold transition-colors",
                       $ === h.value ? "text-ink" : "text-muted hover:text-ink",
                     )}
                   >
@@ -204,7 +204,7 @@ export function FeedView({
                   onClick={() => Ee((h?: any) => !h)}
                   aria-haspopup="menu"
                   aria-expanded={le}
-                  className="inline-flex items-center gap-1 rounded-[6px] px-1.5 py-1 text-[11px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
+                  className="inline-flex items-center gap-1 rounded-[8px] px-1.5 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
                 >
                   {Ve === "latest" ? "Latest" : "Top"}
                   <CaretDown size={11} strokeWidth={2} aria-hidden="true" />
@@ -220,7 +220,7 @@ export function FeedView({
                     />
                     <div
                       role="menu"
-                      className="animate-pop absolute top-[calc(100%+4px)] right-0 z-40 w-[128px] rounded-[10px] border border-line bg-surface p-1 shadow-[0_10px_28px_rgba(29,33,28,0.12)]"
+                      className="animate-pop absolute top-[calc(100%+4px)] right-0 z-40 w-[128px] rounded-[12px] border border-line bg-surface p-1 shadow-[0_10px_28px_rgba(29,33,28,0.12)]"
                     >
                       {[
                         {
@@ -241,7 +241,7 @@ export function FeedView({
                             Ee(false);
                           }}
                           className={cn(
-                            "flex w-full items-center justify-between rounded-[6px] px-2 py-1.5 text-[11px] transition-colors hover:bg-surface-muted",
+                            "flex w-full items-center justify-between rounded-[8px] px-2 py-1.5 text-[12px] transition-colors hover:bg-surface-muted",
                             Ve === h.value
                               ? "font-semibold text-forest"
                               : "text-ink-soft",
@@ -266,7 +266,7 @@ export function FeedView({
                   className="text-forest"
                   aria-hidden="true"
                 />
-                <p className="min-w-0 flex-1 truncate text-[10.5px] text-muted">
+                <p className="min-w-0 flex-1 truncate text-[11.5px] text-muted">
                   {"Showing posts from "}
                   {V.length
                     ? V.map((h?: any) => h.name).join(" and ")
@@ -275,7 +275,7 @@ export function FeedView({
                 <button
                   type="button"
                   onClick={onOpenCircles}
-                  className="shrink-0 text-[10.5px] font-semibold text-forest hover:opacity-70"
+                  className="shrink-0 text-[11.5px] font-semibold text-forest hover:opacity-70"
                 >
                   Manage
                 </button>
@@ -329,7 +329,7 @@ export function FeedView({
                     onClick={
                       $ === "circles" ? onOpenCircles : () => ye("for-you")
                     }
-                    className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+                    className="h-8 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft hover:bg-surface-muted"
                   >
                     {$ === "circles" ? "Find a circle" : "Back to For you"}
                   </button>
@@ -337,13 +337,13 @@ export function FeedView({
               />
             )}
             {W.length ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-3 text-[10.5px] text-faint">
+              <div className="flex items-center justify-center gap-2 px-4 py-3 text-[11.5px] text-faint">
                 <span className="h-1 w-1 rounded-full bg-forest/60" />
                 You're all caught up for now
               </div>
             ) : null}
           </div>
-          <div className="flex items-center justify-center gap-1.5 pb-2 text-[10.5px] text-faint">
+          <div className="flex items-center justify-center gap-1.5 pb-2 text-[11.5px] text-faint">
             <span>Thursday keeps the noise down.</span>
             <button
               type="button"
@@ -372,7 +372,7 @@ export function FeedView({
             <button
               type="button"
               onClick={onOpenReels}
-              className="text-[10.5px] font-semibold text-forest hover:opacity-70"
+              className="text-[11.5px] font-semibold text-forest hover:opacity-70"
             >
               Watch
             </button>
@@ -386,7 +386,7 @@ export function FeedView({
                   key={h.id}
                   type="button"
                   onClick={() => onOpenReels(h.id)}
-                  className="group relative aspect-[9/13] overflow-hidden rounded-[7px] border border-line text-left"
+                  className="group relative aspect-[9/13] overflow-hidden rounded-[8px] border border-line text-left"
                   aria-label={`Watch reel by ${k?.name}`}
                 >
                   <img
@@ -400,10 +400,10 @@ export function FeedView({
                     <Play size={8} strokeWidth={3} className="fill-current" />
                   </span>
                   <span className="absolute right-1.5 bottom-1.5 left-1.5">
-                    <span className="block truncate text-[8.5px] font-semibold text-white">
+                    <span className="block truncate text-[11px] font-semibold text-white">
                       {k?.name.split(" ")[0]}
                     </span>
-                    <span className="block truncate text-[7.5px] text-white/60">
+                    <span className="block truncate text-[10px] text-white/60">
                       {formatCount(h.views)}
                       {" views"}
                     </span>
@@ -423,7 +423,7 @@ export function FeedView({
           }}
         />
         {Ce ? (
-          <p className="px-1 text-[10px] text-forest">
+          <p className="px-1 text-[11.5px] text-forest">
             {"Your circle answered: "}
             {Ce}
           </p>
@@ -441,7 +441,7 @@ export function FeedView({
             </span>
           }
           action={
-            <span className="text-[9.5px] text-faint">
+            <span className="text-[11px] text-faint">
               {savedGuideIds.length || guides.length} saved
             </span>
           }
@@ -480,7 +480,7 @@ export function FeedView({
             <button
               type="button"
               onClick={onExplore}
-              className="text-[10.5px] font-semibold text-forest hover:opacity-70"
+              className="text-[11.5px] font-semibold text-forest hover:opacity-70"
             >
               See all
             </button>
@@ -498,7 +498,7 @@ export function FeedView({
             ))}
           </div>
           <div className="mt-2.5 border-t border-line px-1 pt-2.5 pb-1">
-            <p className="text-[10.5px] leading-[1.5] text-muted">
+            <p className="text-[11.5px] leading-[1.5] text-muted">
               {"Followed by "}
               <span className="font-medium text-ink-soft">Maya and Priya</span>
             </p>
@@ -506,7 +506,7 @@ export function FeedView({
         </RailSection>
         <RailSection
           title="Today in Thursday"
-          action={<span className="text-[10.5px] text-faint">Live</span>}
+          action={<span className="text-[11.5px] text-faint">Live</span>}
         >
           <div className="space-y-0.5 px-0.5 pt-0.5">
             {TOPICS.slice(0, 3).map((h?: any) => (
@@ -530,7 +530,7 @@ export function FeedView({
             <button
               type="button"
               onClick={onOpenCircles}
-              className="text-[10.5px] font-semibold text-forest hover:opacity-70"
+              className="text-[11.5px] font-semibold text-forest hover:opacity-70"
             >
               Browse
             </button>
@@ -542,19 +542,19 @@ export function FeedView({
                 key={h.id}
                 type="button"
                 onClick={() => onOpenCircle(h.id)}
-                className="flex w-full items-center gap-2 rounded-[7px] px-1 py-1.5 text-left transition-colors hover:bg-surface-muted"
+                className="flex w-full items-center gap-2 rounded-[8px] px-1 py-1.5 text-left transition-colors hover:bg-surface-muted"
               >
                 <img
                   src={h.image}
                   alt=""
-                  className="h-8 w-8 rounded-[6px] object-cover"
+                  className="h-8 w-8 rounded-[8px] object-cover"
                   loading="lazy"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11.5px] font-semibold text-ink">
+                  <span className="block truncate text-[12px] font-semibold text-ink">
                     {h.name}
                   </span>
-                  <span className="block truncate text-[10px] text-muted">
+                  <span className="block truncate text-[11.5px] text-muted">
                     {formatCount(h.members)}
                     {" members"}
                   </span>
@@ -563,7 +563,7 @@ export function FeedView({
               </button>
             ))}
             {V.length ? null : (
-              <p className="px-1 pb-1 text-[10.5px] text-muted">
+              <p className="px-1 pb-1 text-[11.5px] text-muted">
                 Join a circle to see it here.
               </p>
             )}
@@ -585,7 +585,7 @@ export function FeedView({
             <button
               type="button"
               onClick={onOpenEvents}
-              className="text-[10.5px] font-semibold text-forest hover:opacity-70"
+              className="text-[11.5px] font-semibold text-forest hover:opacity-70"
             >
               All
             </button>
@@ -597,21 +597,21 @@ export function FeedView({
                 key={h.id}
                 type="button"
                 onClick={onOpenEvents}
-                className="flex w-full items-start gap-2 rounded-[7px] px-1 py-1.5 text-left transition-colors hover:bg-surface-muted"
+                className="flex w-full items-start gap-2 rounded-[8px] px-1 py-1.5 text-left transition-colors hover:bg-surface-muted"
               >
-                <span className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-[6px] border border-line bg-surface-muted">
-                  <span className="text-[7px] font-semibold tracking-[0.06em] text-faint uppercase">
+                <span className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-[8px] border border-line bg-surface-muted">
+                  <span className="text-[10px] font-medium tracking-[0.08em] text-faint uppercase">
                     {h.weekday}
                   </span>
-                  <span className="text-[11.5px] font-semibold leading-none text-ink tabular-nums">
+                  <span className="text-[12px] font-semibold leading-none text-ink tabular-nums">
                     {h.day}
                   </span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11px] font-semibold text-ink">
+                  <span className="block truncate text-[12px] font-semibold text-ink">
                     {h.title}
                   </span>
-                  <span className="block truncate text-[10px] text-faint">
+                  <span className="block truncate text-[11.5px] text-faint">
                     {h.place}
                   </span>
                 </span>
@@ -626,7 +626,7 @@ export function FeedView({
           onOpen={onOpenPerson}
         />
         <nav
-          className="flex flex-wrap gap-x-3 gap-y-1 px-2 text-[10px] text-faint"
+          className="flex flex-wrap gap-x-3 gap-y-1 px-2 text-[11.5px] text-faint"
           aria-label="Footer"
         >
           {["About", "Guidelines", "Privacy", "Help"].map((h?: any) => (
@@ -639,11 +639,11 @@ export function FeedView({
       </aside>
       <div className="space-y-3 pb-4 lg:hidden">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[13px] font-semibold text-ink">Your circles</h2>
+          <h2 className="text-[14px] font-semibold text-ink">Your circles</h2>
           <button
             type="button"
             onClick={onOpenCircles}
-            className="text-[11px] font-semibold text-forest"
+            className="text-[12px] font-semibold text-forest"
           >
             See all
           </button>
@@ -663,10 +663,10 @@ export function FeedView({
                 loading="lazy"
               />
               <span className="block px-2 py-1.5">
-                <span className="block truncate text-[11px] font-semibold text-ink">
+                <span className="block truncate text-[12px] font-semibold text-ink">
                   {h.name}
                 </span>
-                <span className="block text-[8.5px] text-muted">
+                <span className="block text-[11px] text-muted">
                   {formatCount(h.members)}
                   {" members"}
                 </span>
@@ -676,18 +676,18 @@ export function FeedView({
           <button
             type="button"
             onClick={onOpenCircles}
-            className="flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line-strong text-[10.5px] font-medium text-muted"
+            className="flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line-strong text-[11.5px] font-medium text-muted"
           >
             <Plus size={14} strokeWidth={2} aria-hidden="true" />
             Find more
           </button>
         </div>
         <div className="flex items-center justify-between px-1 pt-1">
-          <h2 className="text-[13px] font-semibold text-ink">Coming up</h2>
+          <h2 className="text-[14px] font-semibold text-ink">Coming up</h2>
           <button
             type="button"
             onClick={onOpenEvents}
-            className="text-[11px] font-semibold text-forest"
+            className="text-[12px] font-semibold text-forest"
           >
             All gatherings
           </button>
@@ -700,19 +700,19 @@ export function FeedView({
               onClick={onOpenEvents}
               className="flex w-full items-center gap-2.5 border-b border-line/70 px-3 py-2.5 text-left last:border-b-0"
             >
-              <span className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-[6px] border border-line bg-surface-muted">
-                <span className="text-[7px] font-semibold uppercase text-faint">
+              <span className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-[8px] border border-line bg-surface-muted">
+                <span className="text-[10px] font-semibold uppercase text-faint">
                   {h.weekday}
                 </span>
-                <span className="text-[11px] font-semibold leading-none text-ink">
+                <span className="text-[12px] font-semibold leading-none text-ink">
                   {h.day}
                 </span>
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[11.5px] font-medium text-ink">
+                <span className="block truncate text-[12px] font-medium text-ink">
                   {h.title}
                 </span>
-                <span className="block truncate text-[10px] text-faint">
+                <span className="block truncate text-[11.5px] text-faint">
                   {h.place}
                   {" · "}
                   {h.attendees}
@@ -731,7 +731,7 @@ export function FeedView({
               </span>
             ))}
           </div>
-          <p className="text-[10px] text-faint">
+          <p className="text-[11.5px] text-faint">
             12,480 people making quieter internet
           </p>
         </div>

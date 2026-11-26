@@ -143,7 +143,7 @@ export function ReelsView({
             <p className="text-[20px] font-semibold leading-none tracking-[-0.02em] text-white">
               Reels
             </p>
-            <p className="mt-0.5 truncate text-[8.5px] font-medium tracking-[0.14em] text-white/50 uppercase">
+            <p className="mt-0.5 truncate text-[11px] font-medium tracking-[0.14em] text-white/50 uppercase">
               Thursday · short moments
             </p>
           </div>
@@ -174,7 +174,7 @@ export function ReelsView({
                 }}
                 aria-pressed={q === X_local.value}
                 className={cn(
-                  "h-6.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors",
+                  "h-6.5 rounded-full px-2.5 text-[12px] font-semibold transition-colors",
                   q === X_local.value
                     ? "bg-white text-[#141810]"
                     : "text-white/70 hover:text-white",
@@ -188,7 +188,7 @@ export function ReelsView({
             type="button"
             onClick={() => Ve(true)}
             aria-label="Create a reel"
-            className="inline-flex h-8 items-center gap-1 rounded-full bg-white px-3 text-[11.5px] font-semibold text-[#141810] transition-colors hover:bg-white/90"
+            className="inline-flex h-8 items-center gap-1 rounded-full bg-white px-3 text-[12px] font-semibold text-[#141810] transition-colors hover:bg-white/90"
           >
             <Plus size={12} strokeWidth={2.6} />
             <span className="hidden xs:inline">Create</span>
@@ -323,7 +323,7 @@ export function ReelsView({
                         onClick={() => onOpenPerson(se.id)}
                         className="flex min-w-0 items-center gap-1 text-left"
                       >
-                        <span className="truncate text-[13px] font-semibold text-white">
+                        <span className="truncate text-[14px] font-semibold text-white">
                           {se.name}
                         </span>
                         {se.verified ? (
@@ -335,14 +335,14 @@ export function ReelsView({
                         onChange={() => onToggleFollow(se.id)}
                         size="sm"
                       />
-                      <span className="ml-0.5 rounded-full bg-white/15 px-1.5 py-0.5 text-[8.5px] font-medium text-white/85 backdrop-blur">
+                      <span className="ml-0.5 rounded-full bg-white/15 px-1.5 py-0.5 text-[11px] font-medium text-white/85 backdrop-blur">
                         @{se.handle}
                       </span>
                     </div>
-                    <p className="mt-2 line-clamp-3 max-w-[92%] text-[12.5px] leading-[1.55] text-white/92">
+                    <p className="mt-2 line-clamp-3 max-w-[92%] text-[13px] leading-[1.55] text-white/92">
                       {X_local.caption}
                     </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pr-2 text-[10.5px] text-white/70">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pr-2 text-[11.5px] text-white/70">
                       <span className="inline-flex min-w-0 items-center gap-1">
                         <MusicNotes
                           size={10}
@@ -386,7 +386,7 @@ export function ReelsView({
                       strokeWidth={2}
                       className="animate-bounce"
                     />
-                    <span className="text-[8px] font-medium tracking-[0.08em] uppercase">
+                    <span className="text-[11px] font-medium tracking-[0.08em] uppercase">
                       Next
                     </span>
                   </button>
@@ -400,13 +400,13 @@ export function ReelsView({
             <p className="mt-3 text-[14px] font-semibold text-white">
               Your following feed is quiet
             </p>
-            <p className="mt-1 max-w-[280px] text-[12px] leading-relaxed text-white/60">
+            <p className="mt-1 max-w-[280px] text-[13px] leading-relaxed text-white/60">
               Follow a few creators, or switch back to For you to keep watching.
             </p>
             <button
               type="button"
               onClick={() => _("for-you")}
-              className="mt-4 h-8 rounded-full bg-white px-4 text-[12px] font-semibold text-[#141810]"
+              className="mt-4 h-8 rounded-full bg-white px-4 text-[13px] font-semibold text-[#141810]"
             >
               Back to For you
             </button>
@@ -424,8 +424,8 @@ export function ReelsView({
           <div className="animate-drawer relative flex h-[72vh] w-full flex-col border-t border-white/10 bg-[#141814] sm:h-full sm:max-w-[380px] sm:border-t-0 sm:border-l">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>
-                <p className="text-[13px] font-semibold text-white">Comments</p>
-                <p className="text-[10px] text-white/50">
+                <p className="text-[14px] font-semibold text-white">Comments</p>
+                <p className="text-[11.5px] text-white/50">
                   {G.comments.length}
                   {" replies · Be kind"}
                 </p>
@@ -452,23 +452,23 @@ export function ReelsView({
                       </button>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
-                          <span className="truncate text-[11.5px] font-semibold text-white">
+                          <span className="truncate text-[12px] font-semibold text-white">
                             {se.name}
                           </span>
                           {se.verified ? (
                             <VerifiedBadge className="text-white/60" />
                           ) : null}
-                          <span className="text-[8.5px] text-white/40">
+                          <span className="text-[11px] text-white/40">
                             {"· "}
                             {X_local.time}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[11.5px] leading-[1.55] text-white/80">
+                        <p className="mt-0.5 text-[12px] leading-[1.55] text-white/80">
                           {X_local.text}
                         </p>
                         <button
                           type="button"
-                          className="mt-1 inline-flex items-center gap-1 text-[8.5px] font-semibold text-white/45 hover:text-white/80"
+                          className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-white/45 hover:text-white/80"
                         >
                           <Heart size={9} strokeWidth={2.2} /> {X_local.likes}
                           {" · Reply"}
@@ -484,10 +484,10 @@ export function ReelsView({
                     strokeWidth={1.7}
                     className="text-white/40"
                   />
-                  <p className="mt-2 text-[12px] font-semibold text-white/80">
+                  <p className="mt-2 text-[13px] font-semibold text-white/80">
                     No comments yet
                   </p>
-                  <p className="mt-0.5 text-[10.5px] text-white/45">
+                  <p className="mt-0.5 text-[11.5px] text-white/45">
                     Say the first kind thing.
                   </p>
                 </div>
@@ -506,7 +506,7 @@ export function ReelsView({
                 onChange={(X_local?: any) => $(X_local.target.value)}
                 placeholder="Add a comment…"
                 aria-label="Add a reel comment"
-                className="h-9 min-w-0 flex-1 rounded-full border border-white/15 bg-white/5 px-3.5 text-[12px] text-white placeholder:text-white/40 focus:border-white/35 focus:outline-none"
+                className="h-9 min-w-0 flex-1 rounded-full border border-white/15 bg-white/5 px-3.5 text-[13px] text-white placeholder:text-white/40 focus:border-white/35 focus:outline-none"
               />
               <button
                 type="submit"
@@ -560,7 +560,7 @@ function ReelActionButton({
           aria-hidden="true"
         />
       </span>
-      <span className="max-w-full truncate text-[8.5px] font-semibold tracking-[0.01em] text-white/85">
+      <span className="max-w-full truncate text-[11px] font-semibold tracking-[0.01em] text-white/85">
         {count !== undefined ? formatCount(count) : label}
       </span>
     </button>
@@ -589,10 +589,10 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
       <div className="flex h-[60dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#141814] text-white sm:h-[min(620px,78dvh)] sm:w-[calc(100%-2rem)] sm:rounded-xl lg:max-w-[1100px] xl:max-w-[1240px]">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-4 py-3.5">
           <div>
-            <p className="text-[13px] font-semibold text-white">
+            <p className="text-[14px] font-semibold text-white">
               Create a reel
             </p>
-            <p className="mt-0.5 text-[10.5px] text-white/50">
+            <p className="mt-0.5 text-[11.5px] text-white/50">
               Vertical, under a minute, entirely yours.
             </p>
           </div>
@@ -609,10 +609,10 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
           <div className="flex items-center gap-2.5">
             <Avatar person={me} size="sm" />
             <div>
-              <p className="text-[11.5px] font-semibold text-white">
+              <p className="text-[12px] font-semibold text-white">
                 {me.name}
               </p>
-              <p className="text-[10px] text-white/45">
+              <p className="text-[11.5px] text-white/45">
                 Anyone can watch · no tracking tags
               </p>
             </div>
@@ -647,10 +647,10 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80">
                 <UploadSimple size={17} strokeWidth={1.9} />
               </span>
-              <span className="mt-2.5 text-[12px] font-semibold text-white">
+              <span className="mt-2.5 text-[13px] font-semibold text-white">
                 Choose a vertical video
               </span>
-              <span className="mt-0.5 text-[10px] text-white/45">
+              <span className="mt-0.5 text-[11.5px] text-white/45">
                 MP4 or MOV · recommended 9:16
               </span>
               <input
@@ -685,7 +685,7 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
             </label>
           )}
           {A ? (
-            <p className="truncate text-[10px] text-white/40">
+            <p className="truncate text-[11.5px] text-white/40">
               {"Selected: "}
               {A}
             </p>
@@ -694,7 +694,7 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
               actually wide, so a broad sheet is not one long column of inputs. */}
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
           <label className="block space-y-1">
-            <span className="text-[10.5px] font-medium text-white/70">
+            <span className="text-[11.5px] font-medium text-white/70">
               Caption
             </span>
             <textarea
@@ -703,28 +703,28 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
               rows={3}
               maxLength={180}
               placeholder="What are we looking at?"
-              className="w-full resize-none rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-[12px] leading-relaxed text-white placeholder:text-white/35 focus:border-white/40 focus:outline-none"
+              className="w-full resize-none rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-[13px] leading-relaxed text-white placeholder:text-white/35 focus:border-white/40 focus:outline-none"
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[10.5px] font-medium text-white/70">
+            <span className="text-[11.5px] font-medium text-white/70">
               Place
             </span>
             <input
               value={R}
               onChange={(_?: any) => z(_.target.value)}
-              className="h-8 w-full rounded-lg border border-white/15 bg-white/5 px-2.5 text-[11.5px] text-white focus:border-white/40 focus:outline-none"
+              className="h-8 w-full rounded-lg border border-white/15 bg-white/5 px-2.5 text-[12px] text-white focus:border-white/40 focus:outline-none"
             />
           </label>
           </div>
           {v ? (
-            <p className="rounded-md border border-[#d59679]/30 bg-[#d59679]/10 px-2 py-1.5 text-[10.5px] text-[#f0b49a]">
+            <p className="rounded-md border border-[#d59679]/30 bg-[#d59679]/10 px-2 py-1.5 text-[11.5px] text-[#f0b49a]">
               {v}
             </p>
           ) : null}
         </div>
         <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-3">
-          <span className="text-[10px] text-white/35">
+          <span className="text-[11.5px] text-white/35">
             Stored on this device in this build.
           </span>
           <button
@@ -751,7 +751,7 @@ export function CreateReelModal({ open, onClose, me, onCreate }: any) {
                 comments: [],
               });
             }}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white px-3.5 text-[11.5px] font-semibold text-[#141810] hover:bg-white/90"
+            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white px-3.5 text-[12px] font-semibold text-[#141810] hover:bg-white/90"
           >
             <UploadSimple size={12} strokeWidth={2.4} />
             Publish reel

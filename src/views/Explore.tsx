@@ -115,11 +115,11 @@ export function ExploreView({
       <header className="animate-rise">
         <div className="mb-2 flex items-center gap-2">
           <span className="h-1 w-1 rounded-full bg-forest" />
-          <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+          <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
             Look around
           </p>
           {liveCount ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-forest/20 bg-forest-wash px-1.5 py-0.5 text-[10px] font-medium text-forest">
+            <span className="inline-flex items-center gap-1 rounded-full border border-forest/20 bg-forest-wash px-1.5 py-0.5 text-[11.5px] font-medium text-forest">
               <span className="h-1 w-1 animate-pulse rounded-full bg-forest" />
               {liveCount} new in real time
             </span>
@@ -130,7 +130,7 @@ export function ExploreView({
             <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
               Explore
             </h1>
-            <p className="mt-1 text-[13px] text-muted">
+            <p className="mt-1 text-[14px] text-muted">
               Good things made and found by people in your circle.
             </p>
           </div>
@@ -146,7 +146,7 @@ export function ExploreView({
               onChange={(e: any) => setQuery(e.target.value)}
               placeholder="Search people, topics, moments"
               aria-label="Search explore"
-              className="h-9 w-full rounded-[10px] border border-line bg-surface pr-8 pl-8.5 text-[12.5px] text-ink shadow-[0_1px_1px_rgba(29,33,28,0.02)] transition-colors placeholder:text-faint hover:border-line-strong focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
+              className="h-9 w-full rounded-[12px] border border-line bg-surface pr-8 pl-8.5 text-[13px] text-ink shadow-[0_1px_1px_rgba(29,33,28,0.02)] transition-colors placeholder:text-faint hover:border-line-strong focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
             />
             {query ? (
               <button
@@ -169,7 +169,7 @@ export function ExploreView({
             onClick={() => setActiveTopic(label)}
             aria-pressed={activeTopic === label}
             className={cn(
-              "h-7 shrink-0 rounded-full border px-3 text-[11.5px] font-medium transition-colors",
+              "h-7 shrink-0 rounded-full border px-3 text-[12px] font-medium transition-colors",
               activeTopic === label
                 ? "border-forest bg-forest text-white"
                 : "border-line bg-surface text-muted hover:border-line-strong hover:text-ink",
@@ -181,7 +181,7 @@ export function ExploreView({
       </div>
       {peopleMatches.length ? (
         <section className="animate-rise mt-5">
-          <h2 className="mb-2 text-[12px] font-semibold text-ink">
+          <h2 className="mb-2 text-[13px] font-semibold text-ink">
             People matching “{query}”
           </h2>
           <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2">
@@ -203,12 +203,12 @@ export function ExploreView({
                   className="min-w-0 flex-1 text-left"
                 >
                   <span className="flex items-center gap-1">
-                    <span className="truncate text-[12.5px] font-semibold text-ink">
+                    <span className="truncate text-[13px] font-semibold text-ink">
                       {p.name}
                     </span>
                     {p.verified ? <VerifiedBadge /> : null}
                   </span>
-                  <span className="mt-0.5 block truncate text-[10.5px] text-muted">
+                  <span className="mt-0.5 block truncate text-[11.5px] text-muted">
                     {onlineIds.includes(p.id) ? "Active now · " : ""}
                     {formatCount(p.followers)}
                     {" followers · @"}
@@ -226,10 +226,10 @@ export function ExploreView({
       ) : null}
       <section className="animate-rise mt-6">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[13px] font-semibold text-ink">
+          <h2 className="text-[14px] font-semibold text-ink">
             {activeTopic === "All" ? "Moments worth a look" : activeTopic}
           </h2>
-          <span className="text-[10.5px] text-faint">
+          <span className="text-[11.5px] text-faint">
             {visibleMoments.length}
             {" results"}
           </span>
@@ -264,14 +264,14 @@ export function ExploreView({
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-80 transition-opacity group-hover:opacity-100" />
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-[#101318] backdrop-blur">
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11.5px] font-semibold text-[#101318] backdrop-blur">
                     {m.live ? (
                       <span className="h-1 w-1 rounded-full bg-forest" />
                     ) : null}
                     {m.topic}
                   </div>
                   <div className="absolute right-0 bottom-0 left-0 p-3">
-                    <p className="line-clamp-2 text-[12px] leading-snug font-medium text-white">
+                    <p className="line-clamp-2 text-[13px] leading-snug font-medium text-white">
                       {m.title}
                     </p>
                     <div className="mt-1.5 flex items-center gap-1.5">
@@ -282,7 +282,7 @@ export function ExploreView({
                           className="h-4 w-4 rounded-full object-cover ring-1 ring-white/40"
                         />
                       ) : null}
-                      <span className="truncate text-[10px] text-white/75">
+                      <span className="truncate text-[11.5px] text-white/75">
                         {author?.name ?? "Thursday"}
                         {m.live && onlineIds.includes(m.authorId)
                           ? " · online now"
@@ -307,7 +307,7 @@ export function ExploreView({
                     setQuery("");
                     setActiveTopic("All");
                   }}
-                  className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+                  className="h-8 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft hover:bg-surface-muted"
                 >
                   Show everything
                 </button>
@@ -325,7 +325,7 @@ export function ExploreView({
               className="text-forest"
               aria-hidden="true"
             />
-            <h2 className="text-[13px] font-semibold text-ink">
+            <h2 className="text-[14px] font-semibold text-ink">
               People you may know
             </h2>
           </div>
@@ -348,12 +348,12 @@ export function ExploreView({
                     onClick={() => onOpenPerson(p.id)}
                     className="flex max-w-full items-center gap-1 text-left"
                   >
-                    <span className="truncate text-[12.5px] font-semibold text-ink">
+                    <span className="truncate text-[13px] font-semibold text-ink">
                       {p.name}
                     </span>
                     {p.verified ? <VerifiedBadge /> : null}
                   </button>
-                  <p className="mt-0.5 line-clamp-1 text-[10.5px] text-muted">
+                  <p className="mt-0.5 line-clamp-1 text-[11.5px] text-muted">
                     {onlineIds.includes(p.id) ? "Active now · " : ""}
                     {p.bio}
                   </p>
@@ -391,14 +391,14 @@ export function BookmarksView({
       <header className="animate-rise mb-4">
         <div className="mb-2 flex items-center gap-2">
           <span className="h-1 w-1 rounded-full bg-forest" />
-          <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+          <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
             Collected
           </p>
         </div>
         <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
           Saved
         </h1>
-        <p className="mt-1 text-[13px] text-muted">
+        <p className="mt-1 text-[14px] text-muted">
           {"The moments you wanted to keep, "}
           {z.length === 1 ? "one post" : `${z.length} posts`}
           {" collected."}
@@ -435,7 +435,7 @@ export function BookmarksView({
               <button
                 type="button"
                 onClick={onExplore}
-                className="inline-flex h-8 items-center gap-1.5 rounded-[7px] bg-forest px-3 text-[12px] font-semibold text-white hover:bg-forest-hover"
+                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-forest px-3 text-[13px] font-semibold text-white hover:bg-forest-hover"
               >
                 <Heart size={12} strokeWidth={2} aria-hidden="true" />
                 Find something to save
@@ -445,7 +445,7 @@ export function BookmarksView({
         )}
       </div>
       {z.length ? (
-        <p className="mt-3 text-center text-[10.5px] text-faint">
+        <p className="mt-3 text-center text-[11.5px] text-faint">
           Saved posts are private to you. Only you can see this collection.
         </p>
       ) : null}

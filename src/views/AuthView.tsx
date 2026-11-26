@@ -188,7 +188,7 @@ export function AuthView({
         <div className="mx-auto flex h-16 max-w-[1160px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <BrandLockup />
-            <span className="hidden items-center gap-1.5 rounded-full border border-forest/20 bg-forest-wash px-2.5 py-0.5 text-[11px] font-medium text-forest sm:inline-flex">
+            <span className="hidden items-center gap-1.5 rounded-full border border-forest/20 bg-forest-wash px-2.5 py-0.5 text-[12px] font-medium text-forest sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-forest animate-pulse" />
               {liveInfo.ok
                 ? `Live · ${liveInfo.onlineCount} in the room`
@@ -206,7 +206,7 @@ export function AuthView({
         <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-12 lg:gap-12">
           {/* Left Column: Editorial Story & Visual Showcase */}
           <section className="lg:col-span-6 space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[11.5px] font-medium text-muted shadow-2xs">
+            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[12px] font-medium text-muted shadow-2xs">
               <Sparkle size={13} className="text-clay" />
               <span>Designed for slower, real-time connection</span>
             </div>
@@ -215,7 +215,7 @@ export function AuthView({
               <h1 className="text-[32px] sm:text-[40px] font-semibold leading-[1.12] tracking-[-0.035em] text-ink">
                 A quieter place to share with your circle.
               </h1>
-              <p className="max-w-[500px] text-[15px] leading-[1.65] text-muted">
+              <p className="max-w-[500px] text-[14px] leading-[1.65] text-muted">
                 No algorithmic noise or endless strangers. Share unhurried photo
                 notes, voice memos, short reels, small circles, and Thursday
                 evening gatherings — all syncing live in real time.
@@ -231,16 +231,16 @@ export function AuthView({
                   className="h-full w-full object-contain"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+                <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur-md">
                   <UsersThree size={12} />
                   <span>Clay Club · Active right now</span>
                 </div>
                 <div className="absolute right-4 bottom-3.5 left-4 text-white">
-                  <p className="text-[13.5px] font-medium leading-snug">
+                  <p className="text-[14px] font-medium leading-snug">
                     “A quieter place to share the unfinished version. No
                     metrics, no noise — just the people you actually know.”
                   </p>
-                  <p className="mt-1 text-[11.5px] text-white/75">
+                  <p className="mt-1 text-[12px] text-white/75">
                     The idea behind Thursday
                   </p>
                 </div>
@@ -248,26 +248,26 @@ export function AuthView({
 
               <div className="grid grid-cols-3 divide-x divide-line bg-surface-muted/40 px-2 py-3 text-center">
                 <div className="px-2">
-                  <p className="text-[13px] font-semibold text-ink">
+                  <p className="text-[14px] font-semibold text-ink">
                     Chronological
                   </p>
-                  <p className="mt-0.5 text-[11px] text-muted">
+                  <p className="mt-0.5 text-[12px] text-muted">
                     Calm feed, zero rage-bait
                   </p>
                 </div>
                 <div className="px-2">
-                  <p className="text-[13px] font-semibold text-ink">
+                  <p className="text-[14px] font-semibold text-ink">
                     Live Rooms
                   </p>
-                  <p className="mt-0.5 text-[11px] text-muted">
+                  <p className="mt-0.5 text-[12px] text-muted">
                     Instant DMs, voice & calls
                   </p>
                 </div>
                 <div className="px-2">
-                  <p className="text-[13px] font-semibold text-ink">
+                  <p className="text-[14px] font-semibold text-ink">
                     Small Circles
                   </p>
-                  <p className="mt-0.5 text-[11px] text-muted">
+                  <p className="mt-0.5 text-[12px] text-muted">
                     Gatherings & field guides
                   </p>
                 </div>
@@ -286,7 +286,7 @@ export function AuthView({
                     <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-ink">
                       {mode === "login" ? "Welcome back" : "Join Thursday"}
                     </h2>
-                    <p className="text-[12px] text-muted">
+                    <p className="text-[13px] text-muted">
                       {mode === "login"
                         ? "Sign in to your account"
                         : "Create your personal corner in seconds"}
@@ -309,7 +309,7 @@ export function AuthView({
                     setError(null);
                   }}
                   className={cn(
-                    "h-9 rounded-lg text-[13px] font-semibold transition-all",
+                    "h-9 rounded-lg text-[14px] font-semibold transition-all",
                     mode === "login"
                       ? "bg-surface text-ink shadow-2xs"
                       : "text-muted hover:text-ink",
@@ -326,7 +326,7 @@ export function AuthView({
                     setError(null);
                   }}
                   className={cn(
-                    "h-9 rounded-lg text-[13px] font-semibold transition-all",
+                    "h-9 rounded-lg text-[14px] font-semibold transition-all",
                     mode === "signup"
                       ? "bg-surface text-ink shadow-2xs"
                       : "text-muted hover:text-ink",
@@ -337,7 +337,7 @@ export function AuthView({
               </div>
 
               {error ? (
-                <div className="mb-4 flex items-start gap-2 rounded-xl border border-clay/30 bg-clay-wash px-3.5 py-2.5 text-[12.5px] text-clay">
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-clay/30 bg-clay-wash px-3.5 py-2.5 text-[13px] text-clay">
                   <Warning size={16} className="mt-0.5 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -355,7 +355,7 @@ export function AuthView({
                           className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-forest/25"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[12px] font-semibold text-ink">
+                          <p className="text-[13px] font-semibold text-ink">
                             Profile portrait
                           </p>
                           <div className="mt-1.5 flex items-center gap-1.5">
@@ -381,7 +381,7 @@ export function AuthView({
                             <button
                               type="button"
                               onClick={() => fileInputRef.current?.click()}
-                              className="ml-1 inline-flex h-6 items-center gap-1 rounded-full border border-line-strong bg-surface px-2.5 text-[11px] font-medium text-ink-soft hover:border-forest hover:text-forest"
+                              className="ml-1 inline-flex h-6 items-center gap-1 rounded-full border border-line-strong bg-surface px-2.5 text-[12px] font-medium text-ink-soft hover:border-forest hover:text-forest"
                             >
                               <UploadSimple size={11} />
                               <span>Upload</span>
@@ -400,7 +400,7 @@ export function AuthView({
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[11.5px] font-semibold text-ink-soft">
+                        <label className="mb-1 block text-[12px] font-semibold text-ink-soft">
                           Full name
                         </label>
                         <input
@@ -409,22 +409,22 @@ export function AuthView({
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="Adaeze Okafor"
-                          className="h-10 w-full rounded-xl border border-line bg-canvas px-3 text-[13.5px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                          className="h-10 w-full rounded-xl border border-line bg-canvas px-3 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="mb-1 flex items-center justify-between text-[11.5px] font-semibold text-ink-soft">
+                        <label className="mb-1 flex items-center justify-between text-[12px] font-semibold text-ink-soft">
                           <span>Handle</span>
                           {handleStatus === "checking" ? (
-                            <span className="text-[10.5px] font-normal text-faint">
+                            <span className="text-[11.5px] font-normal text-faint">
                               Checking…
                             </span>
                           ) : handleStatus === "available" ? (
-                            <span className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-forest">
+                            <span className="inline-flex items-center gap-0.5 text-[11.5px] font-medium text-forest">
                               <Check size={11} /> Available
                             </span>
                           ) : handleStatus === "taken" ? (
-                            <span className="text-[10.5px] font-medium text-clay">
+                            <span className="text-[11.5px] font-medium text-clay">
                               Taken
                             </span>
                           ) : null}
@@ -448,14 +448,14 @@ export function AuthView({
                               );
                             }}
                             placeholder="adaeze"
-                            className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-8 text-[13.5px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                            className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-8 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                           />
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-[11.5px] font-semibold text-ink-soft">
+                      <label className="mb-1 block text-[12px] font-semibold text-ink-soft">
                         Email address
                       </label>
                       <div className="relative">
@@ -469,14 +469,14 @@ export function AuthView({
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="you@example.com"
-                          className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-9 text-[13.5px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                          className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-9 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[11.5px] font-semibold text-ink-soft">
+                        <label className="mb-1 block text-[12px] font-semibold text-ink-soft">
                           City / Corner{" "}
                           <span className="font-normal text-faint">
                             (optional)
@@ -492,12 +492,12 @@ export function AuthView({
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
                             placeholder="Lagos · Lisbon · Portland"
-                            className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-8 text-[13px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                            className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-8 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="mb-1 block text-[11.5px] font-semibold text-ink-soft">
+                        <label className="mb-1 block text-[12px] font-semibold text-ink-soft">
                           Short bio{" "}
                           <span className="font-normal text-faint">
                             (optional)
@@ -508,14 +508,14 @@ export function AuthView({
                           value={bio}
                           onChange={(e) => setBio(e.target.value)}
                           placeholder="Tea, film photos & slow walks"
-                          className="h-10 w-full rounded-xl border border-line bg-canvas px-3 text-[13px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                          className="h-10 w-full rounded-xl border border-line bg-canvas px-3 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                         />
                       </div>
                     </div>
                   </>
                 ) : (
                   <div>
-                    <label className="mb-1 block text-[11.5px] font-semibold text-ink-soft">
+                    <label className="mb-1 block text-[12px] font-semibold text-ink-soft">
                       Email or @handle
                     </label>
                     <div className="relative">
@@ -529,17 +529,17 @@ export function AuthView({
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
                         placeholder="you@example.com or @yourhandle"
-                        className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-9 text-[13.5px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                        className="h-10 w-full rounded-xl border border-line bg-canvas pr-3 pl-9 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                       />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="mb-1 flex items-center justify-between text-[11.5px] font-semibold text-ink-soft">
+                  <label className="mb-1 flex items-center justify-between text-[12px] font-semibold text-ink-soft">
                     <span>Password</span>
                     {mode === "signup" ? (
-                      <span className="text-[10.5px] font-normal text-faint">
+                      <span className="text-[11.5px] font-normal text-faint">
                         Min. 6 characters
                       </span>
                     ) : null}
@@ -560,7 +560,7 @@ export function AuthView({
                           ? "Create a strong password"
                           : "Enter your password"
                       }
-                      className="h-10 w-full rounded-xl border border-line bg-canvas pr-10 pl-9 text-[13.5px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                      className="h-10 w-full rounded-xl border border-line bg-canvas pr-10 pl-9 text-[14px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                     />
                     <button
                       type="button"
@@ -585,7 +585,7 @@ export function AuthView({
                     submitting ||
                     (mode === "signup" && handleStatus === "taken")
                   }
-                  className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-forest px-4 text-[13.5px] font-semibold text-white shadow-sm transition-all hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-forest px-4 text-[14px] font-semibold text-white shadow-sm transition-all hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting ? (
                     <>

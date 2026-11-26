@@ -265,7 +265,7 @@ export function AuthorChip({
   // string can only ever say whatever it said when the post was written.
   const stamp = createdAt ? relativeTime(createdAt) : time;
   return (
-    <p className={cn("truncate text-[12px] text-muted", className)}>
+    <p className={cn("truncate text-[13px] text-muted", className)}>
       {showHandle ? `@${person.handle}` : null}
       {showHandle && stamp ? (
         <span className="mx-1 text-line-strong">·</span>
@@ -286,7 +286,7 @@ export function FollowButton({ following, onChange, size = "sm" }: any) {
       aria-pressed={following}
       className={cn(
         "shrink-0 rounded-[8px] border font-semibold transition-colors duration-150",
-        size === "sm" ? "h-7 px-2.5 text-[11.5px]" : "h-9 px-3.5 text-[13px]",
+        size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-9 px-3.5 text-[14px]",
         following
           ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
           : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -313,7 +313,7 @@ export function MediaFrame({
       title={label}
       aria-pressed={active}
       className={cn(
-        "group inline-flex items-center gap-1.5 rounded-[7px] py-1 pr-1.5 pl-1 text-[12px] font-medium text-muted transition-colors hover:text-ink",
+        "group inline-flex items-center gap-1.5 rounded-[8px] py-1 pr-1.5 pl-1 text-[13px] font-medium text-muted transition-colors hover:text-ink",
         active && activeClass,
         className,
       )}
@@ -476,7 +476,7 @@ export function PostCard({
                 onClick={onOpenAuthor}
                 className="flex max-w-full items-center gap-1 text-left"
               >
-                <span className="truncate text-[13.5px] font-semibold text-ink hover:underline">
+                <span className="truncate text-[14px] font-semibold text-ink hover:underline">
                   {author.name}
                 </span>
                 {author.verified ? <VerifiedBadge /> : null}
@@ -500,7 +500,7 @@ export function PostCard({
               {menuOpen ? (
                 <div
                   role="menu"
-                  className="animate-pop absolute top-8 right-0 z-30 w-[186px] overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_44px_rgba(24,28,24,0.18)]"
+                  className="animate-pop absolute top-8 right-0 z-30 w-[186px] overflow-hidden rounded-[12px] border border-line bg-surface py-1 shadow-[0_16px_44px_rgba(24,28,24,0.18)]"
                 >
                   {[
                     {
@@ -576,7 +576,7 @@ export function PostCard({
                       role="menuitem"
                       onClick={item.onClick}
                       className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-medium transition-colors",
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors",
                         item.danger
                           ? "text-clay hover:bg-clay-wash"
                           : "text-ink-soft hover:bg-surface-muted hover:text-ink",
@@ -599,7 +599,7 @@ export function PostCard({
       {post.pinned || ae ? (
         <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2 sm:px-5">
           {post.pinned ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-canvas-deep px-1.5 py-0.5 text-[10px] font-medium text-muted">
+            <span className="inline-flex items-center gap-1 rounded-full bg-canvas-deep px-1.5 py-0.5 text-[11.5px] font-medium text-muted">
               <PushPin size={9} strokeWidth={2} aria-hidden="true" />
               {" Pinned"}
             </span>
@@ -608,7 +608,7 @@ export function PostCard({
             <button
               type="button"
               onClick={() => onOpenCircle?.(ae.id)}
-              className="inline-flex items-center gap-1 rounded-full border border-forest/15 bg-forest-wash px-1.5 py-0.5 text-[10px] font-medium text-forest transition-colors hover:bg-forest-soft"
+              className="inline-flex items-center gap-1 rounded-full border border-forest/15 bg-forest-wash px-1.5 py-0.5 text-[11.5px] font-medium text-forest transition-colors hover:bg-forest-soft"
             >
               <UsersThree size={9} strokeWidth={2} aria-hidden="true" />{" "}
               {ae.name}
@@ -624,13 +624,13 @@ export function PostCard({
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-[10px] border border-line bg-canvas px-3 py-2 text-[13px] leading-[1.6] text-ink focus:border-forest focus:bg-surface focus:outline-none"
+              className="w-full resize-none rounded-[12px] border border-line bg-canvas px-3 py-2 text-[14px] leading-[1.6] text-ink focus:border-forest focus:bg-surface focus:outline-none"
             />
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="h-7 rounded-[7px] px-2.5 text-[11.5px] font-semibold text-muted hover:bg-surface-muted hover:text-ink"
+                className="h-7 rounded-[8px] px-2.5 text-[12px] font-semibold text-muted hover:bg-surface-muted hover:text-ink"
               >
                 Cancel
               </button>
@@ -644,14 +644,14 @@ export function PostCard({
                   setSavingEdit(false);
                   setEditing(false);
                 }}
-                className="h-7 rounded-[7px] bg-forest px-2.5 text-[11.5px] font-semibold text-white disabled:opacity-50"
+                className="h-7 rounded-[8px] bg-forest px-2.5 text-[12px] font-semibold text-white disabled:opacity-50"
               >
                 {savingEdit ? "Saving…" : "Save changes"}
               </button>
             </div>
           </div>
         ) : (
-        <p className="text-[13px] leading-[1.65] text-ink-soft">
+        <p className="text-[14px] leading-[1.65] text-ink-soft">
           <RichText
             text={he}
             onOpenTopic={handleTopic}
@@ -661,7 +661,7 @@ export function PostCard({
             <button
               type="button"
               onClick={() => q(true)}
-              className="ml-1 text-[12.5px] font-semibold text-forest hover:opacity-70"
+              className="ml-1 text-[13px] font-semibold text-forest hover:opacity-70"
             >
               more
             </button>
@@ -669,7 +669,7 @@ export function PostCard({
         </p>
         )}
         {post.place || post.taggedIds?.length ? (
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-faint">
             {post.place ? (
               <span className="inline-flex items-center gap-1">
                 <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
@@ -699,10 +699,10 @@ export function PostCard({
       {post.poll ? (
         <div className="mx-4 mt-3 rounded-xl border border-line bg-surface-muted/50 p-3 sm:mx-5">
           <div className="mb-2.5 flex items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold tracking-[0.05em] text-muted uppercase">
+            <p className="text-[12px] font-semibold tracking-[0.05em] text-muted uppercase">
               Poll
             </p>
-            <span className="text-[10.5px] text-faint">{post.poll.closes}</span>
+            <span className="text-[11.5px] text-faint">{post.poll.closes}</span>
           </div>
           <div className="space-y-1.5">
             {post.poll.options.map((pe?: any) => {
@@ -716,7 +716,7 @@ export function PostCard({
                   onClick={() => onVote?.(pe.id)}
                   aria-pressed={Ee}
                   className={cn(
-                    "relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-[7px] border px-2.5 py-2 text-left transition-colors",
+                    "relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-[8px] border px-2.5 py-2 text-left transition-colors",
                     Ee
                       ? "border-forest/35 bg-forest-wash"
                       : "border-line bg-surface",
@@ -734,7 +734,7 @@ export function PostCard({
                   ) : null}
                   <span
                     className={cn(
-                      "relative flex items-center gap-1.5 text-[11.5px] font-medium",
+                      "relative flex items-center gap-1.5 text-[12px] font-medium",
                       Ee ? "text-forest" : "text-ink-soft",
                     )}
                   >
@@ -746,7 +746,7 @@ export function PostCard({
                     {pe.label}
                   </span>
                   {ye ? (
-                    <span className="relative text-[11px] font-medium text-muted tabular-nums">
+                    <span className="relative text-[12px] font-medium text-muted tabular-nums">
                       {le}%
                     </span>
                   ) : null}
@@ -754,7 +754,7 @@ export function PostCard({
               );
             })}
           </div>
-          <p className="mt-2 text-[10.5px] text-faint">
+          <p className="mt-2 text-[11.5px] text-faint">
             {$.toLocaleString()}
             {" votes"}
             {ye ? " · you voted" : " · one vote each"}
@@ -789,14 +789,14 @@ export function PostCard({
             </button>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1 text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
+            <p className="flex items-center gap-1 text-[11.5px] font-semibold tracking-[0.08em] text-muted uppercase">
               <MusicNotes size={10} strokeWidth={2} aria-hidden="true" />
               {" Now playing"}
             </p>
-            <p className="mt-0.5 truncate text-[12.5px] font-semibold text-ink">
+            <p className="mt-0.5 truncate text-[13px] font-semibold text-ink">
               {post.music.title}
             </p>
-            <p className="truncate text-[11px] text-muted">
+            <p className="truncate text-[12px] text-muted">
               {post.music.artist}
               {" · "}
               {post.music.duration}
@@ -843,12 +843,12 @@ export function PostCard({
               </span>
             </span>
           ) : null}
-          <span className="pointer-events-none absolute bottom-2.5 left-3 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-medium text-white/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute bottom-2.5 left-3 rounded-full bg-black/40 px-2 py-0.5 text-[11.5px] font-medium text-white/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
             Double-tap to like
           </span>
           {images.length > 1 ? (
             <>
-              <span className="absolute top-2.5 right-2.5 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur tabular-nums">
+              <span className="absolute top-2.5 right-2.5 rounded-full bg-black/45 px-2 py-0.5 text-[11.5px] font-medium text-white backdrop-blur tabular-nums">
                 {Math.min(_, images.length - 1) + 1}/{images.length}
               </span>
               <button
@@ -890,7 +890,7 @@ export function PostCard({
               </div>
             </>
           ) : (
-            <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/45 px-2 py-1 text-[10px] font-medium tracking-[0.04em] text-white/90 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
+            <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/45 px-2 py-1 text-[11.5px] font-medium tracking-[0.04em] text-white/90 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
               View post
             </span>
           )}
@@ -940,7 +940,7 @@ export function PostCard({
             className="mt-1 flex w-full items-start gap-1.5 text-left"
           >
             <span className="mt-[3px] h-1 w-1 shrink-0 rounded-full bg-line-strong" />
-            <span className="text-[11.5px] leading-[1.5] text-muted">
+            <span className="text-[12px] leading-[1.5] text-muted">
               <span className="font-semibold text-ink-soft">
                 {post.comments[0].authorId === resolvedMeId
                   ? "You"
@@ -955,7 +955,7 @@ export function PostCard({
           <button
             type="button"
             onClick={onComment}
-            className="mt-1 pl-1 text-[11.5px] font-medium text-faint hover:text-forest"
+            className="mt-1 pl-1 text-[12px] font-medium text-faint hover:text-forest"
           >
             Be the first to comment
           </button>
@@ -972,7 +972,7 @@ export function ComposerPrompt({ person, onOpen }: any) {
         <button
           type="button"
           onClick={onOpen}
-          className="h-9 min-w-0 flex-1 truncate rounded-full border border-line bg-surface-muted/60 px-3.5 text-left text-[13px] text-faint transition-colors hover:border-line-strong hover:bg-surface-muted"
+          className="h-9 min-w-0 flex-1 truncate rounded-full border border-line bg-surface-muted/60 px-3.5 text-left text-[14px] text-faint transition-colors hover:border-line-strong hover:bg-surface-muted"
         >
           <span className="hidden sm:inline">
             Share something with your circle…
@@ -992,7 +992,7 @@ export function ComposerPrompt({ person, onOpen }: any) {
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex items-center gap-1.5 rounded-[7px] px-2 py-1 text-[11.5px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
+          className="inline-flex items-center gap-1.5 rounded-[8px] px-2 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
         >
           <Image size={13} strokeWidth={1.8} aria-hidden="true" />
           {" Photo"}
@@ -1000,7 +1000,7 @@ export function ComposerPrompt({ person, onOpen }: any) {
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex items-center gap-1.5 rounded-[7px] px-2 py-1 text-[11.5px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
+          className="inline-flex items-center gap-1.5 rounded-[8px] px-2 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
         >
           <Sparkle size={13} strokeWidth={1.8} aria-hidden="true" />
           {" Moment"}
@@ -1008,12 +1008,12 @@ export function ComposerPrompt({ person, onOpen }: any) {
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex items-center gap-1.5 rounded-[7px] px-2 py-1 text-[11.5px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
+          className="inline-flex items-center gap-1.5 rounded-[8px] px-2 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
         >
           <Smiley size={13} strokeWidth={1.8} aria-hidden="true" />
           {" Feeling"}
         </button>
-        <span className="ml-auto hidden text-[10.5px] text-faint sm:block">
+        <span className="ml-auto hidden text-[11.5px] text-faint sm:block">
           Your circle · Anyone can reply
         </span>
       </div>
@@ -1064,10 +1064,10 @@ export function StoriesStrip({
     <section className="animate-rise rounded-xl border border-line bg-surface px-3 py-3">
       <div className="mb-2 flex items-center justify-between px-1.5">
         <div className="flex items-center gap-1.5">
-          <h2 className="text-[12px] font-semibold tracking-[0.02em] text-ink">
+          <h2 className="text-[13px] font-semibold tracking-[0.02em] text-ink">
             Stories
           </h2>
-          <span className="rounded-full bg-canvas-deep px-1.5 py-0.5 text-[10px] font-medium text-muted">
+          <span className="rounded-full bg-canvas-deep px-1.5 py-0.5 text-[11.5px] font-medium text-muted">
             {groupedStories.length}
           </span>
         </div>
@@ -1079,7 +1079,7 @@ export function StoriesStrip({
               behavior: "smooth",
             })
           }
-          className="inline-flex h-6 items-center gap-0.5 rounded-[6px] px-1.5 text-[10.5px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
+          className="inline-flex h-6 items-center gap-0.5 rounded-[8px] px-1.5 text-[11.5px] font-medium text-muted transition-colors hover:bg-surface-muted hover:text-ink"
         >
           {"Scroll "}
           <CaretRight size={11} strokeWidth={2} aria-hidden="true" />
@@ -1092,12 +1092,12 @@ export function StoriesStrip({
         <button
           type="button"
           onClick={onCreate}
-          className="flex w-[54px] shrink-0 flex-col items-center gap-1.5 text-center"
+          className="flex w-[62px] shrink-0 flex-col items-center gap-1.5 text-center"
         >
           <span className="relative inline-flex h-[52px] w-[52px] items-center justify-center rounded-full border border-dashed border-line-strong bg-surface-muted text-muted transition-colors hover:border-forest/40 hover:text-forest">
             <Plus size={17} strokeWidth={1.8} aria-hidden="true" />
           </span>
-          <span className="w-full truncate text-[10.5px] font-medium text-muted">
+          <span className="w-full truncate text-[11.5px] font-medium text-muted">
             Add story
           </span>
         </button>
@@ -1111,7 +1111,7 @@ export function StoriesStrip({
               key={group.authorId}
               type="button"
               onClick={() => onOpen(group.stories[0].id)}
-              className="flex w-[54px] shrink-0 flex-col items-center gap-1.5 text-center"
+              className="flex w-[62px] shrink-0 flex-col items-center gap-1.5 text-center"
               aria-label={`${group.authorId === meId ? "Your stories" : person.name + "'s stories"}: ${group.stories.length}`}
             >
               <span className="relative inline-flex items-center justify-center">
@@ -1125,7 +1125,7 @@ export function StoriesStrip({
                   />
                 </span>
                 {group.stories.length > 1 ? (
-                  <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-forest px-1 text-[9px] font-bold text-white ring-2 ring-surface tabular-nums">
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-forest px-1 text-[11px] font-bold text-white ring-2 ring-surface tabular-nums">
                     {group.stories.length}
                   </span>
                 ) : null}
@@ -1133,7 +1133,7 @@ export function StoriesStrip({
               </span>
               <span
                 className={cn(
-                  "w-full truncate text-[10.5px]",
+                  "w-full truncate text-[11.5px]",
                   allSeen ? "font-medium text-faint" : "font-semibold text-ink-soft",
                 )}
               >
@@ -1165,12 +1165,12 @@ export function StoryBubble({
         className="min-w-0 flex-1 text-left"
       >
         <span className="flex items-center gap-1">
-          <span className="truncate text-[12.5px] font-semibold text-ink hover:underline">
+          <span className="truncate text-[13px] font-semibold text-ink hover:underline">
             {person.name}
           </span>
           {person.verified ? <VerifiedBadge className="h-3 w-3" /> : null}
         </span>
-        <span className="mt-0.5 block truncate text-[10.5px] text-muted">
+        <span className="mt-0.5 block truncate text-[11.5px] text-muted">
           {note ?? `@${person.handle}`}
         </span>
       </button>
@@ -1190,14 +1190,14 @@ export function TopicCard({ topic, onOpen }: any) {
       <img
         src={topic.image}
         alt=""
-        className="h-8 w-8 shrink-0 rounded-[6px] object-cover"
+        className="h-8 w-8 shrink-0 rounded-[8px] object-cover"
         loading="lazy"
       />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[12px] font-semibold text-ink">
+        <span className="block truncate text-[13px] font-semibold text-ink">
           {topic.label}
         </span>
-        <span className="mt-0.5 block truncate text-[10.5px] text-muted">
+        <span className="mt-0.5 block truncate text-[11.5px] text-muted">
           #{topic.tag}
           {" · "}
           {topic.posts}
@@ -1218,7 +1218,7 @@ export function RailSection({ title, action, children, className }: any) {
       className={cn("rounded-xl border border-line bg-surface", className)}
     >
       <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
-        <h2 className="text-[12px] font-semibold tracking-[0.01em] text-ink">
+        <h2 className="text-[13px] font-semibold tracking-[0.01em] text-ink">
           {title}
         </h2>
         {action}
@@ -1242,7 +1242,7 @@ export function SuggestedPeopleList({ people, onOpen }: any) {
         </span>
       }
       action={
-        <span className="text-[10.5px] text-faint">
+        <span className="text-[11.5px] text-faint">
           {people.length}
           {" active"}
         </span>
@@ -1265,11 +1265,11 @@ export function SuggestedPeopleList({ people, onOpen }: any) {
             </span>
           </button>
         ))}
-        <span className="-ml-1 inline-flex h-8 items-center rounded-full bg-canvas-deep px-2 text-[10.5px] font-semibold text-muted ring-2 ring-surface">
+        <span className="-ml-1 inline-flex h-8 items-center rounded-full bg-canvas-deep px-2 text-[11.5px] font-semibold text-muted ring-2 ring-surface">
           +{people.length - 5}
         </span>
       </div>
-      <p className="px-1.5 pb-2 text-[11px] leading-[1.5] text-muted">
+      <p className="px-1.5 pb-2 text-[12px] leading-[1.5] text-muted">
         Five friends are sharing something new today. Join the conversation.
       </p>
     </RailSection>
@@ -1286,8 +1286,8 @@ export function EmptyState({
       <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-muted">
         <IconComp size={18} strokeWidth={1.7} aria-hidden="true" />
       </span>
-      <p className="text-[13.5px] font-semibold text-ink">{title}</p>
-      <p className="mt-1 max-w-[280px] text-[12.5px] leading-relaxed text-muted">
+      <p className="text-[14px] font-semibold text-ink">{title}</p>
+      <p className="mt-1 max-w-[280px] text-[13px] leading-relaxed text-muted">
         {description}
       </p>
       {action ? <div className="mt-4">{action}</div> : null}
@@ -1305,9 +1305,9 @@ export function ToastBanner({ title, description, onDismiss, action }: any) {
         <Sparkle size={11} strokeWidth={2.2} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-ink">{title}</p>
+        <p className="text-[14px] font-semibold text-ink">{title}</p>
         {description ? (
-          <p className="mt-0.5 text-[11.5px] leading-[1.5] text-muted">
+          <p className="mt-0.5 text-[12px] leading-[1.5] text-muted">
             {description}
           </p>
         ) : null}
@@ -1315,7 +1315,7 @@ export function ToastBanner({ title, description, onDismiss, action }: any) {
           <button
             type="button"
             onClick={action.onClick}
-            className="mt-1.5 text-[11.5px] font-semibold text-forest hover:opacity-70"
+            className="mt-1.5 text-[12px] font-semibold text-forest hover:opacity-70"
           >
             {action.label}
           </button>
@@ -1327,7 +1327,7 @@ export function ToastBanner({ title, description, onDismiss, action }: any) {
         aria-label="Dismiss notification"
         className="-mt-1 -mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-faint hover:bg-surface-muted hover:text-ink"
       >
-        <span className="text-[15px] leading-none">×</span>
+        <span className="text-[14px] leading-none">×</span>
       </button>
     </div>
   );
@@ -1339,18 +1339,18 @@ export function IncomingCallBanner({ call, people, onAccept, onDecline }: any) {
     <div
       role="alertdialog"
       aria-label="Incoming call"
-      className="animate-pop fixed inset-x-3 top-3 z-[90] mx-auto flex max-w-[420px] items-center gap-3 rounded-[14px] border border-line bg-surface p-3 shadow-[0_18px_50px_rgba(24,28,24,0.22)] sm:right-6 sm:left-auto sm:top-5"
+      className="animate-pop fixed inset-x-3 top-3 z-[90] mx-auto flex max-w-[420px] items-center gap-3 rounded-[12px] border border-line bg-surface p-3 shadow-[0_18px_50px_rgba(24,28,24,0.22)] sm:right-6 sm:left-auto sm:top-5"
     >
       {caller ? <Avatar person={caller} size="lg" /> : null}
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.09em] text-forest uppercase">
+        <p className="flex items-center gap-1.5 text-[11.5px] font-semibold tracking-[0.09em] text-forest uppercase">
           <Phone size={10} strokeWidth={2.4} aria-hidden="true" />
           {call.kind === "video" ? "Video call" : "Voice call"}
         </p>
-        <p className="mt-0.5 truncate text-[13px] font-semibold text-ink">
+        <p className="mt-0.5 truncate text-[14px] font-semibold text-ink">
           {caller?.name ?? "Someone in your circle"}
         </p>
-        <p className="truncate text-[11px] text-muted">
+        <p className="truncate text-[12px] text-muted">
           is calling you right now
         </p>
       </div>
@@ -1367,7 +1367,7 @@ export function IncomingCallBanner({ call, people, onAccept, onDecline }: any) {
           type="button"
           onClick={() => onAccept?.(call)}
           aria-label="Accept call"
-          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-forest px-3 text-[11.5px] font-semibold text-white transition-colors hover:bg-forest-hover"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-forest px-3 text-[12px] font-semibold text-white transition-colors hover:bg-forest-hover"
         >
           <Phone size={12} strokeWidth={2.2} aria-hidden="true" />
           Join
@@ -1439,7 +1439,7 @@ export function Modal({
                 {title}
               </h2>
               {description ? (
-                <p className="mt-0.5 text-[12px] text-muted">{description}</p>
+                <p className="mt-0.5 text-[13px] text-muted">{description}</p>
               ) : null}
             </div>
             <button

@@ -46,7 +46,7 @@ export class AppErrorBoundary extends Component<
         <h1 className="mt-6 text-[20px] font-semibold tracking-[-0.02em] text-ink">
           Something slipped
         </h1>
-        <p className="mt-2 max-w-[44ch] text-center text-[13.5px] leading-relaxed text-muted">
+        <p className="mt-2 max-w-[44ch] text-center text-[14px] leading-relaxed text-muted">
           A part of Thursday didn’t load properly. Your data is safe — reloading
           usually clears it.
         </p>
@@ -54,7 +54,7 @@ export class AppErrorBoundary extends Component<
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex h-10 items-center rounded-lg bg-forest px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-forest-hover"
+            className="inline-flex h-10 items-center rounded-lg bg-forest px-5 text-[14px] font-semibold text-white transition-colors hover:bg-forest-hover"
           >
             Reload Thursday
           </button>
@@ -64,16 +64,16 @@ export class AppErrorBoundary extends Component<
               // Recover without a hard reload by clearing the error state.
               this.setState({ error: null, info: "" });
             }}
-            className="inline-flex h-10 items-center rounded-lg border border-line bg-surface px-4 text-[13.5px] font-medium text-muted transition-colors hover:border-line-strong hover:text-ink"
+            className="inline-flex h-10 items-center rounded-lg border border-line bg-surface px-4 text-[14px] font-medium text-muted transition-colors hover:border-line-strong hover:text-ink"
           >
             Try again
           </button>
         </div>
         <details className="mt-8 w-full max-w-[560px] rounded-lg border border-line bg-surface">
-          <summary className="cursor-pointer px-3.5 py-2.5 text-[11.5px] font-medium text-faint select-none">
+          <summary className="cursor-pointer px-3.5 py-2.5 text-[12px] font-medium text-faint select-none">
             Technical details
           </summary>
-          <pre className="thin-scrollbar max-h-[220px] overflow-auto border-t border-line px-3.5 py-3 text-[10.5px] leading-relaxed whitespace-pre-wrap text-muted">
+          <pre className="thin-scrollbar max-h-[220px] overflow-auto border-t border-line px-3.5 py-3 text-[11.5px] leading-relaxed whitespace-pre-wrap text-muted">
             {String(error.stack || error.message)}
             {this.state.info ? `\n\nComponent stack:${this.state.info}` : ""}
           </pre>

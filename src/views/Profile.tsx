@@ -68,13 +68,13 @@ export function ProfileView({
         <h2 className="text-[17px] font-semibold text-ink">
           This profile isn’t available
         </h2>
-        <p className="mx-auto mt-1.5 max-w-[36ch] text-[13px] leading-relaxed text-muted">
+        <p className="mx-auto mt-1.5 max-w-[36ch] text-[14px] leading-relaxed text-muted">
           The person may have left Thursday, or the page is still catching up.
         </p>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-5 inline-flex h-9 items-center rounded-lg bg-forest px-4 text-[13px] font-semibold text-white transition-colors hover:bg-forest-hover"
+          className="mt-5 inline-flex h-9 items-center rounded-lg bg-forest px-4 text-[14px] font-semibold text-white transition-colors hover:bg-forest-hover"
         >
           Refresh
         </button>
@@ -172,7 +172,7 @@ export function ProfileView({
                     aria-label="Close profile menu"
                     tabIndex={-1}
                   />
-                  <div className="animate-pop absolute top-[calc(100%+6px)] right-0 z-40 w-[176px] rounded-[10px] border border-line bg-surface p-1 shadow-[0_12px_32px_rgba(29,33,28,0.16)]">
+                  <div className="animate-pop absolute top-[calc(100%+6px)] right-0 z-40 w-[176px] rounded-[12px] border border-line bg-surface p-1 shadow-[0_12px_32px_rgba(29,33,28,0.16)]">
                     <button
                       type="button"
                       onClick={() => {
@@ -180,7 +180,7 @@ export function ProfileView({
                         onToast?.("Handle copied", `@${person.handle} copied to clipboard.`);
                         setMenuOpen(false);
                       }}
-                      className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                     >
                       Copy @{person.handle}
                     </button>
@@ -190,7 +190,7 @@ export function ProfileView({
                         onShare();
                         setMenuOpen(false);
                       }}
-                      className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                      className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                     >
                       Share profile
                     </button>
@@ -201,7 +201,7 @@ export function ProfileView({
                           onEdit();
                           setMenuOpen(false);
                         }}
-                        className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                        className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                       >
                         Edit profile
                       </button>
@@ -213,7 +213,7 @@ export function ProfileView({
                             onMessage(person.id);
                             setMenuOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                          className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                         >
                           Send message
                         </button>
@@ -223,7 +223,7 @@ export function ProfileView({
                             onToggleMute?.(person.id, !person.muted);
                             setMenuOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                          className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                         >
                           {person.muted ? "Unmute" : "Mute"}
                         </button>
@@ -233,7 +233,7 @@ export function ProfileView({
                             onToggleBlock?.(person.id, true);
                             setMenuOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] text-ink-soft hover:bg-surface-muted"
+                          className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                         >
                           Block
                         </button>
@@ -243,7 +243,7 @@ export function ProfileView({
                             onReport?.("person", person.id);
                             setMenuOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-[11.5px] font-medium text-red-600 hover:bg-red-50"
+                          className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[12px] font-medium text-red-600 hover:bg-red-50"
                         >
                           Report
                         </button>
@@ -272,7 +272,7 @@ export function ProfileView({
                 <button
                   type="button"
                   onClick={onEdit}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted"
                 >
                   <PencilSimple
                     size={12}
@@ -300,7 +300,7 @@ export function ProfileView({
                     onClick={() => onToggleFollow(person.id)}
                     aria-pressed={$}
                     className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[12px] font-semibold transition-colors",
+                      "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[13px] font-semibold transition-colors",
                       $
                         ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
                         : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -328,19 +328,19 @@ export function ProfileView({
               </h1>
               {person.verified ? <VerifiedBadge className="h-4 w-4" /> : null}
             </div>
-            <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
+            <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
               <span>@{person.handle}</span>
               {isOnline ? (
-                <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-forest">
+                <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-forest">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-forest" />
                   Active now
                 </span>
               ) : null}
             </p>
-            <p className="mt-2.5 max-w-[540px] text-[13px] leading-[1.65] text-ink-soft">
+            <p className="mt-2.5 max-w-[540px] text-[14px] leading-[1.65] text-ink-soft">
               {person.bio}
             </p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-muted">
               {person.location ? (
                 <span className="inline-flex items-center gap-1">
                   <MapPin size={11} strokeWidth={1.8} aria-hidden="true" />
@@ -359,19 +359,20 @@ export function ProfileView({
               </span>
             </div>
             <div className="mt-3 flex items-center gap-4">
-              <p className="text-[12px] text-muted">
+              <p className="text-[13px] text-muted">
                 <span className="font-semibold text-ink">
                   {formatCount(person.following)}
                 </span>{" "}
                 following
               </p>
-              <p className="text-[12px] text-muted">
+              <p className="text-[13px] text-muted">
                 <span className="font-semibold text-ink">
                   {formatCount(person.followers)}
                 </span>{" "}
-                followers
+                {/* was always "followers", so a single one read "1 followers" */}
+                {Number(person.followers) === 1 ? "follower" : "followers"}
               </p>
-              <span className="inline-flex items-center gap-1 rounded-full bg-forest-soft px-2 py-0.5 text-[10px] font-medium text-forest">
+              <span className="inline-flex items-center gap-1 rounded-full bg-forest-soft px-2 py-0.5 text-[11.5px] font-medium text-forest">
                 <span className="h-1 w-1 rounded-full bg-forest" />
                 {isMe ? "Your profile" : $ ? "In your circle" : "New to you"}
               </span>
@@ -396,12 +397,12 @@ export function ProfileView({
               type="button"
               onClick={() => Ne(le.value)}
               className={cn(
-                "relative inline-flex h-10 items-center gap-1.5 px-3 text-[12px] font-semibold transition-colors",
+                "relative inline-flex h-10 items-center gap-1.5 px-3 text-[13px] font-semibold transition-colors",
                 te === le.value ? "text-ink" : "text-muted hover:text-ink",
               )}
             >
               {le.label}
-              <span className="text-[10px] font-medium text-faint tabular-nums">
+              <span className="text-[11.5px] font-medium text-faint tabular-nums">
                 {le.count}
               </span>
               {te === le.value ? (
@@ -427,7 +428,7 @@ export function ProfileView({
                   key={`${le.image}-${Ee}`}
                   type="button"
                   onClick={() => onOpenPost(le.post)}
-                  className="group relative aspect-square overflow-hidden rounded-[6px] bg-canvas-deep/40"
+                  className="group relative aspect-square overflow-hidden rounded-[8px] bg-canvas-deep/40"
                   aria-label="Open post media"
                 >
                   <img
@@ -481,12 +482,12 @@ export function ProfileView({
         )}
       </div>
       <div className="mt-3 flex items-center justify-between px-1">
-        <p className="text-[10.5px] text-faint">
+        <p className="text-[11.5px] text-faint">
           {isMe
             ? "Only you can see your likes."
             : "Public profile · Visible to everyone on Thursday"}
         </p>
-        <div className="flex items-center gap-1.5 text-[10px] text-faint">
+        <div className="flex items-center gap-1.5 text-[11.5px] text-faint">
           <span className="h-1 w-1 rounded-full bg-forest/60" />
           {"Joined "}
           {String(person.joined || "Recently").replace("Joined ", "")}

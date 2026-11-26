@@ -30,7 +30,7 @@ function SectionEyebrow({ children }: any) {
   return (
     <div className="mb-2 flex items-center gap-2">
       <span className="h-1 w-1 rounded-full bg-forest" />
-      <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+      <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
         {children}
       </p>
     </div>
@@ -143,7 +143,7 @@ export function CirclesView({
           <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
             Circles
           </h1>
-          <p className="mt-1 max-w-[430px] text-[13px] text-muted">
+          <p className="mt-1 max-w-[430px] text-[14px] text-muted">
             Smaller rooms inside Thursday. Join the ones that feel like you, and
             post where it lands with the right people.
           </p>
@@ -151,7 +151,7 @@ export function CirclesView({
         <button
           type="button"
           onClick={onCreate}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-[10px] border border-forest bg-forest px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-forest-hover sm:self-auto"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-[12px] border border-forest bg-forest px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-forest-hover sm:self-auto"
         >
           <Plus size={14} strokeWidth={2.3} aria-hidden="true" />
           Start a circle
@@ -159,7 +159,7 @@ export function CirclesView({
       </header>
       <section className="animate-rise mt-5 rounded-xl border border-line bg-surface p-3.5">
         <div className="flex items-center justify-between gap-3 px-1">
-          <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink">
+          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
             <UsersThree
               size={12}
               strokeWidth={2}
@@ -168,7 +168,7 @@ export function CirclesView({
             />
             Your circles
           </p>
-          <span className="text-[10.5px] text-faint">
+          <span className="text-[11.5px] text-faint">
             {U.length}
             {" joined"}
           </span>
@@ -183,19 +183,19 @@ export function CirclesView({
                   key={K.id}
                   type="button"
                   onClick={() => C(K.id)}
-                  className="group flex shrink-0 items-center gap-2 rounded-[10px] border border-line bg-surface-muted/50 py-1.5 pr-3 pl-1.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted"
+                  className="group flex shrink-0 items-center gap-2 rounded-[12px] border border-line bg-surface-muted/50 py-1.5 pr-3 pl-1.5 text-left transition-colors hover:border-line-strong hover:bg-surface-muted"
                 >
                   <img
                     src={K.image}
                     alt=""
-                    className="h-8 w-8 rounded-[6px] object-cover"
+                    className="h-8 w-8 rounded-[8px] object-cover"
                   />
                   <span>
-                    <span className="block text-[11.5px] font-semibold text-ink">
+                    <span className="block text-[12px] font-semibold text-ink">
                       {K.name}
                     </span>
                     <span
-                      className={cn("block text-[8.5px] font-medium", ae.text)}
+                      className={cn("block text-[11px] font-medium", ae.text)}
                     >
                       {formatCount(K.members)}
                       {" members"}
@@ -210,14 +210,14 @@ export function CirclesView({
               );
             })
           ) : (
-            <p className="px-1 py-2 text-[11.5px] text-muted">
+            <p className="px-1 py-2 text-[12px] text-muted">
               You have not joined a circle yet. Start with one below.
             </p>
           )}
         </div>
       </section>
       <div className="animate-rise mt-5 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-ink">
+        <h2 className="text-[14px] font-semibold text-ink">
           Browse all circles
         </h2>
         <div className="no-scrollbar flex gap-1 overflow-x-auto">
@@ -228,7 +228,7 @@ export function CirclesView({
               onClick={() => _(K)}
               aria-pressed={q === K}
               className={cn(
-                "h-6.5 shrink-0 rounded-full border px-2.5 text-[11px] font-medium transition-colors",
+                "h-6.5 shrink-0 rounded-full border px-2.5 text-[12px] font-medium transition-colors",
                 q === K
                   ? "border-forest bg-forest text-white"
                   : "border-line bg-surface text-muted hover:border-line-strong hover:text-ink",
@@ -274,7 +274,7 @@ export function CirclesView({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
                 <span
                   className={cn(
-                    "absolute top-2.5 left-2.5 rounded-full px-2 py-0.5 text-[8.5px] font-semibold backdrop-blur",
+                    "absolute top-2.5 left-2.5 rounded-full px-2 py-0.5 text-[11px] font-semibold backdrop-blur",
                     $.bg,
                     $.text,
                   )}
@@ -282,7 +282,7 @@ export function CirclesView({
                   {K.category}
                 </span>
                 {K.joined ? (
-                  <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-0.5 rounded-full bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-[#1f6b52] backdrop-blur">
+                  <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-0.5 rounded-full bg-white/95 px-1.5 py-0.5 text-[11.5px] font-semibold text-[#1f6b52] backdrop-blur">
                     <Check size={9} strokeWidth={2.6} aria-hidden="true" />
                     {" Joined"}
                   </span>
@@ -291,7 +291,7 @@ export function CirclesView({
                   <p className="text-[14px] font-semibold text-white">
                     {K.name}
                   </p>
-                  <p className="truncate text-[10.5px] text-white/75">
+                  <p className="truncate text-[11.5px] text-white/75">
                     {K.tagline}
                   </p>
                 </div>
@@ -303,19 +303,19 @@ export function CirclesView({
                     people={people}
                     onlineIds={onlineIds}
                   />
-                  <p className="ml-0.5 truncate text-[10px] text-muted">
+                  <p className="ml-0.5 truncate text-[11.5px] text-muted">
                     {formatCount(K.members)}
                     {" members · "}
                     {K.posts}
                     {" posts"}
                   </p>
                 </div>
-                <p className="mt-2 line-clamp-2 text-[11px] leading-[1.55] text-muted">
+                <p className="mt-2 line-clamp-2 text-[12px] leading-[1.55] text-muted">
                   {K.description}
                 </p>
                 <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-line pt-2.5">
                   <span
-                    className={cn("truncate text-[10px] font-medium", $.text)}
+                    className={cn("truncate text-[11.5px] font-medium", $.text)}
                   >
                     {K.activity}
                   </span>
@@ -324,7 +324,7 @@ export function CirclesView({
                     onClick={() => onToggleCircle(K.id)}
                     aria-pressed={K.joined}
                     className={cn(
-                      "inline-flex h-6.5 shrink-0 items-center gap-1 rounded-[6px] border px-2 text-[10.5px] font-semibold transition-colors",
+                      "inline-flex h-6.5 shrink-0 items-center gap-1 rounded-[8px] border px-2 text-[11.5px] font-semibold transition-colors",
                       K.joined
                         ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
                         : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -368,13 +368,13 @@ export function CirclesView({
                 <span className="text-[17px] leading-none">×</span>
               </button>
               <div className="absolute right-4 bottom-3.5 left-4">
-                <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-[#101318]">
+                <span className="rounded-full bg-white/95 px-2 py-0.5 text-[11.5px] font-semibold text-[#101318]">
                   {te.category}
                 </span>
                 <h2 className="mt-1.5 text-[22px] font-semibold leading-tight tracking-[-0.025em] text-white">
                   {te.name}
                 </h2>
-                <p className="text-[11.5px] text-white/75">{te.tagline}</p>
+                <p className="text-[12px] text-white/75">{te.tagline}</p>
               </div>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
@@ -385,11 +385,11 @@ export function CirclesView({
                   people={people}
                 />
                 <div>
-                  <p className="text-[11px] font-semibold text-ink">
+                  <p className="text-[12px] font-semibold text-ink">
                     {formatCount(te.members)}
                     {" members"}
                   </p>
-                  <p className="text-[10px] text-muted">
+                  <p className="text-[11.5px] text-muted">
                     Moderated by{" "}
                     {te.moderatorIds
                       .map(
@@ -408,7 +408,7 @@ export function CirclesView({
                 onClick={() => onToggleCircle(te.id)}
                 aria-pressed={te.joined}
                 className={cn(
-                  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[8px] border px-3 text-[11.5px] font-semibold transition-colors",
+                  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[8px] border px-3 text-[12px] font-semibold transition-colors",
                   te.joined
                     ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
                     : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -429,10 +429,10 @@ export function CirclesView({
             </div>
             <div className="thin-scrollbar max-h-[46vh] overflow-y-auto">
               <div className="px-4 pt-3">
-                <p className="text-[12.5px] leading-[1.65] text-ink-soft">
+                <p className="text-[13px] leading-[1.65] text-ink-soft">
                   {te.description}
                 </p>
-                <div className="mt-2.5 flex items-center gap-1.5 text-[10.5px] text-muted">
+                <div className="mt-2.5 flex items-center gap-1.5 text-[11.5px] text-muted">
                   <CalendarBlank
                     size={11}
                     strokeWidth={1.9}
@@ -457,10 +457,10 @@ export function CirclesView({
                         onChange={(e?: any) => setComposerText(e.target.value)}
                         rows={2}
                         placeholder={`Share something with ${te.name}…`}
-                        className="w-full resize-none rounded-[9px] border border-line bg-canvas px-3 py-2 text-[12.5px] leading-[1.55] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+                        className="w-full resize-none rounded-[8px] border border-line bg-canvas px-3 py-2 text-[13px] leading-[1.55] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
                       />
                       <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <span className="text-[10.5px] text-faint">
+                        <span className="text-[11.5px] text-faint">
                           Posts live-sync to everyone in this circle
                         </span>
                         <button
@@ -477,7 +477,7 @@ export function CirclesView({
                             setComposerText("");
                             setPosting(false);
                           }}
-                          className="inline-flex h-7 items-center gap-1.5 rounded-[7px] bg-forest px-2.5 text-[11.5px] font-semibold text-white transition-colors hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-forest px-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {posting ? (
                             <CircleNotch size={12} className="animate-spin" />
@@ -490,7 +490,7 @@ export function CirclesView({
                     </div>
                   </div>
                 </div>
-                <p className="px-4 pt-2.5 pb-1 text-[10px] font-semibold tracking-[0.1em] text-faint uppercase">
+                <p className="px-4 pt-2.5 pb-1 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                   From inside the circle
                 </p>
                 {Ne.length ? (
@@ -515,7 +515,7 @@ export function CirclesView({
                     ) : null;
                   })
                 ) : (
-                  <p className="px-4 pb-4 pt-1 text-[11.5px] text-muted">
+                  <p className="px-4 pb-4 pt-1 text-[12px] text-muted">
                     No posts here yet. Be the first to share something.
                   </p>
                 )}
@@ -568,13 +568,13 @@ export function GatheringsView({
           <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
             Gatherings
           </h1>
-          <p className="mt-1 max-w-[430px] text-[13px] text-muted">
+          <p className="mt-1 max-w-[430px] text-[14px] text-muted">
             Small, real-world things happening in your circles. RSVP, bring a
             friend, no pressure to post about it.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[10.5px] font-medium text-muted sm:flex">
+          <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11.5px] font-medium text-muted sm:flex">
             <Ticket size={11} strokeWidth={1.9} aria-hidden="true" />
             {"You're going to "}
             {U}
@@ -582,7 +582,7 @@ export function GatheringsView({
           <button
             type="button"
             onClick={onSuggest}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[12px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted"
           >
             <Plus size={13} strokeWidth={2.2} aria-hidden="true" />
             Suggest one
@@ -604,19 +604,19 @@ export function GatheringsView({
                 className="h-full w-full object-contain"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
-              <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-[#101318] backdrop-blur">
+              <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[11.5px] font-semibold text-[#101318] backdrop-blur">
                 Next up
               </span>
             </button>
             <div className="flex h-full flex-col justify-between gap-4 p-4 sm:p-5">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-forest-soft px-2 py-0.5 text-[10px] font-semibold text-forest">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-forest-soft px-2 py-0.5 text-[11.5px] font-semibold text-forest">
                     <Compass size={9} strokeWidth={2.2} aria-hidden="true" />
                     {" In the spirit of June"}
                   </span>
                   {q.spotsLeft <= 8 ? (
-                    <span className="text-[10px] font-medium text-clay">
+                    <span className="text-[11.5px] font-medium text-clay">
                       {q.spotsLeft}
                       {" spots left"}
                     </span>
@@ -625,10 +625,10 @@ export function GatheringsView({
                 <h2 className="mt-2.5 text-[22px] font-semibold leading-tight tracking-[-0.025em] tracking-[-0.01em] text-ink sm:text-[28px]">
                   {q.title}
                 </h2>
-                <p className="mt-1.5 line-clamp-2 text-[12px] leading-[1.6] text-muted">
+                <p className="mt-1.5 line-clamp-2 text-[13px] leading-[1.6] text-muted">
                   {q.description}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-ink-soft">
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-ink-soft">
                   <span className="inline-flex items-center gap-1">
                     <CalendarBlank
                       size={11}
@@ -682,12 +682,12 @@ export function GatheringsView({
                   ].map((J?: any) => (
                     <div
                       key={J.label}
-                      className="rounded-[7px] border border-line bg-surface-muted/60 px-2 py-1.5"
+                      className="rounded-[8px] border border-line bg-surface-muted/60 px-2 py-1.5"
                     >
-                      <p className="text-[8px] font-semibold tracking-[0.06em] text-faint uppercase">
+                      <p className="text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
                         {J.label}
                       </p>
-                      <p className="mt-0.5 truncate text-[10.5px] font-medium text-ink-soft">
+                      <p className="mt-0.5 truncate text-[11.5px] font-medium text-ink-soft">
                         {J.value}
                       </p>
                     </div>
@@ -701,7 +701,7 @@ export function GatheringsView({
                     ids={attendanceCaption(q, meId).ids}
                     people={people}
                   />
-                  <p className="text-[10.5px] text-muted">
+                  <p className="text-[11.5px] text-muted">
                     {attendanceCaption(q, meId).text}
                   </p>
                 </div>
@@ -710,7 +710,7 @@ export function GatheringsView({
                   onClick={() => onToggleEvent(q.id)}
                   aria-pressed={q.joined}
                   className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[11.5px] font-semibold transition-colors",
+                    "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[12px] font-semibold transition-colors",
                     q.joined
                       ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
                       : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -731,7 +731,7 @@ export function GatheringsView({
         </article>
       ) : null}
       <div className="animate-rise mt-5 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-ink">Coming up</h2>
+        <h2 className="text-[14px] font-semibold text-ink">Coming up</h2>
         <div className="flex gap-1">
           {EVENT_FILTERS.map((J?: any) => (
             <button
@@ -740,7 +740,7 @@ export function GatheringsView({
               onClick={() => g(J)}
               aria-pressed={y === J}
               className={cn(
-                "h-6.5 rounded-full border px-2.5 text-[11px] font-medium transition-colors",
+                "h-6.5 rounded-full border px-2.5 text-[12px] font-medium transition-colors",
                 y === J
                   ? "border-forest bg-forest text-white"
                   : "border-line bg-surface text-muted hover:border-line-strong hover:text-ink",
@@ -763,7 +763,7 @@ export function GatheringsView({
                   className="flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-surface-muted/40 sm:flex-row sm:items-center sm:px-5"
                 >
                   <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-[8px] border border-line bg-surface-muted">
-                    <span className="text-[8px] font-semibold tracking-[0.08em] text-faint uppercase">
+                    <span className="text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
                       {J.weekday}
                     </span>
                     <span className="text-[14px] font-semibold leading-none text-ink tabular-nums">
@@ -776,16 +776,16 @@ export function GatheringsView({
                     className="min-w-0 flex-1 text-left"
                   >
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-[12.5px] font-semibold text-ink">
+                      <p className="truncate text-[13px] font-semibold text-ink">
                         {J.title}
                       </p>
                       {J.joined ? (
-                        <span className="rounded-full bg-forest-soft px-1.5 py-0.5 text-[8px] font-semibold text-forest">
+                        <span className="rounded-full bg-forest-soft px-1.5 py-0.5 text-[11px] font-semibold text-forest">
                           Going
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-muted">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-muted">
                       <span className="inline-flex items-center gap-1">
                         <Clock size={9} strokeWidth={2} aria-hidden="true" />{" "}
                         {J.time}
@@ -796,7 +796,7 @@ export function GatheringsView({
                       </span>
                     </p>
                     {te ? (
-                      <p className="mt-1 flex items-center gap-1 text-[10px] text-faint">
+                      <p className="mt-1 flex items-center gap-1 text-[11.5px] text-faint">
                         {"Hosted by "}
                         {te.name}
                         {Ne ? (
@@ -814,7 +814,7 @@ export function GatheringsView({
                       ids={attendanceCaption(J, meId).ids.slice(0, 3)}
                       people={people}
                     />
-                    <span className="hidden w-[60px] text-[10px] text-faint sm:block">
+                    <span className="hidden w-[60px] text-[11.5px] text-faint sm:block">
                       {J.attendees}
                       {" going"}
                     </span>
@@ -823,7 +823,7 @@ export function GatheringsView({
                       onClick={() => onToggleEvent(J.id)}
                       aria-pressed={J.joined}
                       className={cn(
-                        "inline-flex h-7 w-[70px] items-center justify-center gap-1 rounded-[6px] border text-[10.5px] font-semibold transition-colors",
+                        "inline-flex h-7 w-[70px] items-center justify-center gap-1 rounded-[8px] border text-[11.5px] font-semibold transition-colors",
                         J.joined
                           ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
                           : "border-forest bg-forest text-white hover:bg-forest-hover",
@@ -845,7 +845,7 @@ export function GatheringsView({
               <button
                 type="button"
                 onClick={() => g("All")}
-                className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+                className="h-8 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft hover:bg-surface-muted"
               >
                 Show all gatherings
               </button>
@@ -853,13 +853,13 @@ export function GatheringsView({
           />
         )}
         <div className="flex items-center justify-between gap-3 border-t border-line bg-surface-muted/50 px-4 py-2.5 sm:px-5">
-          <p className="text-[10.5px] text-muted">
+          <p className="text-[11.5px] text-muted">
             Hosting is free. Thursday never charges for a gathering.
           </p>
           <button
             type="button"
             onClick={onSuggest}
-            className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-forest hover:opacity-70"
+            className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-forest hover:opacity-70"
           >
             Put something on
             <ArrowRight size={11} strokeWidth={2.2} aria-hidden="true" />
@@ -886,13 +886,13 @@ export function GatheringsView({
               </button>
               <div className="absolute right-4 bottom-3 left-4">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-[#101318]">
+                  <span className="rounded-full bg-white/95 px-2 py-0.5 text-[11.5px] font-semibold text-[#101318]">
                     {_.weekday}
                     {", "}
                     {_.day}
                     {" June"}
                   </span>
-                  <span className="rounded-full bg-black/35 px-2 py-0.5 text-[8.5px] font-medium text-white backdrop-blur">
+                  <span className="rounded-full bg-black/35 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">
                     {_.cost}
                   </span>
                 </div>
@@ -902,7 +902,7 @@ export function GatheringsView({
               </div>
             </div>
             <div className="px-4 py-4">
-              <p className="text-[12.5px] leading-[1.7] text-ink-soft">
+              <p className="text-[13px] leading-[1.7] text-ink-soft">
                 {_.description}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -934,11 +934,11 @@ export function GatheringsView({
                       key={J.label}
                       className="rounded-[8px] border border-line bg-surface-muted/60 px-2.5 py-2"
                     >
-                      <p className="flex items-center gap-1 text-[8.5px] font-semibold tracking-[0.06em] text-faint uppercase">
+                      <p className="flex items-center gap-1 text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
                         <Comp_te size={9} strokeWidth={2} aria-hidden="true" />{" "}
                         {J.label}
                       </p>
-                      <p className="mt-0.5 text-[11px] font-medium leading-snug text-ink-soft">
+                      <p className="mt-0.5 text-[12px] font-medium leading-snug text-ink-soft">
                         {J.value}
                       </p>
                     </div>
@@ -946,19 +946,19 @@ export function GatheringsView({
                 })}
               </div>
               {C ? (
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-[10px] border border-line p-2.5">
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-line p-2.5">
                   <div className="flex items-center gap-2.5">
                     <button type="button" onClick={() => onOpenPerson(C.id)}>
                       <Avatar person={C} size="sm" />
                     </button>
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1 text-[11.5px] font-semibold text-ink">
+                      <p className="flex items-center gap-1 text-[12px] font-semibold text-ink">
                         {C.name}
                         {C.verified ? (
                           <VerifiedBadge className="h-2.5 w-2.5" />
                         ) : null}
                       </p>
-                      <p className="truncate text-[10px] text-muted">
+                      <p className="truncate text-[11.5px] text-muted">
                         Hosting · @{C.handle}
                       </p>
                     </div>
@@ -967,7 +967,7 @@ export function GatheringsView({
                     <button
                       type="button"
                       onClick={() => onMessage(C.id)}
-                      className="h-7 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted"
+                      className="h-7 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-surface-muted"
                     >
                       Message
                     </button>
@@ -978,7 +978,7 @@ export function GatheringsView({
                           onOpenCircle(j.id);
                           z(null);
                         }}
-                        className="h-7 rounded-[6px] border border-forest/20 bg-forest-wash px-2.5 text-[10.5px] font-semibold text-forest hover:bg-forest-soft"
+                        className="h-7 rounded-[8px] border border-forest/20 bg-forest-wash px-2.5 text-[11.5px] font-semibold text-forest hover:bg-forest-soft"
                       >
                         {j.name}
                       </button>
@@ -990,7 +990,7 @@ export function GatheringsView({
                 <div className="flex items-center gap-2">
                   <AvatarStack
                     onlineIds={onlineIds} ids={attendanceCaption(_, meId).ids} people={people} />
-                  <p className="text-[10px] text-muted">
+                  <p className="text-[11.5px] text-muted">
                     {_.attendees}
                     {" people going"}
                   </p>
@@ -999,7 +999,7 @@ export function GatheringsView({
                   <button
                     type="button"
                     onClick={() => downloadIcsEvent(_)}
-                    className="inline-flex h-8 items-center gap-1 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11px] font-semibold text-ink-soft hover:bg-surface-muted"
+                    className="inline-flex h-8 items-center gap-1 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
                   >
                     <CalendarBlank size={12} strokeWidth={2} aria-hidden="true" />
                     Calendar
@@ -1009,7 +1009,7 @@ export function GatheringsView({
                     onClick={() => onToggleEvent(_.id)}
                     aria-pressed={_.joined}
                     className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3.5 text-[11.5px] font-semibold transition-colors",
+                      "inline-flex h-8 items-center gap-1.5 rounded-[8px] border px-3.5 text-[12px] font-semibold transition-colors",
                       _.joined
                         ? "border-line-strong bg-surface text-muted hover:border-clay/30 hover:bg-clay-wash hover:text-clay"
                         : "border-forest bg-forest text-white hover:bg-forest-hover",

@@ -15,7 +15,7 @@
   --color-ink: #101318;
   --color-ink-soft: #30363f;
   --color-muted: #5c6572;
-  --color-faint: #8b93a0;
+  --color-faint: #66707d;
   --color-line: #e5e8ed;
   --color-line-strong: #d3d8e0;
   --color-forest: #1f6b52;
@@ -29,6 +29,24 @@
   --color-sand-soft: #f7f0e2;
   --color-sage: #6f8a74;
   --color-sage-soft: #eef3ee;
+
+  /* Type scale. There used to be nine sizes between 9px and 13.5px, which is
+     too fine to read as a hierarchy — it just looked cramped. Four steps:
+     caption / body / emphasis / display. */
+  --text-caption: 0.75rem;   /* 12px */
+  --text-caption--line-height: 1.45;
+  --text-body: 0.875rem;     /* 14px */
+  --text-body--line-height: 1.55;
+  --text-strong: 0.9375rem;  /* 15px */
+  --text-strong--line-height: 1.5;
+  --text-title: 1.375rem;    /* 22px */
+  --text-title--line-height: 1.25;
+
+  /* Corner radii. Eight ad-hoc values (6, 7, 8, 9.28, 10, 12, 16) read as
+     accidental; three deliberate steps read as a system. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
 }
 
 @keyframes ai-typing {
@@ -234,7 +252,7 @@ html[data-theme="dark"] {
   --color-ink: #f2f4f7;
   --color-ink-soft: #c9cfd8;
   --color-muted: #98a1ad;
-  --color-faint: #747d8a;
+  --color-faint: #8b95a3;
   --color-line: #232830;
   --color-line-strong: #333a44;
   --color-forest: #6fc3a2;

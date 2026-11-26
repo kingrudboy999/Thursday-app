@@ -148,14 +148,14 @@ export function ColdStartSplash({ onDone }: any) {
         <p className="splash-word mt-6 text-[30px] leading-none font-semibold tracking-[-0.04em] text-[#f4f6f0]">
           Thursday
         </p>
-        <p className="splash-tag mt-2 text-[10px] font-medium tracking-[0.24em] text-[#9ab5a5] uppercase">
+        <p className="splash-tag mt-2 text-[11.5px] font-medium tracking-[0.24em] text-[#9ab5a5] uppercase">
           A quieter place to share
         </p>
       </div>
       <div className="splash-track absolute bottom-14 h-[2px] w-[124px] overflow-hidden rounded-full bg-white/10">
         <span className="splash-fill block h-full rounded-full bg-[#8ec3a5]" />
       </div>
-      <p className="splash-tag absolute bottom-8 text-[10px] tracking-[0.06em] text-white/30">
+      <p className="splash-tag absolute bottom-8 text-[11.5px] tracking-[0.06em] text-white/30">
         Made for your circle
       </p>
     </div>,
@@ -175,7 +175,7 @@ export function BrandLockup({ compact = false }: any) {
           <span className="text-[20px] leading-none font-semibold tracking-[-0.035em] text-ink">
             Thursday
           </span>
-          <span className="rounded bg-canvas-deep px-1 py-0.5 text-[8px] font-semibold tracking-[0.08em] text-faint uppercase">
+          <span className="rounded-[8px] bg-canvas-deep px-1.5 py-0.5 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
             beta
           </span>
         </span>

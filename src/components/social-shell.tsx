@@ -144,7 +144,7 @@ function SidebarNavItem({
       aria-current={active ? "page" : undefined}
       className={cn(
         "group relative flex w-full items-center gap-2.5 rounded-lg text-left transition-colors duration-150",
-        compact ? "h-11 px-3 text-[13.5px]" : "h-9 px-3 text-[13px]",
+        compact ? "h-11 px-3 text-[14px]" : "h-9 px-3 text-[14px]",
         active
           ? "bg-forest-soft font-semibold text-forest"
           : isAi
@@ -155,7 +155,7 @@ function SidebarNavItem({
       {isAi ? (
         <span
           className={cn(
-            "inline-flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[6px] transition-colors",
+            "inline-flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[8px] transition-colors",
             active
               ? "bg-forest text-white"
               : "bg-clay-wash text-clay ring-1 ring-clay/20 group-hover:bg-clay group-hover:text-white",
@@ -178,7 +178,7 @@ function SidebarNavItem({
       {count ? (
         <span
           className={cn(
-            "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums",
+            "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[12px] font-semibold tabular-nums",
             active ? "bg-forest text-white" : "bg-canvas-deep text-muted",
           )}
         >
@@ -240,7 +240,7 @@ export function LivePresencePill({ live, onlineCount, className }: any) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-medium",
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11.5px] font-medium",
         live
           ? "border-forest/25 bg-forest-wash text-forest"
           : "border-line bg-surface-muted text-faint",
@@ -308,10 +308,10 @@ export function AccountMenu({
       >
         <Avatar person={me} size="md" online={live} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13.5px] font-semibold text-ink">
+          <span className="block truncate text-[14px] font-semibold text-ink">
             {me.name}
           </span>
-          <span className="block truncate text-[12px] text-muted">
+          <span className="block truncate text-[13px] text-muted">
             @{me.handle}
           </span>
         </span>
@@ -328,15 +328,15 @@ export function AccountMenu({
         <div
           role="menu"
           className={cn(
-            "animate-pop absolute z-50 w-[228px] overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-[0_16px_44px_rgba(24,28,24,0.18)]",
+            "animate-pop absolute z-50 w-[228px] overflow-hidden rounded-[12px] border border-line bg-surface py-1 shadow-[0_16px_44px_rgba(24,28,24,0.18)]",
             align === "right" ? "right-0 top-14" : "bottom-14 left-0",
           )}
         >
           <div className="border-b border-line px-3 py-2">
-            <p className="truncate text-[12px] font-semibold text-ink">
+            <p className="truncate text-[13px] font-semibold text-ink">
               {me.name}
             </p>
-            <p className="truncate text-[11px] text-muted">@{me.handle}</p>
+            <p className="truncate text-[12px] text-muted">@{me.handle}</p>
             <span className="mt-1.5 inline-flex">
               <LivePresencePill live={live} onlineCount={1} />
             </span>
@@ -363,7 +363,7 @@ export function AccountMenu({
               type="button"
               role="menuitem"
               onClick={item.onClick}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink"
             >
               <item.icon size={14} strokeWidth={1.8} aria-hidden="true" />
               {item.label}
@@ -380,7 +380,7 @@ export function AccountMenu({
               await onSignOut?.();
               setBusy(false);
             }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-semibold text-clay transition-colors hover:bg-clay-wash disabled:opacity-60"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-semibold text-clay transition-colors hover:bg-clay-wash disabled:opacity-60"
           >
             <SignOut size={14} strokeWidth={1.9} aria-hidden="true" />
             {busy ? "Signing out…" : "Sign out"}
@@ -439,7 +439,7 @@ export function DesktopSidebar({
           <button
             type="button"
             onClick={onCreate}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-forest text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-forest-hover"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-forest text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-forest-hover"
           >
             <Plus size={16} weight="bold" aria-hidden="true" />
             Create post
@@ -461,7 +461,7 @@ export function DesktopSidebar({
             ))}
           </div>
           <div className="my-4 h-px bg-line" />
-          <p className="mb-2 px-3 text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+          <p className="mb-2 px-3 text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
             Inbox
           </p>
           <div className="space-y-0.5">
@@ -476,7 +476,7 @@ export function DesktopSidebar({
             ))}
           </div>
           <div className="my-4 h-px bg-line" />
-          <p className="mb-2 px-3 text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+          <p className="mb-2 px-3 text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
             Account
           </p>
           <div className="space-y-0.5">
@@ -492,13 +492,13 @@ export function DesktopSidebar({
           <div className="my-4 h-px bg-line" />
           <div className="px-1">
             <div className="mb-2 flex items-center justify-between px-2">
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+              <p className="text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
                 Following
               </p>
               <button
                 type="button"
                 onClick={() => onNavigate("explore")}
-                className="text-[12px] font-medium text-muted hover:text-forest"
+                className="text-[13px] font-medium text-muted hover:text-forest"
               >
                 Find
               </button>
@@ -515,7 +515,7 @@ export function DesktopSidebar({
                   size="xs"
                   online={onlineIds.includes(j.id)}
                 />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-soft">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink-soft">
                   {j.name}
                 </span>
                 <CaretRight
@@ -526,7 +526,7 @@ export function DesktopSidebar({
               </button>
             ))}
             {q.length === 0 ? (
-              <p className="px-2 text-[12px] leading-relaxed text-faint">
+              <p className="px-2 text-[13px] leading-relaxed text-faint">
                 Follow people to build your circle.
               </p>
             ) : null}
@@ -534,13 +534,13 @@ export function DesktopSidebar({
           <div className="my-4 h-px bg-line" />
           <div className="px-1">
             <div className="mb-2 flex items-center justify-between px-2">
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+              <p className="text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
                 Your circles
               </p>
               <button
                 type="button"
                 onClick={() => onNavigate("circles")}
-                className="text-[12px] font-medium text-muted hover:text-forest"
+                className="text-[13px] font-medium text-muted hover:text-forest"
               >
                 All
               </button>
@@ -558,19 +558,19 @@ export function DesktopSidebar({
                   <img
                     src={j.image}
                     alt=""
-                    className="h-6 w-6 shrink-0 rounded-[5px] object-cover"
+                    className="h-6 w-6 shrink-0 rounded-[8px] object-cover"
                     loading="lazy"
                   />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-soft">
+                  <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink-soft">
                     {j.name}
                   </span>
-                  <span className="shrink-0 text-[11px] text-faint tabular-nums">
+                  <span className="shrink-0 text-[12px] text-faint tabular-nums">
                     {formatCount(j.members)}
                   </span>
                 </button>
               ))}
             {circles.filter((j?: any) => j.joined).length === 0 ? (
-              <p className="px-2 text-[12px] leading-relaxed text-faint">
+              <p className="px-2 text-[13px] leading-relaxed text-faint">
                 Join a circle to see it here.
               </p>
             ) : null}
@@ -578,13 +578,13 @@ export function DesktopSidebar({
           <div className="my-4 h-px bg-line" />
           <div className="px-1">
             <div className="mb-2 flex items-center justify-between px-2">
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+              <p className="text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
                 Coming up
               </p>
               <button
                 type="button"
                 onClick={() => onNavigate("events")}
-                className="text-[12px] font-medium text-muted hover:text-forest"
+                className="text-[13px] font-medium text-muted hover:text-forest"
               >
                 All
               </button>
@@ -597,18 +597,18 @@ export function DesktopSidebar({
                 className="flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-canvas-deep/70"
               >
                 <span className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-md border border-line bg-canvas">
-                  <span className="text-[8px] font-semibold tracking-[0.06em] text-faint uppercase">
+                  <span className="text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
                     {j.weekday}
                   </span>
-                  <span className="text-[11px] font-semibold leading-none text-ink tabular-nums">
+                  <span className="text-[12px] font-semibold leading-none text-ink tabular-nums">
                     {j.day}
                   </span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12.5px] font-medium text-ink-soft">
+                  <span className="block truncate text-[13px] font-medium text-ink-soft">
                     {j.title}
                   </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-faint">
+                  <span className="mt-0.5 block truncate text-[12px] text-faint">
                     {j.time}
                     {" · "}
                     {j.attendees}
@@ -620,7 +620,7 @@ export function DesktopSidebar({
           </div>
           <div className="my-4 h-px bg-line" />
           <div className="px-1">
-            <p className="mb-2 px-2 text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+            <p className="mb-2 px-2 text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
               Topics
             </p>
             <div className="flex flex-wrap gap-1.5 px-1">
@@ -629,7 +629,7 @@ export function DesktopSidebar({
                   key={j.tag}
                   type="button"
                   onClick={() => onNavigate("explore")}
-                  className="rounded-full border border-line bg-canvas px-2 py-1 text-[11.5px] font-medium text-muted transition-colors hover:border-line-strong hover:text-ink"
+                  className="rounded-full border border-line bg-canvas px-2 py-1 text-[12px] font-medium text-muted transition-colors hover:border-line-strong hover:text-ink"
                 >
                   #{j.tag}
                 </button>
@@ -672,8 +672,8 @@ export function TopBar({
   onSignOut,
 }: any) {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-2 px-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-2.5 px-3 sm:px-6 lg:gap-2 lg:px-8">
         <button
           type="button"
           onClick={onOpenMobile}
@@ -683,7 +683,7 @@ export function TopBar({
         >
           <List size={21} aria-hidden="true" />
         </button>
-        <div className="lg:hidden">
+        <div className="-ml-0.5 lg:hidden">
           <button
             type="button"
             onClick={() => onNavigate("home")}
@@ -693,9 +693,9 @@ export function TopBar({
           </button>
         </div>
         <div className="hidden min-w-0 items-center gap-2 lg:flex">
-          <span className="text-[13px] font-medium text-faint">Thursday</span>
+          <span className="text-[14px] font-medium text-faint">Thursday</span>
           <span className="text-line-strong">/</span>
-          <span className="truncate text-[13px] font-semibold text-ink">
+          <span className="truncate text-[14px] font-semibold text-ink">
             {VIEW_TITLES[view]}
           </span>
           <LivePresencePill live={live} onlineCount={onlineCount} />
@@ -704,14 +704,14 @@ export function TopBar({
           <button
             type="button"
             onClick={onSearch}
-            className="hidden h-9 w-full max-w-[360px] items-center gap-2.5 rounded-lg border border-line bg-canvas px-3 text-left text-[13px] text-faint transition-colors hover:border-line-strong hover:bg-surface sm:flex"
+            className="hidden h-9 w-full max-w-[360px] items-center gap-2.5 rounded-lg border border-line bg-canvas px-3 text-left text-[14px] text-faint transition-colors hover:border-line-strong hover:bg-surface sm:flex"
             aria-label="Search Thursday"
           >
             <MagnifyingGlass size={15} aria-hidden="true" />
             <span className="flex-1 truncate">
               Search people, posts, or topics
             </span>
-            <kbd className="rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[11px] font-medium text-faint">
+            <kbd className="rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[12px] font-medium text-faint">
               ⌘K
             </kbd>
           </button>
@@ -830,7 +830,7 @@ export function MobileBottomDock({ view, onNavigate, onCreate }: any) {
           type="button"
           onClick={onCreate}
           aria-label="Create a post"
-          className="flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-medium text-muted transition-colors hover:text-ink"
+          className="flex h-full w-full flex-col items-center justify-center gap-1 text-[12px] font-medium text-muted transition-colors hover:text-ink"
         >
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-forest text-white shadow-md transition-colors hover:bg-forest-hover">
             <Plus size={18} weight="bold" aria-hidden="true" />
@@ -859,7 +859,7 @@ function MobileDockButton({ item, active, onNavigate }: any) {
       onClick={() => onNavigate(item.key)}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+        "flex h-full w-full flex-col items-center justify-center gap-1 text-[12px] font-medium transition-colors",
         active ? "text-forest" : "text-faint hover:text-ink",
       )}
     >
@@ -963,7 +963,7 @@ export function MobileDrawer({
               onCreate();
               onClose();
             }}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-forest text-[13.5px] font-semibold text-white shadow-sm transition-colors hover:bg-forest-hover"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-forest text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-forest-hover"
           >
             <Plus size={16} weight="bold" aria-hidden="true" />
             Create post
@@ -973,7 +973,7 @@ export function MobileDrawer({
           className="thin-scrollbar relative min-h-0 flex-1 overflow-y-auto px-3 pt-4 pb-6"
           aria-label="Mobile"
         >
-          <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+          <p className="mb-1.5 px-3 text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
             Browse
           </p>
           <div className="space-y-0.5">
@@ -988,7 +988,7 @@ export function MobileDrawer({
               />
             ))}
           </div>
-          <p className="mt-2.5 mb-1 px-3 text-[10.5px] font-semibold tracking-[0.1em] text-faint uppercase">
+          <p className="mt-2.5 mb-1 px-3 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
             Inbox
           </p>
           <div className="space-y-0.5">
@@ -1003,7 +1003,7 @@ export function MobileDrawer({
               />
             ))}
           </div>
-          <p className="mt-2.5 mb-1 px-3 text-[10.5px] font-semibold tracking-[0.1em] text-faint uppercase">
+          <p className="mt-2.5 mb-1 px-3 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
             Account
           </p>
           <div className="space-y-0.5">
@@ -1019,13 +1019,13 @@ export function MobileDrawer({
           </div>
           <div className="mt-4">
             <div className="mb-1 flex items-center justify-between px-2">
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-faint uppercase">
+              <p className="text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
                 Your circles
               </p>
               <button
                 type="button"
                 onClick={() => C("circles")}
-                className="text-[12px] font-medium text-forest"
+                className="text-[13px] font-medium text-forest"
               >
                 {circles.filter((U?: any) => U.joined).length}
                 {" joined"}
@@ -1044,10 +1044,10 @@ export function MobileDrawer({
                   <img
                     src={U.image}
                     alt=""
-                    className="h-7 w-7 shrink-0 rounded-[6px] object-cover"
+                    className="h-7 w-7 shrink-0 rounded-[8px] object-cover"
                     loading="lazy"
                   />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-soft">
+                  <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink-soft">
                     {U.name}
                   </span>
                   <CaretRight
@@ -1070,7 +1070,7 @@ export function MobileDrawer({
                   className="text-forest"
                   aria-hidden="true"
                 />
-                <span className="text-[12px] font-semibold text-ink">
+                <span className="text-[13px] font-semibold text-ink">
                   Find people
                 </span>
               </span>
@@ -1099,10 +1099,10 @@ export function MobileDrawer({
             >
               <Avatar person={me} size="sm" online={live} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12px] font-semibold text-ink">
+                <span className="block truncate text-[13px] font-semibold text-ink">
                   {me.name}
                 </span>
-                <span className="block truncate text-[10.5px] text-muted">
+                <span className="block truncate text-[11.5px] text-muted">
                   @{me.handle}
                 </span>
               </span>
@@ -1125,7 +1125,7 @@ export function MobileDrawer({
                 await onSignOut?.();
                 onClose();
               }}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] font-semibold text-clay hover:bg-clay-wash"
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-semibold text-clay hover:bg-clay-wash"
             >
               <SignOut size={12} strokeWidth={2} aria-hidden="true" />
               Sign out
@@ -1237,8 +1237,8 @@ export function ComposerModal({
           <div className="flex items-center gap-2">
             <Avatar person={me} size="sm" />
             <div className="hidden sm:block">
-              <p className="text-[11.5px] font-semibold text-ink">{me.name}</p>
-              <p className="text-[10px] text-muted">
+              <p className="text-[12px] font-semibold text-ink">{me.name}</p>
+              <p className="text-[11.5px] text-muted">
                 {"Posting to "}
                 {R.toLowerCase()}
               </p>
@@ -1248,7 +1248,7 @@ export function ComposerModal({
                 value={R}
                 onChange={(J?: any) => z(J.target.value)}
                 aria-label="Audience"
-                className="h-7 appearance-none rounded-[6px] border border-line bg-surface pr-6 pl-2 text-[10.5px] font-medium text-muted focus:border-forest focus:outline-none"
+                className="h-7 appearance-none rounded-[8px] border border-line bg-surface pr-6 pl-2 text-[11.5px] font-medium text-muted focus:border-forest focus:outline-none"
               >
                 <option>Anyone</option>
                 <option>Your circle</option>
@@ -1267,7 +1267,7 @@ export function ComposerModal({
                   value={circleId}
                   onChange={(e) => setCircleId(e.target.value)}
                   aria-label="Circle"
-                  className="h-7 appearance-none rounded-[6px] border border-line bg-surface pr-6 pl-2 text-[10.5px] font-medium text-muted focus:border-forest focus:outline-none"
+                  className="h-7 appearance-none rounded-[8px] border border-line bg-surface pr-6 pl-2 text-[11.5px] font-medium text-muted focus:border-forest focus:outline-none"
                 >
                   <option value="">No circle</option>
                   {circles
@@ -1288,7 +1288,7 @@ export function ComposerModal({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden text-[10.5px] text-faint tabular-nums sm:block">
+            <span className="hidden text-[11.5px] text-faint tabular-nums sm:block">
               {A.length}/500
             </span>
             <button
@@ -1301,7 +1301,7 @@ export function ComposerModal({
                 onSaveDraft?.(A.trim(), y ?? undefined, buildExtras());
                 onClose();
               }}
-              className="mr-1 text-[10.5px] font-semibold text-muted hover:text-ink"
+              className="mr-1 text-[11.5px] font-semibold text-muted hover:text-ink"
             >
               Save draft
             </button>
@@ -1315,7 +1315,7 @@ export function ComposerModal({
                 onSubmit(A.trim(), y ?? undefined, buildExtras());
                 onClose();
               }}
-              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-forest px-3.5 text-[12px] font-semibold text-white transition-colors hover:bg-forest-hover"
+              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-forest px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-forest-hover"
             >
               Post
               <Sparkle size={11} strokeWidth={2} aria-hidden="true" />
@@ -1339,12 +1339,12 @@ export function ComposerModal({
               rows={5}
               placeholder={`What's on your mind, ${me.name?.split(" ")[0] || "Nora"}?`}
               aria-label="Post text"
-              className="w-full resize-none bg-transparent text-[13px] leading-[1.65] text-ink outline-none placeholder:text-faint"
+              className="w-full resize-none bg-transparent text-[14px] leading-[1.65] text-ink outline-none placeholder:text-faint"
             />
             <div className="mt-1 flex flex-wrap items-center gap-1 border-t border-line pt-2.5">
               <label
                 className={cn(
-                  "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-[8px] px-2 text-[12px] font-medium transition-colors",
                   y
                     ? "bg-forest-soft text-forest"
                     : "text-muted hover:bg-surface-muted hover:text-ink",
@@ -1370,7 +1370,7 @@ export function ComposerModal({
                 onClick={() => setShowPlace((s) => !s)}
                 aria-pressed={showPlace || !!place}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 items-center gap-1.5 rounded-[8px] px-2 text-[12px] font-medium transition-colors",
                   showPlace || place
                     ? "bg-forest-soft text-forest"
                     : "text-muted hover:bg-surface-muted hover:text-ink",
@@ -1384,7 +1384,7 @@ export function ComposerModal({
                 onClick={() => setShowTags((s) => !s)}
                 aria-pressed={showTags || taggedIds.length > 0}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 items-center gap-1.5 rounded-[8px] px-2 text-[12px] font-medium transition-colors",
                   showTags || taggedIds.length > 0
                     ? "bg-forest-soft text-forest"
                     : "text-muted hover:bg-surface-muted hover:text-ink",
@@ -1398,7 +1398,7 @@ export function ComposerModal({
                 onClick={() => setShowPoll((s) => !s)}
                 aria-pressed={showPoll}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 items-center gap-1.5 rounded-[8px] px-2 text-[12px] font-medium transition-colors",
                   showPoll
                     ? "bg-forest-soft text-forest"
                     : "text-muted hover:bg-surface-muted hover:text-ink",
@@ -1414,7 +1414,7 @@ export function ComposerModal({
                   value={place}
                   onChange={(e) => setPlace(e.target.value)}
                   placeholder="Add a city, café, or studio…"
-                  className="h-7.5 w-full rounded-[6px] border border-line bg-surface px-2.5 text-[11.5px] text-ink focus:border-forest focus:outline-none"
+                  className="h-7.5 w-full rounded-[8px] border border-line bg-surface px-2.5 text-[12px] text-ink focus:border-forest focus:outline-none"
                 />
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {[
@@ -1428,7 +1428,7 @@ export function ComposerModal({
                       type="button"
                       onClick={() => setPlace(loc)}
                       className={cn(
-                        "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                        "rounded-full border px-2 py-0.5 text-[11.5px] font-medium",
                         place === loc
                           ? "border-forest/40 bg-forest-wash text-forest"
                           : "border-line bg-surface text-muted hover:text-ink",
@@ -1458,7 +1458,7 @@ export function ComposerModal({
                           )
                         }
                         className={cn(
-                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-medium transition-colors",
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-medium transition-colors",
                           active
                             ? "border-forest/40 bg-forest-wash text-forest"
                             : "border-line bg-surface text-muted hover:text-ink",
@@ -1476,32 +1476,32 @@ export function ComposerModal({
                   value={pollQuestion}
                   onChange={(e) => setPollQuestion(e.target.value)}
                   placeholder="Poll question (optional)"
-                  className="h-7.5 w-full rounded-[6px] border border-line bg-surface px-2.5 text-[11.5px] text-ink focus:border-forest focus:outline-none"
+                  className="h-7.5 w-full rounded-[8px] border border-line bg-surface px-2.5 text-[12px] text-ink focus:border-forest focus:outline-none"
                 />
                 <div className="grid grid-cols-2 gap-1.5">
                   <input
                     value={pollOptA}
                     onChange={(e) => setPollOptA(e.target.value)}
                     placeholder="Option 1"
-                    className="h-7.5 rounded-[6px] border border-line bg-surface px-2.5 text-[11px] text-ink focus:border-forest focus:outline-none"
+                    className="h-7.5 rounded-[8px] border border-line bg-surface px-2.5 text-[12px] text-ink focus:border-forest focus:outline-none"
                   />
                   <input
                     value={pollOptB}
                     onChange={(e) => setPollOptB(e.target.value)}
                     placeholder="Option 2"
-                    className="h-7.5 rounded-[6px] border border-line bg-surface px-2.5 text-[11px] text-ink focus:border-forest focus:outline-none"
+                    className="h-7.5 rounded-[8px] border border-line bg-surface px-2.5 text-[12px] text-ink focus:border-forest focus:outline-none"
                   />
                 </div>
                 <input
                   value={pollOptC}
                   onChange={(e) => setPollOptC(e.target.value)}
                   placeholder="Option 3 (optional)"
-                  className="h-7.5 w-full rounded-[6px] border border-line bg-surface px-2.5 text-[11px] text-ink focus:border-forest focus:outline-none"
+                  className="h-7.5 w-full rounded-[8px] border border-line bg-surface px-2.5 text-[12px] text-ink focus:border-forest focus:outline-none"
                 />
               </div>
             ) : null}
             {music ? (
-              <div className="mt-2 flex items-center justify-between rounded-[8px] border border-forest/25 bg-forest-wash px-2.5 py-1.5 text-[11px] text-forest">
+              <div className="mt-2 flex items-center justify-between rounded-[8px] border border-forest/25 bg-forest-wash px-2.5 py-1.5 text-[12px] text-forest">
                 <span className="truncate font-medium">
                   ♫ {music.title} · {music.artist}
                 </span>
@@ -1518,24 +1518,24 @@ export function ComposerModal({
               <button
                 type="button"
                 onClick={() => j(true)}
-                className="inline-flex h-7 items-center gap-1.5 rounded-[6px] border border-line px-2 text-[10.5px] font-medium text-muted hover:text-ink"
+                className="inline-flex h-7 items-center gap-1.5 rounded-[8px] border border-line px-2 text-[11.5px] font-medium text-muted hover:text-ink"
               >
                 {"Drafts "}
-                <span className="rounded bg-canvas-deep px-1 text-[9px] text-faint">
+                <span className="rounded bg-canvas-deep px-1 text-[11px] text-faint">
                   {drafts ? drafts.length : INITIAL_DRAFTS.length}
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => U(true)}
-                className="inline-flex h-7 items-center gap-1.5 rounded-[6px] border border-line px-2 text-[10.5px] font-medium text-muted hover:text-ink"
+                className="inline-flex h-7 items-center gap-1.5 rounded-[8px] border border-line px-2 text-[11.5px] font-medium text-muted hover:text-ink"
               >
                 Audio library
               </button>
               <CloseFriendsPill people={people.length ? people : [me]} />
             </div>
             {y ? (
-              <div className="relative mt-2.5 overflow-hidden rounded-[10px] border border-line">
+              <div className="relative mt-2.5 overflow-hidden rounded-[12px] border border-line">
                 <img
                   src={y}
                   alt="Selected attachment"
@@ -1557,7 +1557,7 @@ export function ComposerModal({
                     key={J.value}
                     type="button"
                     onClick={() => g(photoOptions[J.value])}
-                    className="group overflow-hidden rounded-[7px] border border-line"
+                    className="group overflow-hidden rounded-[8px] border border-line"
                   >
                     <img
                       src={photoOptions[J.value]}
@@ -1570,11 +1570,11 @@ export function ComposerModal({
               </div>
             )}
             {v ? (
-              <p className="mt-2.5 rounded-[7px] border border-clay/20 bg-clay-wash px-2.5 py-1.5 text-[11px] text-clay">
+              <p className="mt-2.5 rounded-[8px] border border-clay/20 bg-clay-wash px-2.5 py-1.5 text-[12px] text-clay">
                 {v}
               </p>
             ) : (
-              <p className="mt-2.5 text-[10px] leading-[1.5] text-faint">
+              <p className="mt-2.5 text-[11.5px] leading-[1.5] text-faint">
                 Keep it kind. Your post will appear in your circle's feed
                 instantly.
               </p>
@@ -1654,7 +1654,7 @@ export function PostDetailModal({
                 onClick={() => onOpenPerson(author.id)}
                 className="flex items-center gap-1 text-left"
               >
-                <span className="truncate text-[12.5px] font-semibold text-ink hover:underline">
+                <span className="truncate text-[13px] font-semibold text-ink hover:underline">
                   {author.name}
                 </span>
                 {author.verified ? <VerifiedBadge className="h-3 w-3" /> : null}
@@ -1672,17 +1672,17 @@ export function PostDetailModal({
           </div>
           <div className="thin-scrollbar flex-1 overflow-y-auto">
             <div className="px-4 py-3">
-              <p className="text-[13.5px] leading-[1.7] text-ink-soft">
+              <p className="text-[14px] leading-[1.7] text-ink-soft">
                 {post.text}
               </p>
               <div className="mt-2 flex items-center gap-2">
                 {post.place ? (
-                  <span className="inline-flex items-center gap-1 text-[10.5px] text-faint">
+                  <span className="inline-flex items-center gap-1 text-[11.5px] text-faint">
                     <MapPin size={10} strokeWidth={1.9} aria-hidden="true" />
                     {post.place}
                   </span>
                 ) : null}
-                <span className="rounded-full bg-canvas-deep px-2 py-0.5 text-[8.5px] font-medium text-muted">
+                <span className="rounded-full bg-canvas-deep px-2 py-0.5 text-[11px] font-medium text-muted">
                   {post.topic}
                 </span>
               </div>
@@ -1690,10 +1690,10 @@ export function PostDetailModal({
             {post.poll ? (
               <div className="mx-4 mb-3 rounded-xl border border-line bg-surface-muted/50 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[11px] font-semibold text-ink">
+                  <p className="text-[12px] font-semibold text-ink">
                     {post.poll.question}
                   </p>
-                  <span className="text-[8.5px] text-faint">
+                  <span className="text-[11px] text-faint">
                     {post.poll.closes}
                   </span>
                 </div>
@@ -1713,7 +1713,7 @@ export function PostDetailModal({
                         onClick={() => onVote?.(post.id, C.id)}
                         aria-pressed={te}
                         className={cn(
-                          "relative flex w-full items-center justify-between overflow-hidden rounded-[7px] border px-2.5 py-2 text-left transition-colors",
+                          "relative flex w-full items-center justify-between overflow-hidden rounded-[8px] border px-2.5 py-2 text-left transition-colors",
                           te
                             ? "border-forest/35 bg-forest-wash"
                             : "border-line bg-surface",
@@ -1732,14 +1732,14 @@ export function PostDetailModal({
                         ) : null}
                         <span
                           className={cn(
-                            "relative text-[11.5px] font-medium",
+                            "relative text-[12px] font-medium",
                             te ? "text-forest" : "text-ink-soft",
                           )}
                         >
                           {C.label}
                         </span>
                         {post.poll.votedOptionId ? (
-                          <span className="relative text-[11px] text-muted tabular-nums">
+                          <span className="relative text-[12px] text-muted tabular-nums">
                             {J}%
                           </span>
                         ) : null}
@@ -1747,7 +1747,7 @@ export function PostDetailModal({
                     );
                   })}
                 </div>
-                <p className="mt-1.5 text-[10px] text-faint">
+                <p className="mt-1.5 text-[11.5px] text-faint">
                   {post.poll.options
                     .reduce((C?: any, U?: any) => C + U.votes, 0)
                     .toLocaleString()}
@@ -1763,16 +1763,16 @@ export function PostDetailModal({
                 <img
                   src={post.music.art}
                   alt=""
-                  className="h-11 w-11 rounded-[7px] object-cover"
+                  className="h-11 w-11 rounded-[8px] object-cover"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[8.5px] font-semibold tracking-[0.08em] text-muted uppercase">
+                  <p className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">
                     Now playing
                   </p>
-                  <p className="truncate text-[12px] font-semibold text-ink">
+                  <p className="truncate text-[13px] font-semibold text-ink">
                     {post.music.title}
                   </p>
-                  <p className="truncate text-[10.5px] text-muted">
+                  <p className="truncate text-[11.5px] text-muted">
                     {post.music.artist}
                     {" · "}
                     {post.music.duration}
@@ -1789,7 +1789,7 @@ export function PostDetailModal({
                 <button
                   type="button"
                   onClick={() => onDelete?.(post.id)}
-                  className="text-[10px] font-semibold text-clay hover:opacity-70"
+                  className="text-[11.5px] font-semibold text-clay hover:opacity-70"
                 >
                   Delete post
                 </button>
@@ -1805,7 +1805,7 @@ export function PostDetailModal({
                   activeClass="text-clay"
                   onClick={onLike}
                 />
-                <span className="inline-flex items-center gap-1 px-1 text-[11.5px] text-muted">
+                <span className="inline-flex items-center gap-1 px-1 text-[12px] text-muted">
                   <ChatCircle size={13} strokeWidth={1.9} aria-hidden="true" />
                   {post.comments.length}
                 </span>
@@ -1838,32 +1838,32 @@ export function PostDetailModal({
                           <button
                             type="button"
                             onClick={() => onOpenPerson(U.id)}
-                            className="truncate text-[12px] font-semibold text-ink hover:underline"
+                            className="truncate text-[13px] font-semibold text-ink hover:underline"
                           >
                             {C.authorId === (me?.id ?? "me") ? "You" : U.name}
                           </button>
                           {U.verified ? (
                             <VerifiedBadge className="h-2.5 w-2.5" />
                           ) : null}
-                          <span className="text-[10px] text-faint">
+                          <span className="text-[11.5px] text-faint">
                             {"· "}
                             {C.time}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[12px] leading-[1.55] text-ink-soft">
+                        <p className="mt-0.5 text-[13px] leading-[1.55] text-ink-soft">
                           {C.text}
                         </p>
                         <div className="mt-1 flex items-center gap-3">
                           <button
                             type="button"
-                            className="text-[10px] font-semibold text-muted hover:text-clay"
+                            className="text-[11.5px] font-semibold text-muted hover:text-clay"
                           >
                             {"Like "}
                             {C.likes ? `(${C.likes})` : ""}
                           </button>
                           <button
                             type="button"
-                            className="text-[10px] font-semibold text-muted hover:text-ink"
+                            className="text-[11.5px] font-semibold text-muted hover:text-ink"
                           >
                             Reply
                           </button>
@@ -1894,7 +1894,7 @@ export function PostDetailModal({
               onChange={(C?: any) => _(C.target.value)}
               placeholder="Add a thoughtful reply…"
               aria-label="Add a comment"
-              className="h-8 min-w-0 flex-1 rounded-full border border-line bg-surface-muted/60 px-3 text-[12px] text-ink transition-colors placeholder:text-faint hover:border-line-strong focus:border-forest focus:bg-surface focus:outline-none"
+              className="h-8 min-w-0 flex-1 rounded-full border border-line bg-surface-muted/60 px-3 text-[13px] text-ink transition-colors placeholder:text-faint hover:border-line-strong focus:border-forest focus:bg-surface focus:outline-none"
             />
             <button
               type="submit"
@@ -2050,11 +2050,11 @@ export function StoryViewerModal({
         <div className="mx-auto mt-3 flex w-full max-w-[540px] items-center gap-2.5">
           <Avatar person={y} size="sm" ring seen />
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1 text-[13px] font-semibold text-white drop-shadow">
+            <p className="flex items-center gap-1 text-[14px] font-semibold text-white drop-shadow">
               {y.name}
               {y.verified ? <VerifiedBadge className="text-white/80" /> : null}
             </p>
-            <p className="truncate text-[11px] text-white/65 drop-shadow">
+            <p className="truncate text-[12px] text-white/65 drop-shadow">
               {/* Real posting time, and how long is left before it disappears.
                   "2h ago" was hard-coded, so every story claimed the same age. */}
               {(() => {
@@ -2104,7 +2104,7 @@ export function StoryViewerModal({
       ) : null}
       <div className="absolute inset-x-0 bottom-0 z-20 px-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
         <div className="mx-auto w-full max-w-[540px]">
-          <p className="text-[15px] leading-[1.45] font-medium text-white text-balance drop-shadow sm:text-[17px]">
+          <p className="text-[14px] leading-[1.45] font-medium text-white text-balance drop-shadow sm:text-[17px]">
             {T.caption}
           </p>
           <div className="mt-3">
@@ -2116,7 +2116,7 @@ export function StoryViewerModal({
               }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] text-white/45">
+          <div className="mt-2 flex items-center justify-between text-[11.5px] text-white/45">
             <span>Tap right for next · tap left to go back · hold to pause</span>
             <button
               type="button"
@@ -2165,7 +2165,7 @@ export function ReportModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+            className="h-8 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft hover:bg-surface-muted"
           >
             Cancel
           </button>
@@ -2180,7 +2180,7 @@ export function ReportModal({
               if (res?.ok) onClose();
               else setError(res?.error || "Could not send that report.");
             }}
-            className="h-8 rounded-[7px] bg-red-600 px-3.5 text-[12px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-8 rounded-[8px] bg-red-600 px-3.5 text-[13px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? "Sending…" : "Send report"}
           </button>
@@ -2192,7 +2192,7 @@ export function ReportModal({
           <label
             key={option}
             className={cn(
-              "flex cursor-pointer items-center gap-2.5 rounded-[8px] border px-3 py-2 text-[12px] transition-colors",
+              "flex cursor-pointer items-center gap-2.5 rounded-[8px] border px-3 py-2 text-[13px] transition-colors",
               reason === option
                 ? "border-red-300 bg-red-50 font-semibold text-red-700"
                 : "border-line bg-surface text-ink-soft hover:bg-surface-muted",
@@ -2225,10 +2225,10 @@ export function ReportModal({
           placeholder="Add anything else that helps (optional)"
           rows={3}
           maxLength={1000}
-          className="w-full resize-none rounded-[8px] border border-line-strong bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-forest"
+          className="w-full resize-none rounded-[8px] border border-line-strong bg-surface px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
         />
         {error ? (
-          <p role="alert" className="rounded-[6px] bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700">
+          <p role="alert" className="rounded-[8px] bg-red-50 px-2.5 py-1.5 text-[12px] font-medium text-red-700">
             {error}
           </p>
         ) : null}
@@ -2304,12 +2304,12 @@ export function SearchPaletteModal({
             }}
             placeholder="Search people, posts, or topics…"
             aria-label="Search"
-            className="h-12 min-w-0 flex-1 bg-transparent text-[13.5px] text-ink outline-none placeholder:text-faint"
+            className="h-12 min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
           />
           <button
             type="button"
             onClick={onClose}
-            className="rounded border border-line bg-surface-muted px-1.5 py-0.5 text-[10px] text-faint hover:text-ink"
+            className="rounded border border-line bg-surface-muted px-1.5 py-0.5 text-[11.5px] text-faint hover:text-ink"
           >
             esc
           </button>
@@ -2317,7 +2317,7 @@ export function SearchPaletteModal({
         <div className="thin-scrollbar max-h-[440px] overflow-y-auto p-2">
           {v.length ? (
             <>
-              <p className="px-2.5 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-faint uppercase">
+              <p className="px-2.5 py-1.5 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                 People
               </p>
               {v.slice(0, 4).map((j?: any) => (
@@ -2332,13 +2332,13 @@ export function SearchPaletteModal({
                 >
                   <Avatar person={j} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1 text-[12.5px] font-medium text-ink">
+                    <span className="flex items-center gap-1 text-[13px] font-medium text-ink">
                       {j.name}
                       {j.verified ? (
                         <VerifiedBadge className="h-3 w-3" />
                       ) : null}
                     </span>
-                    <span className="text-[10.5px] text-muted">
+                    <span className="text-[11.5px] text-muted">
                       @{j.handle}
                       {" · "}
                       {formatCount(j.followers)}
@@ -2356,7 +2356,7 @@ export function SearchPaletteModal({
           ) : null}
           {q.length ? (
             <>
-              <p className="mt-1 px-2.5 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-faint uppercase">
+              <p className="mt-1 px-2.5 py-1.5 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                 Posts
               </p>
               {q.slice(0, 3).map((j?: any) => (
@@ -2373,14 +2373,14 @@ export function SearchPaletteModal({
                     <img
                       src={j.images[0]}
                       alt=""
-                      className="h-8 w-8 rounded-[6px] object-cover"
+                      className="h-8 w-8 rounded-[8px] object-cover"
                     />
                   ) : null}
                   <span className="min-w-0 flex-1">
-                    <span className="line-clamp-1 text-[12px] text-ink-soft">
+                    <span className="line-clamp-1 text-[13px] text-ink-soft">
                       {j.text}
                     </span>
-                    <span className="text-[10px] text-faint">
+                    <span className="text-[11.5px] text-faint">
                       {j.topic}
                       {" · "}
                       {j.time}
@@ -2392,7 +2392,7 @@ export function SearchPaletteModal({
           ) : null}
           {_.length ? (
             <>
-              <p className="mt-1 px-2.5 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-faint uppercase">
+              <p className="mt-1 px-2.5 py-1.5 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                 Topics
               </p>
               <div className="grid grid-cols-2 gap-1">
@@ -2404,18 +2404,18 @@ export function SearchPaletteModal({
                       onOpenTopic();
                       onClose();
                     }}
-                    className="flex items-center gap-2 rounded-[7px] px-2.5 py-2 text-left transition-colors hover:bg-surface-muted"
+                    className="flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-surface-muted"
                   >
                     <img
                       src={j.image}
                       alt=""
-                      className="h-7 w-7 rounded-[5px] object-cover"
+                      className="h-7 w-7 rounded-[8px] object-cover"
                     />
                     <span className="min-w-0">
-                      <span className="block truncate text-[11.5px] font-medium text-ink-soft">
+                      <span className="block truncate text-[12px] font-medium text-ink-soft">
                         {j.label}
                       </span>
-                      <span className="block truncate text-[8.5px] text-faint">
+                      <span className="block truncate text-[11px] text-faint">
                         #{j.tag}
                       </span>
                     </span>
@@ -2425,14 +2425,14 @@ export function SearchPaletteModal({
             </>
           ) : null}
           {!v.length && !q.length ? (
-            <p className="px-3 py-8 text-center text-[12px] text-muted">
+            <p className="px-3 py-8 text-center text-[13px] text-muted">
               Nothing found for “{R}”. Try a name or a topic.
             </p>
           ) : null}
           {R ? null : (
             <>
               <div className="my-1.5 h-px bg-line" />
-              <p className="px-2.5 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-faint uppercase">
+              <p className="px-2.5 py-1.5 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                 Quick actions
               </p>
               {[
@@ -2488,10 +2488,10 @@ export function SearchPaletteModal({
                     }}
                     className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-surface-muted"
                   >
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-line bg-surface-muted text-muted">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-line bg-surface-muted text-muted">
                       <C size={13} strokeWidth={1.9} aria-hidden="true" />
                     </span>
-                    <span className="text-[12px] font-medium text-ink-soft">
+                    <span className="text-[13px] font-medium text-ink-soft">
                       {j.label}
                     </span>
                   </button>
@@ -2500,7 +2500,7 @@ export function SearchPaletteModal({
             </>
           )}
         </div>
-        <div className="flex items-center justify-between border-t border-line bg-surface-muted px-3.5 py-2 text-[10px] text-faint">
+        <div className="flex items-center justify-between border-t border-line bg-surface-muted px-3.5 py-2 text-[11.5px] text-faint">
           <span>Press ↵ to open the first result</span>
           <span className="flex items-center gap-1">
             <Sparkle size={9} strokeWidth={2} aria-hidden="true" />
@@ -2545,7 +2545,7 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
           <button
             type="button"
             onClick={onClose}
-            className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+            className="h-8 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft hover:bg-surface-muted"
           >
             Cancel
           </button>
@@ -2570,7 +2570,7 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
               if (result?.ok) onClose();
               else setPhotoError(result?.error || "Could not save your profile.");
             }}
-            className="h-8 rounded-[7px] bg-forest px-3.5 text-[12px] font-semibold text-white hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-8 rounded-[8px] bg-forest px-3.5 text-[13px] font-semibold text-white hover:bg-forest-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving…" : photoRejected ? "Pick another photo" : "Save profile"}
           </button>
@@ -2578,16 +2578,16 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
       }
     >
       <div className="space-y-3.5 px-4 py-4 sm:px-5">
-        <div className="flex items-center justify-between gap-3 rounded-[10px] border border-line bg-surface-muted/60 p-3">
+        <div className="flex items-center justify-between gap-3 rounded-[12px] border border-line bg-surface-muted/60 p-3">
           <div className="flex items-center gap-3">
             <Avatar person={{ ...me, avatar }} size="lg" />
             <div>
-              <p className="text-[12px] font-medium text-ink">{x || me.name}</p>
-              <p className="mt-0.5 text-[10px] text-faint">@{me.handle}</p>
+              <p className="text-[13px] font-medium text-ink">{x || me.name}</p>
+              <p className="mt-0.5 text-[11.5px] text-faint">@{me.handle}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-ink-soft hover:bg-surface-muted">
+            <label className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-surface-muted">
               <Image size={11} strokeWidth={2} />
               Photo
               <input
@@ -2611,7 +2611,7 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
                 }}
               />
             </label>
-            <label className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-line-strong bg-surface px-2.5 text-[10.5px] font-semibold text-muted hover:bg-surface-muted hover:text-ink">
+            <label className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[11.5px] font-semibold text-muted hover:bg-surface-muted hover:text-ink">
               Cover
               <input
                 type="file"
@@ -2639,7 +2639,7 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
         {photoError ? (
           <p
             role="alert"
-            className="rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[11.5px] leading-snug font-medium text-red-700"
+            className="rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] leading-snug font-medium text-red-700"
           >
             {photoError}
           </p>
@@ -2665,28 +2665,28 @@ export function EditProfileModal({ open, onClose, me, onSave }: any) {
           },
         ].map((v?: any) => (
           <label key={v.label} className="block space-y-1.5">
-            <span className="text-[11.5px] font-medium text-ink-soft">
+            <span className="text-[12px] font-medium text-ink-soft">
               {v.label}
             </span>
             <input
               value={v.value}
               onChange={(q?: any) => v.set(q.target.value)}
               maxLength={v.max}
-              className="h-9 w-full rounded-[8px] border border-line-strong bg-surface px-3 text-[12.5px] text-ink transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
+              className="h-9 w-full rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] text-ink transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
             />
           </label>
         ))}
         <label className="block space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11.5px] font-medium text-ink-soft">Bio</span>
-            <span className="text-[10px] text-faint">{A.length}/160</span>
+            <span className="text-[12px] font-medium text-ink-soft">Bio</span>
+            <span className="text-[11.5px] text-faint">{A.length}/160</span>
           </div>
           <textarea
             value={A}
             onChange={(v?: any) => T(v.target.value)}
             maxLength={160}
             rows={4}
-            className="w-full resize-none rounded-[8px] border border-line-strong bg-surface px-3 py-2 text-[12.5px] leading-relaxed text-ink transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
+            className="w-full resize-none rounded-[8px] border border-line-strong bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
           />
         </label>
       </div>

@@ -443,20 +443,20 @@ export function InboxView({
         <div>
           <div className="mb-2 flex items-center gap-2">
             <span className="h-1 w-1 rounded-full bg-forest" />
-            <p className="text-[10.5px] font-semibold tracking-[0.13em] text-faint uppercase">
+            <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
               Your conversations
             </p>
           </div>
           <h1 className="text-[24px] leading-[1.15] font-semibold tracking-[-0.03em] text-ink sm:text-[27px]">
             Inbox
           </h1>
-          <p className="mt-1 text-[13px] text-muted">
+          <p className="mt-1 text-[14px] text-muted">
             Private notes with the people who matter. Tap a chat to open it full
             screen.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[10.5px] font-medium text-muted sm:flex">
+          <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11.5px] font-medium text-muted sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-forest" />
             {conversations.filter((E?: any) => E.online).length}
             {" online"}
@@ -464,7 +464,7 @@ export function InboxView({
           <button
             type="button"
             onClick={() => V(true)}
-            className="inline-flex h-8.5 items-center gap-1.5 rounded-[8px] bg-forest px-3 text-[11.5px] font-semibold text-white transition-colors hover:bg-forest-hover"
+            className="inline-flex h-8.5 items-center gap-1.5 rounded-[8px] bg-forest px-3 text-[12px] font-semibold text-white transition-colors hover:bg-forest-hover"
           >
             <UserPlus size={12} strokeWidth={2.2} />
             New message
@@ -484,7 +484,7 @@ export function InboxView({
               onChange={(E?: any) => $(E.target.value)}
               placeholder="Search messages or people"
               aria-label="Search conversations"
-              className="h-8.5 w-full rounded-[8px] border border-line bg-surface-muted/60 pr-3 pl-8.5 text-[12.5px] text-ink placeholder:text-faint transition-colors hover:border-line-strong focus:border-forest focus:bg-surface focus:outline-none"
+              className="h-8.5 w-full rounded-[8px] border border-line bg-surface-muted/60 pr-3 pl-8.5 text-[13px] text-ink placeholder:text-faint transition-colors hover:border-line-strong focus:border-forest focus:bg-surface focus:outline-none"
             />
           </div>
           <div className="no-scrollbar flex gap-1 overflow-x-auto">
@@ -519,7 +519,7 @@ export function InboxView({
                 onClick={() => K(E.value)}
                 aria-pressed={he === E.value}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium transition-colors",
                   he === E.value
                     ? "bg-forest-soft text-forest"
                     : "text-muted hover:bg-surface-muted hover:text-ink",
@@ -529,7 +529,7 @@ export function InboxView({
                 {E.count ? (
                   <span
                     className={cn(
-                      "rounded-full px-1 text-[8px] font-semibold tabular-nums",
+                      "rounded-full px-1 text-[11px] font-semibold tabular-nums",
                       he === E.value
                         ? "bg-forest text-white"
                         : "bg-canvas-deep text-muted",
@@ -559,7 +559,7 @@ export function InboxView({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-1">
-                        <span className="truncate text-[13px] font-semibold text-ink">
+                        <span className="truncate text-[14px] font-semibold text-ink">
                           {ge.name}
                         </span>
                         {ge.verified ? (
@@ -573,18 +573,18 @@ export function InboxView({
                           />
                         ) : null}
                         {E.request ? (
-                          <span className="rounded-full bg-sand-soft px-1.5 py-0.5 text-[7.5px] font-semibold text-[#8a6c34]">
+                          <span className="rounded-full bg-sand-soft px-1.5 py-0.5 text-[10px] font-semibold text-[#8a6c34]">
                             Request
                           </span>
                         ) : null}
                       </span>
-                      <span className="shrink-0 text-[10px] text-faint">
+                      <span className="shrink-0 text-[11.5px] text-faint">
                         {je?.time ?? "New"}
                       </span>
                     </span>
                     <span
                       className={cn(
-                        "mt-1 block truncate text-[11.5px]",
+                        "mt-1 block truncate text-[12px]",
                         E.unread && !E.request
                           ? "font-medium text-ink-soft"
                           : "text-muted",
@@ -595,7 +595,7 @@ export function InboxView({
                         ? "typing…"
                         : `${je?.from === "me" ? "You: " : ""}${formatDuration(je)}`}
                     </span>
-                    <span className="mt-1 flex items-center gap-2 text-[10px] text-faint">
+                    <span className="mt-1 flex items-center gap-2 text-[11.5px] text-faint">
                       <span className="inline-flex items-center gap-1">
                         <MapPin size={8} strokeWidth={2} /> {ge.location}
                       </span>
@@ -608,7 +608,7 @@ export function InboxView({
                   </span>
                   <span className="mt-1 flex shrink-0 flex-col items-end gap-1">
                     {E.unread && !E.request ? (
-                      <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-forest px-1 text-[8.5px] font-semibold text-white">
+                      <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-forest px-1 text-[11px] font-semibold text-white">
                         {E.unread}
                       </span>
                     ) : E.muted ? (
@@ -618,7 +618,7 @@ export function InboxView({
                         aria-label="Muted"
                       />
                     ) : null}
-                    <span className="text-[8.5px] text-faint">Open</span>
+                    <span className="text-[11px] text-faint">Open</span>
                   </span>
                 </button>
               );
@@ -642,7 +642,7 @@ export function InboxView({
                 <button
                   type="button"
                   onClick={() => K("all")}
-                  className="h-8 rounded-[7px] border border-line-strong bg-surface px-3 text-[12px] font-semibold text-ink-soft hover:bg-surface-muted"
+                  className="h-8 rounded-[8px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft hover:bg-surface-muted"
                 >
                   Back to inbox
                 </button>
@@ -651,16 +651,16 @@ export function InboxView({
           />
         )}
         <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
-          <p className="flex items-center gap-1.5 text-[10px] text-faint">
+          <p className="flex items-center gap-1.5 text-[11.5px] text-faint">
             <ShieldCheck size={10} strokeWidth={2} />
             Messages stay on this device
           </p>
-          <p className="text-[10px] text-faint">
+          <p className="text-[11.5px] text-faint">
             Slide a message right to reply
           </p>
         </div>
       </div>
-      <p className="mt-3 text-center text-[10px] text-faint">
+      <p className="mt-3 text-center text-[11.5px] text-faint">
         Thursday never reads your conversations. No trackers, no ad targeting.
       </p>
       {fe && Ae ? (
@@ -690,12 +690,12 @@ export function InboxView({
               />
               <span className="min-w-0">
                 <span className="flex items-center gap-1">
-                  <span className="truncate text-[13px] font-semibold text-ink">
+                  <span className="truncate text-[14px] font-semibold text-ink">
                     {Ae.name}
                   </span>
                   {Ae.verified ? <VerifiedBadge className="h-3 w-3" /> : null}
                 </span>
-                <span className="block truncate text-[10px] text-muted">
+                <span className="block truncate text-[11.5px] text-muted">
                   {fe.typing
                     ? "typing…"
                     : onlineIds.includes(Ae.id)
@@ -790,7 +790,7 @@ export function InboxView({
                       aria-label="Close menu"
                       tabIndex={-1}
                     />
-                    <div className="animate-pop absolute top-[calc(100%+4px)] right-0 z-40 w-[184px] rounded-[10px] border border-line bg-surface p-1 shadow-[0_12px_32px_rgba(29,33,28,0.14)]">
+                    <div className="animate-pop absolute top-[calc(100%+4px)] right-0 z-40 w-[184px] rounded-[12px] border border-line bg-surface p-1 shadow-[0_12px_32px_rgba(29,33,28,0.14)]">
                       {[
                         {
                           label: fe.pinned
@@ -831,7 +831,7 @@ export function InboxView({
                               E.action();
                               I(false);
                             }}
-                            className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[11px] text-ink-soft hover:bg-surface-muted"
+                            className="flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left text-[12px] text-ink-soft hover:bg-surface-muted"
                           >
                             <Comp_ge size={12} strokeWidth={2} />
                             {E.label}
@@ -851,7 +851,7 @@ export function InboxView({
                 strokeWidth={2}
                 className="shrink-0 text-[#8a6c34]"
               />
-              <p className="min-w-0 flex-1 text-[10.5px] leading-[1.5] text-[#7a602f]">
+              <p className="min-w-0 flex-1 text-[11.5px] leading-[1.5] text-[#7a602f]">
                 <span className="font-semibold">Message request.</span>{" "}
                 {Ae.name.split(" ")[0]}
                 {" doesn't follow you yet."}
@@ -860,7 +860,7 @@ export function InboxView({
                 <button
                   type="button"
                   onClick={() => onAcceptRequest(fe.id)}
-                  className="inline-flex h-6.5 items-center gap-1 rounded-[5px] bg-forest px-2 text-[10px] font-semibold text-white hover:bg-forest-hover"
+                  className="inline-flex h-6.5 items-center gap-1 rounded-[8px] bg-forest px-2 text-[11.5px] font-semibold text-white hover:bg-forest-hover"
                 >
                   <Check size={10} strokeWidth={2.6} />
                   {" Accept"}
@@ -871,7 +871,7 @@ export function InboxView({
                     onDeclineRequest(fe.id);
                     s0();
                   }}
-                  className="inline-flex h-6.5 items-center rounded-[5px] border border-line-strong bg-surface px-2 text-[10px] font-semibold text-muted hover:bg-surface-muted"
+                  className="inline-flex h-6.5 items-center rounded-[8px] border border-line-strong bg-surface px-2 text-[11.5px] font-semibold text-muted hover:bg-surface-muted"
                 >
                   Delete
                 </button>
@@ -884,15 +884,15 @@ export function InboxView({
           >
             <div className="mx-auto flex max-w-[760px] flex-col items-center gap-1 pb-1 text-center">
               <Avatar person={Ae} size="xl" online={fe.online} />
-              <p className="mt-1 text-[13px] font-semibold text-ink">
+              <p className="mt-1 text-[14px] font-semibold text-ink">
                 {Ae.name}
               </p>
-              <p className="text-[10.5px] text-muted">
+              <p className="text-[11.5px] text-muted">
                 @{Ae.handle}
                 {" · "}
                 {Ae.location}
               </p>
-              <p className="mt-1 max-w-[300px] text-[10.5px] leading-[1.55] text-faint">
+              <p className="mt-1 max-w-[300px] text-[11.5px] leading-[1.55] text-faint">
                 Slide any message to the right to reply to it directly.
                 Double-tap to add a reaction.
               </p>
@@ -913,7 +913,7 @@ export function InboxView({
                   {m0 ? (
                     <div className="my-2 flex items-center gap-2">
                       <span className="h-px flex-1 bg-line" />
-                      <span className="rounded-full bg-surface px-2 py-0.5 text-[8px] font-medium text-faint">
+                      <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-faint">
                         {formatMessageDay(E.time, E.createdAt)}
                       </span>
                       <span className="h-px flex-1 bg-line" />
@@ -942,7 +942,7 @@ export function InboxView({
                         <div className="relative">
                           <div
                             className={cn(
-                              "overflow-hidden text-[12.5px] leading-[1.55] shadow-[0_1px_1px_rgba(29,33,28,0.03)]",
+                              "overflow-hidden text-[13px] leading-[1.55] shadow-[0_1px_1px_rgba(29,33,28,0.03)]",
                               E.attachment?.type === "image"
                                 ? "rounded-xl border border-line bg-surface p-1"
                                 : "rounded-xl px-3 py-2",
@@ -955,7 +955,7 @@ export function InboxView({
                             {E.replyTo ? (
                               <div
                                 className={cn(
-                                  "mb-1.5 rounded-[6px] border-l-2 py-1 pr-2 pl-2",
+                                  "mb-1.5 rounded-[8px] border-l-2 py-1 pr-2 pl-2",
                                   je
                                     ? "border-white/40 bg-white/10"
                                     : "border-forest/45 bg-forest-wash",
@@ -963,7 +963,7 @@ export function InboxView({
                               >
                                 <p
                                   className={cn(
-                                    "text-[8.5px] font-semibold",
+                                    "text-[11px] font-semibold",
                                     je ? "text-white/85" : "text-forest",
                                   )}
                                 >
@@ -971,7 +971,7 @@ export function InboxView({
                                 </p>
                                 <p
                                   className={cn(
-                                    "line-clamp-2 text-[8.5px] leading-[1.4]",
+                                    "line-clamp-2 text-[11px] leading-[1.4]",
                                     je ? "text-white/65" : "text-muted",
                                   )}
                                 >
@@ -1070,7 +1070,7 @@ export function InboxView({
                                 </span>
                                 <span
                                   className={cn(
-                                    "shrink-0 pl-0.5 text-[10px] leading-none tabular-nums",
+                                    "shrink-0 pl-0.5 text-[11.5px] leading-none tabular-nums",
                                     je ? "text-white/80" : "text-muted",
                                   )}
                                 >
@@ -1115,7 +1115,7 @@ export function InboxView({
                                     onReact(fe.id, E.id, tt);
                                     ve(null);
                                   }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[13px] transition-transform hover:scale-125"
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[14px] transition-transform hover:scale-125"
                                 >
                                   {tt}
                                 </button>
@@ -1134,7 +1134,7 @@ export function InboxView({
                           {E.reactions.map((tt?: any, Vt?: any) => (
                             <span
                               key={`${tt}-${Vt}`}
-                              className="rounded-full border border-line bg-surface px-1 py-[1px] text-[10px] shadow-sm"
+                              className="rounded-full border border-line bg-surface px-1 py-[1px] text-[11.5px] shadow-sm"
                             >
                               {tt}
                             </span>
@@ -1143,7 +1143,7 @@ export function InboxView({
                       ) : null}
                       <p
                         className={cn(
-                          "mt-0.5 flex items-center gap-1 text-[8px] text-faint",
+                          "mt-0.5 flex items-center gap-1 text-[11px] text-faint",
                           je ? "flex-row-reverse" : "",
                         )}
                       >
@@ -1184,27 +1184,27 @@ export function InboxView({
           <div className="shrink-0 border-t border-line bg-canvas p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-2.5">
             <div className="mx-auto max-w-[820px]">
               {fe.request ? (
-                <div className="flex items-center justify-center gap-1.5 rounded-[7px] bg-surface-muted px-2 py-2 text-[10.5px] text-muted">
+                <div className="flex items-center justify-center gap-1.5 rounded-[8px] bg-surface-muted px-2 py-2 text-[11.5px] text-muted">
                   <ShieldCheck size={11} strokeWidth={2} />
                   {" Accept this request to reply."}
                 </div>
               ) : (
                 <>
                   {pe ? (
-                    <div className="mb-1.5 flex items-center gap-2 rounded-[7px] border-l-2 border-forest bg-forest-wash px-2.5 py-1.5">
+                    <div className="mb-1.5 flex items-center gap-2 rounded-[8px] border-l-2 border-forest bg-forest-wash px-2.5 py-1.5">
                       <ArrowBendUpLeft
                         size={12}
                         strokeWidth={2.2}
                         className="shrink-0 text-forest"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[8.5px] font-semibold text-forest">
+                        <p className="text-[11px] font-semibold text-forest">
                           {"Replying to "}
                           {pe.from === "me"
                             ? "yourself"
                             : Ae.name.split(" ")[0]}
                         </p>
-                        <p className="truncate text-[10px] text-muted">
+                        <p className="truncate text-[11.5px] text-muted">
                           {formatDuration(pe)}
                         </p>
                       </div>
@@ -1219,7 +1219,7 @@ export function InboxView({
                     </div>
                   ) : null}
                   {X_local ? (
-                    <div className="mb-1.5 flex items-center gap-1 rounded-[7px] border border-line bg-surface px-2 py-1.5">
+                    <div className="mb-1.5 flex items-center gap-1 rounded-[8px] border border-line bg-surface px-2 py-1.5">
                       {[
                         "❤️",
                         "😂",
@@ -1235,7 +1235,7 @@ export function InboxView({
                           key={E}
                           type="button"
                           onClick={() => Ve((ge?: any) => `${ge}${E}`)}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[13px] hover:bg-surface-muted"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[14px] hover:bg-surface-muted"
                         >
                           {E}
                         </button>
@@ -1243,7 +1243,7 @@ export function InboxView({
                     </div>
                   ) : null}
                   {h ? (
-                    <div className="mb-1.5 rounded-[7px] border border-line bg-surface p-1.5">
+                    <div className="mb-1.5 rounded-[8px] border border-line bg-surface p-1.5">
                       <div className="grid grid-cols-7 gap-1">
                         {CHAT_PHOTO_PRESETS.map((E?: any) => (
                           <button
@@ -1256,7 +1256,7 @@ export function InboxView({
                                 caption: E.label,
                               })
                             }
-                            className="overflow-hidden rounded-[5px] border border-line"
+                            className="overflow-hidden rounded-[8px] border border-line"
                             aria-label={`Send ${E.label} photo`}
                           >
                             <img
@@ -1268,7 +1268,7 @@ export function InboxView({
                         ))}
                         <label
                           aria-label="Upload photo from device"
-                          className="flex h-10 cursor-pointer items-center justify-center rounded-[5px] border border-dashed border-line-strong text-muted hover:border-forest hover:text-forest"
+                          className="flex h-10 cursor-pointer items-center justify-center rounded-[8px] border border-dashed border-line-strong text-muted hover:border-forest hover:text-forest"
                         >
                           <Plus size={13} strokeWidth={2.2} />
                           <input
@@ -1296,18 +1296,18 @@ export function InboxView({
                   {de ? (
                     <div className="flex items-center gap-2 rounded-[8px] border border-clay/25 bg-clay-wash px-2.5 py-2">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-clay" />
-                      <p className="flex-1 text-[11px] font-medium text-clay">
+                      <p className="flex-1 text-[12px] font-medium text-clay">
                         {locked
                           ? `Locked · 0:${String(De).padStart(2, "0")}`
                           : `Recording · 0:${String(De).padStart(2, "0")}`}
                         {locked ? (
-                          <span className="ml-1.5 text-[10px] font-normal text-clay/70">
+                          <span className="ml-1.5 text-[11.5px] font-normal text-clay/70">
                             Tap Send when done
                           </span>
                         ) : (
                           <span
                             className={cn(
-                              "ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-normal transition-colors",
+                              "ml-1.5 inline-flex items-center gap-0.5 text-[11.5px] font-normal transition-colors",
                               slideUp >= 40 ? "text-forest" : "text-clay/70",
                             )}
                           >
@@ -1323,7 +1323,7 @@ export function InboxView({
                       <button
                         type="button"
                         onClick={() => void finishVoice(false)}
-                        className="inline-flex h-6 items-center gap-1 rounded-[5px] bg-clay px-2 text-[10px] font-semibold text-white"
+                        className="inline-flex h-6 items-center gap-1 rounded-[8px] bg-clay px-2 text-[11.5px] font-semibold text-white"
                       >
                         <PaperPlaneTilt size={9} strokeWidth={2.4} />
                         {" Send"}
@@ -1396,7 +1396,7 @@ export function InboxView({
                             : `Message ${Ae.name.split(" ")[0]}…`
                         }
                         aria-label={`Message ${Ae.name}`}
-                        className="h-9 min-w-0 flex-1 rounded-full border border-line bg-surface px-3.5 text-[12.5px] text-ink placeholder:text-faint focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
+                        className="h-9 min-w-0 flex-1 rounded-full border border-line bg-surface px-3.5 text-[13px] text-ink placeholder:text-faint focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/10"
                       />
                       {ye.trim() ? (
                         <button
@@ -1437,17 +1437,17 @@ export function InboxView({
               <div className="flex items-center gap-3">
                 <Avatar person={Ae} size="xl" online={fe.online} />
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1 text-[13px] font-semibold text-ink">
+                  <p className="flex items-center gap-1 text-[14px] font-semibold text-ink">
                     {Ae.name}
                     {Ae.verified ? <VerifiedBadge /> : null}
                   </p>
-                  <p className="text-[11px] text-muted">@{Ae.handle}</p>
-                  <p className="mt-1 flex items-center gap-1 text-[10.5px] text-faint">
+                  <p className="text-[12px] text-muted">@{Ae.handle}</p>
+                  <p className="mt-1 flex items-center gap-1 text-[11.5px] text-faint">
                     <MapPin size={9} strokeWidth={2} /> {Ae.location}
                   </p>
                 </div>
               </div>
-              <p className="text-[11.5px] leading-[1.6] text-muted">{Ae.bio}</p>
+              <p className="text-[12px] leading-[1.6] text-muted">{Ae.bio}</p>
               <div className="flex items-center gap-2">
                 <FollowButton
                   following={followingIds.includes(Ae.id)}
@@ -1459,13 +1459,13 @@ export function InboxView({
                     Ce(false);
                     onOpenPerson(Ae.id);
                   }}
-                  className="h-7 rounded-[7px] border border-line-strong bg-surface px-2.5 text-[11px] font-semibold text-ink-soft"
+                  className="h-7 rounded-[8px] border border-line-strong bg-surface px-2.5 text-[12px] font-semibold text-ink-soft"
                 >
                   View profile
                 </button>
               </div>
-              <div className="rounded-[10px] border border-line bg-surface-muted/50 p-3">
-                <p className="text-[10px] font-semibold tracking-[0.06em] text-faint uppercase">
+              <div className="rounded-[12px] border border-line bg-surface-muted/50 p-3">
+                <p className="text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
                   Shared media
                 </p>
                 <div className="mt-2 grid grid-cols-3 gap-1.5">
@@ -1477,7 +1477,7 @@ export function InboxView({
                       key={`${E}-${ge}`}
                       type="button"
                       onClick={() => Mt(E)}
-                      className="overflow-hidden rounded-[6px] border border-line"
+                      className="overflow-hidden rounded-[8px] border border-line"
                     >
                       <img
                         src={E}
@@ -1492,7 +1492,7 @@ export function InboxView({
                 <button
                   type="button"
                   onClick={() => onTogglePin(fe.id)}
-                  className="flex items-center justify-between rounded-[8px] border border-line px-2.5 py-2 text-[11px] font-medium text-ink-soft hover:bg-surface-muted"
+                  className="flex items-center justify-between rounded-[8px] border border-line px-2.5 py-2 text-[12px] font-medium text-ink-soft hover:bg-surface-muted"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <PushPin size={11} strokeWidth={2} />
@@ -1500,7 +1500,7 @@ export function InboxView({
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] font-semibold",
+                      "text-[11.5px] font-semibold",
                       fe.pinned ? "text-forest" : "text-faint",
                     )}
                   >
@@ -1510,7 +1510,7 @@ export function InboxView({
                 <button
                   type="button"
                   onClick={() => onToggleMute(fe.id)}
-                  className="flex items-center justify-between rounded-[8px] border border-line px-2.5 py-2 text-[11px] font-medium text-ink-soft hover:bg-surface-muted"
+                  className="flex items-center justify-between rounded-[8px] border border-line px-2.5 py-2 text-[12px] font-medium text-ink-soft hover:bg-surface-muted"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <BellSlash size={11} strokeWidth={2} />
@@ -1518,7 +1518,7 @@ export function InboxView({
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] font-semibold",
+                      "text-[11.5px] font-semibold",
                       fe.muted ? "text-forest" : "text-faint",
                     )}
                   >
@@ -1535,7 +1535,7 @@ export function InboxView({
                   );
                   Ce(false);
                 }}
-                className="flex w-full items-center gap-1.5 rounded-[8px] border border-line px-2.5 py-2 text-left text-[11px] font-medium text-muted hover:bg-surface-muted hover:text-ink"
+                className="flex w-full items-center gap-1.5 rounded-[8px] border border-line px-2.5 py-2 text-left text-[12px] font-medium text-muted hover:bg-surface-muted hover:text-ink"
               >
                 <ShieldCheck size={11} strokeWidth={2} />
                 {" Report conversation"}
@@ -1549,7 +1549,7 @@ export function InboxView({
                   );
                   Ce(false);
                 }}
-                className="flex w-full items-center gap-1.5 rounded-[8px] border border-clay/20 bg-clay-wash px-2.5 py-2 text-left text-[11px] font-semibold text-clay"
+                className="flex w-full items-center gap-1.5 rounded-[8px] border border-clay/20 bg-clay-wash px-2.5 py-2 text-left text-[12px] font-semibold text-clay"
               >
                 <Trash size={11} strokeWidth={2} />
                 {" Block "}
@@ -1579,7 +1579,7 @@ export function InboxView({
               onChange={(E?: any) => G(E.target.value)}
               placeholder="Search people"
               aria-label="Search people for a new message"
-              className="h-8 w-full rounded-[7px] border border-line bg-surface-muted/60 pr-2 pl-7.5 text-[12px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
+              className="h-8 w-full rounded-[8px] border border-line bg-surface-muted/60 pr-2 pl-7.5 text-[13px] text-ink placeholder:text-faint focus:border-forest focus:bg-surface focus:outline-none"
             />
           </div>
           {people
@@ -1611,11 +1611,11 @@ export function InboxView({
                   online={E.online === true}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1 text-[12.5px] font-semibold text-ink">
+                  <span className="flex items-center gap-1 text-[13px] font-semibold text-ink">
                     {E.name}
                     {E.verified ? <VerifiedBadge className="h-3 w-3" /> : null}
                   </span>
-                  <span className="block truncate text-[10.5px] text-muted">
+                  <span className="block truncate text-[11.5px] text-muted">
                     {E.bio}
                   </span>
                 </span>
@@ -1651,7 +1651,7 @@ export function InboxView({
       >
         {activeCall ? (
           <div className="flex flex-col items-center bg-[#121713] px-6 py-7 text-center text-white">
-            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.08em] text-white/75 uppercase">
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11.5px] font-semibold tracking-[0.08em] text-white/75 uppercase">
               {activeCall.mode === "video" ? "Video call" : "Voice call"}
             </span>
             <div className="mt-4">
@@ -1660,7 +1660,7 @@ export function InboxView({
             <p className="mt-3 text-[16px] font-semibold text-white">
               {activeCall.person.name}
             </p>
-            <p className="mt-0.5 text-[12px] text-white/65 tabular-nums">
+            <p className="mt-0.5 text-[13px] text-white/65 tabular-nums">
               {activeCall.status === "ringing"
                 ? "Ringing…"
                 : `${Math.floor(activeCall.seconds / 60)}:${String(
@@ -1708,7 +1708,7 @@ export function InboxView({
                   }
                 }}
                 aria-label="End call"
-                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-clay px-5 text-[12px] font-semibold text-white hover:opacity-90"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-clay px-5 text-[13px] font-semibold text-white hover:opacity-90"
               >
                 End call
               </button>

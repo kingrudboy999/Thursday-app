@@ -79,10 +79,10 @@ function EnginePanel({ status }: any) {
           />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[12.5px] font-semibold text-ink">
+          <span className="block text-[13px] font-semibold text-ink">
             {ready ? "Thursday AI is ready" : "Waking up"}
           </span>
-          <span className="block text-[11px] text-faint">
+          <span className="block text-[12px] text-faint">
             {ready ? "Ask anything — it answers in a moment." : "Send a message and it will come online."}
           </span>
         </span>
@@ -119,7 +119,7 @@ function CopyButton({ text }: { text: string }) {
         setDone(true);
         window.setTimeout(() => setDone(false), 1400);
       }}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-medium text-faint transition-colors hover:bg-canvas-deep hover:text-ink"
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium text-faint transition-colors hover:bg-canvas-deep hover:text-ink"
       aria-label="Copy this"
     >
       {done ? <Check size={11} weight="bold" /> : <CopyIcon size={11} />}
@@ -141,21 +141,21 @@ function AssistantBubble({ turn }: { turn: AiTurn }) {
               {lines.map((line, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-clay" />
-                  <span className="text-[13.5px] leading-relaxed text-ink-soft">
+                  <span className="text-[14px] leading-relaxed text-ink-soft">
                     {line}
                   </span>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap text-ink-soft">
+            <p className="text-[14px] leading-relaxed whitespace-pre-wrap text-ink-soft">
               {turn.content}
             </p>
           )}
         </div>
         <div className="mt-1 flex items-center gap-2 px-1">
           {turn.modelLabel ? (
-            <span className="text-[10px] text-faint">
+            <span className="text-[11.5px] text-faint">
               {turn.modelLabel}
               {turn.latencyMs ? ` · ${(turn.latencyMs / 1000).toFixed(1)}s` : ""}
             </span>
@@ -173,7 +173,7 @@ function UserBubble({ turn }: { turn: AiTurn }) {
   return (
     <div className="flex justify-end">
       <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-forest px-3.5 py-2.5">
-        <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap text-white">
+        <p className="text-[14px] leading-relaxed whitespace-pre-wrap text-white">
           {turn.content}
         </p>
       </div>
@@ -196,7 +196,7 @@ function TypingRow({ label }: { label: string }) {
               />
             ))}
           </span>
-          <span className="text-[11px] text-faint">{label}</span>
+          <span className="text-[12px] text-faint">{label}</span>
         </div>
       </div>
     </div>
@@ -320,7 +320,7 @@ export function AiView({ me, onToast }: any) {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <div className="mb-1.5 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full border border-clay/25 bg-clay-wash px-2 py-0.5 text-[10.5px] font-semibold tracking-[0.04em] text-clay uppercase">
+              <span className="inline-flex items-center gap-1 rounded-full border border-clay/25 bg-clay-wash px-2 py-0.5 text-[11.5px] font-semibold tracking-[0.04em] text-clay uppercase">
                 <Sparkle size={10} weight="fill" />
                 Thursday AI
               </span>
@@ -328,7 +328,7 @@ export function AiView({ me, onToast }: any) {
                 <button
                   type="button"
                   onClick={() => setMode("chat")}
-                  className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2 py-0.5 text-[10.5px] font-medium text-muted transition-colors hover:text-ink"
+                  className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2 py-0.5 text-[11.5px] font-medium text-muted transition-colors hover:text-ink"
                 >
                   <X size={9} weight="bold" />
                   {activeAction.label}
@@ -338,7 +338,7 @@ export function AiView({ me, onToast }: any) {
             <h1 className="text-[23px] leading-tight font-semibold tracking-[-0.025em] text-ink">
               {activeAction ? activeAction.label : `${timeOfDay()}, ${firstName}`}
             </h1>
-            <p className="mt-1 max-w-[52ch] text-[13px] leading-relaxed text-muted">
+            <p className="mt-1 max-w-[52ch] text-[14px] leading-relaxed text-muted">
               {activeAction
                 ? activeAction.hint
                 : "A quiet writing room. Ask for captions, bios, titles, replies — or just think out loud."}
@@ -348,7 +348,7 @@ export function AiView({ me, onToast }: any) {
             <button
               type="button"
               onClick={reset}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] font-medium text-muted transition-colors hover:border-line-strong hover:text-ink"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] font-medium text-muted transition-colors hover:border-line-strong hover:text-ink"
             >
               <ArrowCounterClockwise size={13} />
               New
@@ -363,7 +363,7 @@ export function AiView({ me, onToast }: any) {
         >
           {thread.length === 0 && !busy ? (
             <div className="rounded-2xl border border-dashed border-line-strong bg-surface-muted/60 px-4 py-5">
-              <p className="mb-3 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+              <p className="mb-3 text-[12px] font-medium tracking-[0.08em] text-faint uppercase">
                 {activeAction ? "Give me the raw material" : "Start with"}
               </p>
               <div className="space-y-1.5">
@@ -378,7 +378,7 @@ export function AiView({ me, onToast }: any) {
                     key={s}
                     type="button"
                     onClick={() => send(s)}
-                    className="flex w-full items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-[12.5px] leading-snug text-ink-soft transition-colors hover:border-forest/30 hover:bg-forest-wash"
+                    className="flex w-full items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-[13px] leading-snug text-ink-soft transition-colors hover:border-forest/30 hover:bg-forest-wash"
                   >
                     <ArrowUp
                       size={13}
@@ -409,14 +409,14 @@ export function AiView({ me, onToast }: any) {
             <div className="flex items-start gap-2 rounded-xl border border-clay/25 bg-clay-wash px-3.5 py-3">
               <X size={13} className="mt-0.5 shrink-0 text-clay" />
               <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] font-medium text-clay">{error}</p>
+                <p className="text-[13px] font-medium text-clay">{error}</p>
                 <button
                   type="button"
                   onClick={() => {
                     setError(null);
                     send();
                   }}
-                  className="mt-1.5 text-[11.5px] font-semibold text-clay underline decoration-clay/40 underline-offset-2 hover:decoration-clay"
+                  className="mt-1.5 text-[12px] font-semibold text-clay underline decoration-clay/40 underline-offset-2 hover:decoration-clay"
                 >
                   Try again
                 </button>
@@ -446,7 +446,7 @@ export function AiView({ me, onToast }: any) {
                   ? activeAction.placeholder
                   : "Ask for a caption, a bio, a gentler reply…"
               }
-              className="max-h-[160px] min-h-[38px] flex-1 resize-none bg-transparent px-2 py-2 text-[13.5px] leading-relaxed text-ink outline-none placeholder:text-faint"
+              className="max-h-[160px] min-h-[38px] flex-1 resize-none bg-transparent px-2 py-2 text-[14px] leading-relaxed text-ink outline-none placeholder:text-faint"
               style={{ height: Math.min(160, 38 + draft.split("\n").length * 20) }}
             />
             {busy ? (
@@ -475,7 +475,7 @@ export function AiView({ me, onToast }: any) {
               </button>
             )}
           </div>
-          <p className="mt-1.5 px-1 text-[10.5px] text-faint">
+          <p className="mt-1.5 px-1 text-[11.5px] text-faint">
             Free models, rotated on every message. Thursday AI can be wrong —
             check anything that matters.
           </p>
@@ -485,7 +485,7 @@ export function AiView({ me, onToast }: any) {
       {/* ---------- Tools rail ---------- */}
       <aside className="space-y-3 lg:sticky lg:top-[84px] lg:self-start">
         <div className="rounded-xl border border-line bg-surface p-1.5">
-          <p className="px-2.5 pt-1.5 pb-2 text-[10.5px] font-semibold tracking-[0.09em] text-faint uppercase">
+          <p className="px-2.5 pt-1.5 pb-2 text-[11.5px] font-medium tracking-[0.08em] text-faint uppercase">
             Tools
           </p>
           <div className="space-y-0.5">
@@ -503,13 +503,13 @@ export function AiView({ me, onToast }: any) {
               <span className="min-w-0 flex-1">
                 <span
                   className={cn(
-                    "block text-[12.5px] font-semibold",
+                    "block text-[13px] font-semibold",
                     mode === "chat" ? "text-forest" : "text-ink",
                   )}
                 >
                   Freeform chat
                 </span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-faint">
+                <span className="mt-0.5 block text-[12px] leading-snug text-faint">
                   Think out loud, ask anything.
                 </span>
               </span>
@@ -535,10 +535,10 @@ export function AiView({ me, onToast }: any) {
                     )}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[12.5px] font-medium text-ink">
+                    <span className="block text-[13px] font-medium text-ink">
                       {a.label}
                     </span>
-                    <span className="mt-0.5 block text-[11px] leading-snug text-faint">
+                    <span className="mt-0.5 block text-[12px] leading-snug text-faint">
                       {a.list
                         ? a.task === "reply"
                           ? "Three warm options"
