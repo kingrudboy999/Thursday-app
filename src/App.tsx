@@ -1427,6 +1427,7 @@ export function App() {
               events={A}
               circles={x}
               people={c}
+              meId={meId}
               onlineIds={onlineIds}
               onToggleEvent={Il}
               onOpenPerson={ge}

@@ -50,14 +50,54 @@ function AvatarStack({ ids, people, onlineIds = [] }: any) {
     </span>
   );
 }
-const ACTIVE_CIRCLE_MEMBER_IDS = [
-  "maya",
-  "priya",
-  "jonah",
-  "theo",
-  "lena",
-  "sam",
-];
+/** Real event attendance, derived from who has actually RSVP'd. */
+function eventAttendeeIds(event?: any, meId?: string) {
+  const ids: string[] = Array.isArray(event?.attendeeIds)
+    ? event.attendeeIds.filter(Boolean)
+    : [];
+  return meId ? ids.filter((id) => id !== meId) : ids;
+}
+
+/**
+ * Attendance caption that stays truthful: names the real circle members when
+ * we know them, otherwise reports the stated headcount without pretending to
+ * show faces we do not have.
+ */
+function attendanceCaption(event?: any, meId?: string) {
+  const ids = eventAttendeeIds(event, meId);
+  const total = Number(event?.attendees) || 0;
+  if (ids.length) {
+    return {
+      ids,
+      text:
+        ids.length === 1
+          ? "1 from your circles is going"
+          : `${ids.length} from your circles are going`,
+    };
+  }
+  return {
+    ids: [] as string[],
+    text: total ? `${total} going` : "Be the first to RSVP",
+  };
+}
+
+/**
+ * Real circle membership, derived from who has actually posted in the circle.
+ * No invented member lists — if nobody has posted yet, we say so.
+ */
+function circleMemberIds(circleId?: string, posts: any[] = [], meId?: string) {
+  if (!circleId) return [] as string[];
+  const ids = new Set<string>();
+  const circlePosts = posts.filter((p) => p.circleId === circleId);
+  circlePosts.forEach((p) => {
+    if (p.authorId) ids.add(p.authorId);
+    (p.reactions || []).forEach((r: any) => r?.personId && ids.add(r.personId));
+    (p.comments || []).forEach((c: any) => c?.authorId && ids.add(c.authorId));
+    (p.attendeeIds || []).forEach((id: string) => ids.add(id));
+  });
+  if (meId) ids.delete(meId);
+  return Array.from(ids);
+}
 const CIRCLE_CATEGORIES = [
   "All",
   "Making",
@@ -202,7 +242,13 @@ export function CirclesView({
       <div className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
         {J.map((K?: any, ae?: any) => {
           const $ = ACCENT_BADGE_STYLES[K.accent] ?? ACCENT_BADGE_STYLES.forest,
-            ye = K.moderatorIds
+            ye = Array.from(
+              new Set([
+                ...K.moderatorIds,
+                // people who have actually posted in this circle
+                ...circleMemberIds(K.id, posts, meId),
+              ]),
+            )
               .map((Ve?: any) => people.find((pe?: any) => pe.id === Ve))
               .filter((Ve?: any) => !!Ve);
           return (
@@ -486,6 +532,7 @@ export function GatheringsView({
   events,
   circles,
   people,
+  meId = "me",
   onlineIds = [],
   onToggleEvent,
   onOpenPerson,
@@ -651,14 +698,11 @@ export function GatheringsView({
                 <div className="flex items-center gap-2">
                   <AvatarStack
                     onlineIds={onlineIds}
-                    ids={ACTIVE_CIRCLE_MEMBER_IDS}
+                    ids={attendanceCaption(q, meId).ids}
                     people={people}
                   />
                   <p className="text-[10.5px] text-muted">
-                    <span className="font-semibold text-ink-soft">
-                      {q.attendees}
-                    </span>
-                    {" going"}
+                    {attendanceCaption(q, meId).text}
                   </p>
                 </div>
                 <button
@@ -767,10 +811,10 @@ export function GatheringsView({
                   <div className="flex items-center gap-2 sm:shrink-0">
                     <AvatarStack
                       onlineIds={onlineIds}
-                      ids={ACTIVE_CIRCLE_MEMBER_IDS.slice(0, 3)}
+                      ids={attendanceCaption(J, meId).ids.slice(0, 3)}
                       people={people}
                     />
-                    <span className="hidden w-[54px] text-[10px] text-faint sm:block">
+                    <span className="hidden w-[60px] text-[10px] text-faint sm:block">
                       {J.attendees}
                       {" going"}
                     </span>
@@ -945,7 +989,7 @@ export function GatheringsView({
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
                 <div className="flex items-center gap-2">
                   <AvatarStack
-                    onlineIds={onlineIds} ids={ACTIVE_CIRCLE_MEMBER_IDS} people={people} />
+                    onlineIds={onlineIds} ids={attendanceCaption(_, meId).ids} people={people} />
                   <p className="text-[10px] text-muted">
                     {_.attendees}
                     {" people going"}
