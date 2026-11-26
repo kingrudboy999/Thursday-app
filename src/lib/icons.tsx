@@ -17,6 +17,7 @@ export {
   CaretLeft,
   CaretRight,
   ChatCircle,
+  Copy as CopyIcon,
   Check,
   CheckCircle,
   Checks,
@@ -77,3 +78,4 @@ export {
   WifiHigh,
   X,
 } from "@phosphor-icons/react";
+
