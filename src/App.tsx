@@ -11,16 +11,22 @@ import {
   apiDeleteConversation,
   apiDeleteDraft,
   apiDeletePost,
+  apiEditPost,
   apiMarkNotificationsRead,
+  apiMarkThreadRead,
   apiMarkStorySeen,
   apiPostAction,
   apiReactMessage,
   apiReelAction,
   apiReplyStory,
+  apiRecordProfileVisit,
+  apiRecordReelView,
   apiResetBackend,
   apiSaveDraft,
   apiSaveGuideProgress,
+  apiSendCallSignal,
   apiSendMessage,
+  apiSendTyping,
   apiStartConversation,
   apiToggleCircle,
   apiToggleEventRsvp,
@@ -30,9 +36,16 @@ import {
   apiUpdatePreferences,
   apiVotePoll,
   apiVotePrompt,
+  apiGetAuthMe,
+  apiLogout,
+  clearAuthSession,
   connectRealtimeStream,
   fetchBootstrap,
+  getAuthToken,
+  getStoredAuthUser,
+  saveAuthSession,
   pushWorkspaceToRailway,
+  type AuthUser,
 } from "./lib/api";
 import { ArrowUp } from "./lib/icons";
 import { ColdStartSplash } from "./components/brand";
@@ -53,7 +66,11 @@ import {
   StoryViewerModal,
   TopBar,
 } from "./components/social-shell";
-import { ToastBanner } from "./components/social";
+import {
+  IncomingCallBanner,
+  PostActionsContext,
+  ToastBanner,
+} from "./components/social";
 import {
   CIRCLE_GUIDES,
   INITIAL_DRAFTS,
@@ -77,10 +94,12 @@ import { INITIAL_CIRCLES, INITIAL_EVENTS, SPACE_POSTS } from "./lib/spaces";
 import {
   clearWorkspaceStorage,
   downloadTextFile,
+  resetStoredWorkspaceState,
   exportWorkspaceSnapshot,
   importWorkspaceSnapshot,
   useStoredState,
 } from "./lib/storage";
+import { AuthView } from "./views/AuthView";
 import { NotificationsView } from "./views/Connect";
 import { BookmarksView, ExploreView } from "./views/Explore";
 import { FeedView } from "./views/Feed";
@@ -126,6 +145,13 @@ export function App() {
       ...Ne,
     })),
     [$, ye] = useState<any>("home"),
+    [authUser, setAuthUser] = useState<AuthUser | null>(() => getStoredAuthUser()),
+    [authChecked, setAuthChecked] = useState<boolean>(false),
+    [onlineIds, setOnlineIds] = useState<string[]>([]),
+    [live, setLive] = useState<boolean>(false),
+    [visitors, setVisitors] = useState<any[]>([]),
+    [incomingCall, setIncomingCall] = useState<any>(null),
+    [callLog, setCallLog] = useState<any[]>([]),
     [Ve, pe] = useState<any>(ME_ID),
     [le, Ee] = useState<any>(undefined),
     [Ce, He] = useState<any>(false),
@@ -143,7 +169,29 @@ export function App() {
     [pt, St] = useState<any>(true),
     [Mt, u0] = useState<any>(false),
     gKeyTimerRef = useRef<number | null>(null),
-    fe = c.find((H?: any) => H.id === ME_ID) ?? c[0],
+    meId: string = authUser?.id || ME_ID,
+    authProfile = authUser?.profile
+      ? {
+          ...authUser.profile,
+          id: authUser.id,
+          handle: authUser.handle || authUser.profile?.handle,
+          avatar:
+            authUser.profile?.avatar ||
+            `https://api.dicebear.com/7.x/notionists/svg?seed=${authUser.id}`,
+          name: authUser.profile?.name || authUser.handle || "You",
+        }
+      : null,
+    fe =
+      c.find((H?: any) => H.id === meId) ??
+      authProfile ?? {
+        id: meId,
+        name: "You",
+        handle: "you",
+        avatar: "",
+        bio: "",
+        followers: 0,
+        following: 0,
+      },
     Ae = m.find((H?: any) => H.id === k) ?? null,
     d0 = Ae ? (c.find((H?: any) => H.id === Ae.authorId) ?? null) : null,
     Ft = c.find((H?: any) => H.id === Ve) ?? fe,
@@ -166,31 +214,54 @@ export function App() {
     return () => window.clearTimeout(H);
   }, [qe]);
 
+  // Validate the persisted bearer session against PostgreSQL on load
+  useEffect(() => {
+    let active = true;
+    if (!getStoredAuthUser()) {
+      setAuthChecked(true);
+      return () => {
+        active = false;
+      };
+    }
+    apiGetAuthMe().then((res) => {
+      if (!active) return;
+      if (res.ok && res.data?.user) {
+        setAuthUser(res.data.user);
+      } else if (!res.ok) {
+        clearAuthSession();
+        setAuthUser(null);
+      }
+      setAuthChecked(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Hydrate & merge live state from Railway PostgreSQL backend + subscribe to SSE
   useEffect(() => {
+    if (!authChecked || !authUser) return;
     let active = true;
     fetchBootstrap().then((data) => {
       if (!active || !data?.ok) return;
       if (Array.isArray(data.posts) && data.posts.length) {
         d((localPosts: any[]) => {
-          const map = new Map<string, any>();
-          for (const p of [...data.posts, ...SPACE_POSTS, ...localPosts]) {
-            if (p?.id && !map.has(p.id)) map.set(p.id, p);
-          }
-          // Prefer server version for shared posts
-          for (const p of data.posts) {
-            if (p?.id) map.set(p.id, p);
-          }
-          return Array.from(map.values());
+          const serverIds = new Set(data.posts.map((p: any) => p.id));
+          const localOnly = localPosts.filter(
+            (p: any) => p?.id && !serverIds.has(p.id),
+          );
+          return [...data.posts, ...localOnly];
         });
       }
       if (Array.isArray(data.people) && data.people.length) {
         u((localPeople: any[]) => {
-          const map = new Map<string, any>();
-          for (const p of [...localPeople, ...data.people]) {
-            if (p?.id) map.set(p.id, p);
-          }
-          return Array.from(map.values());
+          const serverIds = new Set(data.people.map((p: any) => p.id));
+          const localOnly = localPeople.filter(
+            (p: any) => p?.id && !serverIds.has(p.id),
+          );
+          // Server projection wins for every shared account, so a stale
+          // browser cache can never shadow a profile edited elsewhere.
+          return [...data.people, ...localOnly];
         });
       }
       if (Array.isArray(data.stories) && data.stories.length) {
@@ -218,10 +289,22 @@ export function App() {
         });
       }
       if (Array.isArray(data.circles) && data.circles.length) {
-        w(data.circles);
+        w((localCircles: any[]) => {
+          const serverIds = new Set(data.circles.map((c: any) => c.id));
+          return [
+            ...data.circles,
+            ...localCircles.filter((c: any) => c?.id && !serverIds.has(c.id)),
+          ];
+        });
       }
       if (Array.isArray(data.events) && data.events.length) {
-        T(data.events);
+        T((localEvents: any[]) => {
+          const serverIds = new Set(data.events.map((e: any) => e.id));
+          return [
+            ...data.events,
+            ...localEvents.filter((e: any) => e?.id && !serverIds.has(e.id)),
+          ];
+        });
       }
       if (Array.isArray(data.prompts) && data.prompts.length) {
         setPrompts(data.prompts);
@@ -346,13 +429,77 @@ export function App() {
           );
         }
       },
+      onConnectionChange: ({ connected, onlineUserIds }) => {
+        setLive(connected);
+        if (Array.isArray(onlineUserIds)) setOnlineIds(onlineUserIds);
+      },
+      onPresenceUpdate: ({ onlineUserIds }) => {
+        setOnlineIds(Array.isArray(onlineUserIds) ? onlineUserIds : []);
+      },
+      onPersonJoined: (person) => {
+        if (person?.id) {
+          u((prev: any[]) =>
+            prev.some((p) => p.id === person.id)
+              ? prev.map((p) => (p.id === person.id ? { ...p, ...person } : p))
+              : [...prev, { ...person }],
+          );
+        }
+      },
+      onPersonUpdated: (person) => {
+        if (person?.id) {
+          u((prev: any[]) =>
+            prev.map((p) => (p.id === person.id ? { ...p, ...person } : p)),
+          );
+        }
+      },
+      onProfileUpdated: (profile) => {
+        if (profile?.id) {
+          u((prev: any[]) =>
+            prev.map((p) => (p.id === profile.id ? { ...p, ...profile } : p)),
+          );
+        }
+      },
+      onDmRead: ({ conversationId, readerId, at }) => {
+        z((prev: any[]) =>
+          prev.map((conv) =>
+            conv.id === conversationId && readerId !== meId
+              ? { ...conv, otherLastReadAt: at }
+              : conv,
+          ),
+        );
+      },
+      onDmReaction: ({ conversationId, conversation }) => {
+        z((prev: any[]) =>
+          prev.map((conv) => {
+            if (conv.id !== conversationId || !conversation) return conv;
+            return {
+              ...conv,
+              messages: conversation.messages ?? conv.messages,
+            };
+          }),
+        );
+      },
+      onNotificationCreated: ({ notice }) => {
+        if (notice?.id) {
+          q((prev: any[]) =>
+            prev.some((n) => n.id === notice.id) ? prev : [notice, ...prev],
+          );
+        }
+      },
+      onVisitorRecorded: ({ visitors }) => {
+        if (Array.isArray(visitors)) setVisitors(visitors);
+      },
+      onCallSignal: (payload) => {
+        if (payload?.type === "ring") setIncomingCall(payload);
+        setCallLog((prev: any[]) => [...prev.slice(-30), payload]);
+      },
     });
 
     return () => {
       active = false;
       disconnect();
     };
-  }, []);
+  }, [authChecked, authUser]);
 
   // Debounced background workspace backup to Railway
   useEffect(() => {
@@ -378,17 +525,21 @@ export function App() {
     E = useCallback((H?: any) => {
       ye(H);
       He(false);
-      H === "profile" && pe(ME_ID);
+      H === "profile" && pe(meId);
       H === "circles" && me(undefined);
       H === "messages" && Ee(undefined);
       $t();
     }, []),
-    ge = useCallback((H?: any) => {
-      pe(H);
-      ye("profile");
-      He(false);
-      $t();
-    }, []);
+    ge = useCallback(
+      (H?: any) => {
+        pe(H);
+        ye("profile");
+        He(false);
+        $t();
+        if (H && H !== meId) apiRecordProfileVisit(H);
+      },
+      [meId],
+    );
 
   // Deep-link hash support (#reel=..., #@handle, #post=..., #circle=...) & keyboard shortcuts
   useEffect(() => {
@@ -610,7 +761,7 @@ export function App() {
     Hs = (H?: any, Y?: any) => {
       const comment = {
         id: `comment_${Date.now()}`,
-        authorId: ME_ID,
+        authorId: meId,
         text: Y,
         time: "now",
         likes: 0,
@@ -624,7 +775,7 @@ export function App() {
     z1 = (H?: any, Y?: any, extras?: any) => {
       const Q = {
         id: `post_${Date.now()}`,
-        authorId: ME_ID,
+        authorId: meId,
         time: "now",
         text: H || "A small moment from today.",
         images: Y ? [Y] : [],
@@ -650,6 +801,25 @@ export function App() {
         "Posted to your circle",
         "Your moment is now part of the conversation.",
       );
+    },
+    handleCreateCirclePost = async (payload: any) => {
+      const post = {
+        id: `post_${Date.now()}`,
+        authorId: meId,
+        time: "now",
+        text: payload?.text || "",
+        images: payload?.image ? [payload.image] : [],
+        likes: 0,
+        reposts: 0,
+        comments: [],
+        liked: false,
+        saved: false,
+        topic: "Circle",
+        circleId: payload?.circleId,
+      };
+      d((prev: any[]) => [post, ...prev]);
+      await apiCreatePost(post, fe);
+      Te("Posted to the circle", "Everyone in the room sees it live now.");
     },
     handleSaveDraft = (text?: string, image?: string, extras?: any) => {
       const draft = {
@@ -758,7 +928,7 @@ export function App() {
     Vs = (H?: any, Y?: any, closeFriends?: boolean) => {
       const story = {
         id: `story_${Date.now()}`,
-        authorId: ME_ID,
+        authorId: meId,
         image: Y,
         caption: H,
         closeFriends: Boolean(closeFriends),
@@ -797,6 +967,19 @@ export function App() {
         }),
       );
       apiSendMessage(H, msg, personId);
+      apiSendTyping(H, false);
+    },
+    sendTyping = (H?: any, typing?: boolean) => {
+      apiSendTyping(H, Boolean(typing));
+    },
+    sendCallSignal = (payload?: any) => {
+      if (!payload) return;
+      apiSendCallSignal(payload);
+      setCallLog((prev: any[]) => [...prev.slice(-30), payload]);
+    },
+    recordVisit = (H?: any) => {
+      if (!H || H === meId) return;
+      apiRecordProfileVisit(H);
     },
     la = (H?: any, Y?: any, Q?: any) => {
       z((oe?: any) =>
@@ -832,6 +1015,7 @@ export function App() {
         ),
       );
       apiUpdateConversation(H, { unread: 0 });
+      apiMarkThreadRead(H);
     },
     N0 = (H?: any) => {
       let nextPinned = false;
@@ -971,7 +1155,7 @@ export function App() {
         posts: 0,
         accent: "forest",
         joined: true,
-        moderatorIds: [ME_ID],
+        moderatorIds: [meId],
         activity: "Started just now",
         spots: "Open to everyone",
       };
@@ -1015,7 +1199,7 @@ export function App() {
         weekday: weekdays[parsed.getDay() || 6],
         time: payload.time,
         place: payload.place,
-        hostId: ME_ID,
+        hostId: meId,
         circleId: payload.circleId,
         attendees: 1,
         image: payload.image,
@@ -1101,7 +1285,7 @@ export function App() {
     tn = (H?: any, Y?: any) => {
       const comment = {
         id: `reel_c_${Date.now()}`,
-        authorId: ME_ID,
+        authorId: meId,
         text: Y,
         time: "now",
         likes: 0,
@@ -1175,9 +1359,19 @@ export function App() {
           return (
             <ExploreView
               people={c}
+              posts={m}
+              circles={x}
+              meId={meId}
+              onlineIds={onlineIds}
               followingIds={y}
               onToggleFollow={je}
               onOpenPerson={ge}
+              onOpenPost={(H?: any) => D(H.id ?? H)}
+              onLike={Vt}
+              onSave={V1}
+              onRepost={P0}
+              onVote={C1}
+              onOpenCircle={_1}
             />
           );
         case "reels":
@@ -1186,6 +1380,8 @@ export function App() {
               reels={J}
               people={c}
               me={fe}
+              meId={meId}
+              onlineIds={onlineIds}
               followingIds={y}
               onToggleFollow={je}
               onLike={Pl}
@@ -1194,6 +1390,7 @@ export function App() {
               onAddComment={tn}
               onOpenPerson={ge}
               onCreateReel={en}
+              onRecordView={apiRecordReelView}
               onOpenMessages={() => w0("maya")}
               onClose={() => E("home")}
             />,
@@ -1206,6 +1403,10 @@ export function App() {
               events={A}
               people={c}
               posts={m}
+              me={fe}
+              meId={meId}
+              onlineIds={onlineIds}
+              onCreatePost={handleCreateCirclePost}
               initialSelectedId={I}
               onToggleCircle={Ls}
               onCreate={() => setCreateCircleOpen(true)}
@@ -1223,6 +1424,7 @@ export function App() {
               events={A}
               circles={x}
               people={c}
+              onlineIds={onlineIds}
               onToggleEvent={Il}
               onOpenPerson={ge}
               onSuggest={() => setCreateGatheringOpen(true)}
@@ -1235,6 +1437,10 @@ export function App() {
             <NotificationsView
               notices={v}
               people={c}
+              posts={m}
+              onOpenPost={(H?: any) => D(H.id ?? H)}
+              onToggleFollow={je}
+              followingIds={y}
               onMarkAllRead={() => {
                 q((H?: any) =>
                   H.map((Y?: any) => ({
@@ -1253,6 +1459,8 @@ export function App() {
             <InboxView
               key={le ?? "inbox"}
               me={fe}
+              meId={meId}
+              onlineIds={onlineIds}
               people={c}
               conversations={R}
               followingIds={y}
@@ -1260,6 +1468,8 @@ export function App() {
               initialPersonId={le}
               onSend={L1}
               onReact={la}
+              onTyping={sendTyping}
+              onCallSignal={sendCallSignal}
               onMarkRead={na}
               onTogglePin={N0}
               onToggleMute={sa}
@@ -1277,6 +1487,8 @@ export function App() {
             <BookmarksView
               posts={m}
               people={c}
+              meId={meId}
+              onlineIds={onlineIds}
               onLike={Vt}
               onSave={V1}
               onRepost={P0}
@@ -1293,7 +1505,10 @@ export function App() {
             <ProfileView
               key={Ft.id}
               person={Ft}
-              isMe={Ft.id === ME_ID}
+              isMe={Ft.id === meId}
+              visitors={Ft.id === meId ? visitors : []}
+              onlineIds={onlineIds}
+              meId={meId}
               posts={m}
               people={c}
               stories={_}
@@ -1353,6 +1568,7 @@ export function App() {
               onReset={ut}
               onToast={Te}
               onOpenPerson={ge}
+              onSignOut={handleSignOut}
               onBackHome={() => E("home")}
             />
           );
@@ -1360,6 +1576,8 @@ export function App() {
           return (
             <FeedView
               me={fe}
+              meId={meId}
+              onlineIds={onlineIds}
               people={c}
               posts={m}
               stories={_}
@@ -1396,15 +1614,122 @@ export function App() {
       }
     };
 
+  const handleEditPost = useCallback(
+    async (post: any, nextText: string) => {
+      if (!post?.id) return;
+      d((prev: any[]) =>
+        prev.map((p: any) =>
+          p.id === post.id
+            ? { ...p, text: nextText, editedAt: new Date().toISOString() }
+            : p,
+        ),
+      );
+      await apiEditPost(post.id, { text: nextText });
+      Te("Post updated", "Everyone in your circle sees the new version.");
+    },
+    [Te],
+  );
+
+  const handleSharePost = useCallback(
+    async (post: any) => {
+      if (!post?.id) return;
+      const url = `${window.location.origin}${window.location.pathname}#post=${post.id}`;
+      const outcome = await shareContent({
+        title: "A note on Thursday",
+        text: post.text?.slice(0, 140) || "A note from my circle on Thursday.",
+        url,
+      });
+      if (outcome === "copied") {
+        Te("Link copied", "Paste it anywhere to share this note.");
+      } else if (outcome === "shared") {
+        Te("Shared", "Thanks for passing it along.");
+      }
+    },
+    [Te],
+  );
+
+  const postActions = {
+    meId,
+    onlineIds,
+    onEdit: (post: any) => {
+      D(post.id);
+    },
+    onDeletePost: f0,
+    onPinPost: Ss,
+    onSharePost: handleSharePost,
+    onSaveEdit: handleEditPost,
+    onOpenTopic: (tag: string) => {
+      ye("explore");
+      He(false);
+      $t();
+      window.location.hash = `topic=${tag}`;
+    },
+    onOpenHandle: (handle: string) => {
+      const person = c.find(
+        (p: any) => p.handle?.toLowerCase() === String(handle).toLowerCase(),
+      );
+      if (person) ge(person.id);
+    },
+  };
+
   const activeViewerStories = highlightViewerStories ?? _;
 
+  const handleAuthenticated = useCallback(
+    (user: AuthUser) => {
+      setAuthUser(user);
+      setAuthChecked(true);
+      pe(user.id);
+      ye("home");
+      // Fresh account caches are scoped per-account, so allow state to rehydrate.
+      window.setTimeout(() => window.dispatchEvent(new Event("resize")), 30);
+    },
+    [],
+  );
+
+  const handleSignOut = useCallback(async () => {
+    await apiLogout();
+    resetStoredWorkspaceState();
+    setAuthUser(null);
+    setOnlineIds([]);
+    setLive(false);
+    setVisitors([]);
+    setIncomingCall(null);
+    pe(ME_ID);
+    ye("home");
+    Te("Signed out", "See you next Thursday.");
+  }, [Te]);
+
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
+        <ColdStartSplash onDone={() => {}} />
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <AuthView
+        theme={K.theme}
+        onToggleTheme={m0}
+        onAuthenticated={handleAuthenticated}
+      />
+    );
+  }
+
+  const meOnline = onlineIds.includes(meId);
+
   return (
+    <PostActionsContext.Provider value={postActions}>
     <div className="min-h-screen bg-canvas">
       {pt ? <ColdStartSplash onDone={() => St(false)} /> : null}
       <ScrollProgressBar />
       <DesktopSidebar
         view={$}
         me={fe}
+        live={live}
+        onlineIds={onlineIds}
+        onSignOut={handleSignOut}
         unreadNotices={A0}
         unreadMessages={s0}
         followingIds={y}
@@ -1422,6 +1747,9 @@ export function App() {
         onClose={() => He(false)}
         view={$}
         me={fe}
+        live={live}
+        onlineIds={onlineIds}
+        onSignOut={handleSignOut}
         unreadNotices={A0}
         unreadMessages={s0}
         followingIds={y}
@@ -1438,6 +1766,10 @@ export function App() {
         <TopBar
           view={$}
           me={fe}
+          live={live}
+          onlineCount={onlineIds.length}
+          onlineIds={onlineIds}
+          onSignOut={handleSignOut}
           unreadNotices={A0}
           unreadMessages={s0}
           onSearch={() => X_local(true)}
@@ -1517,6 +1849,7 @@ export function App() {
           onChange={de}
           onSeen={Cs}
           onReply={Zt}
+          meId={meId}
         />
       ) : null}
       <SearchPaletteModal
@@ -1525,6 +1858,7 @@ export function App() {
         people={c}
         posts={m}
         topics={TOPICS}
+        meId={meId}
         onOpenPerson={ge}
         onOpenPost={(H?: any) => D(H.id)}
         onOpenTopic={() => E("explore")}
@@ -1538,15 +1872,49 @@ export function App() {
         onSave={(H?: any) => {
           const updatedMe = { ...fe, ...H };
           u((Y?: any) =>
-            Y.map((Q?: any) => (Q.id === ME_ID ? updatedMe : Q)),
+            Y.map((Q?: any) => (Q.id === meId ? updatedMe : Q)),
           );
           apiUpdateMe(updatedMe);
+          if (authUser) {
+            const nextUser = {
+              ...authUser,
+              handle: updatedMe.handle || authUser.handle,
+              profile: { ...authUser.profile, ...updatedMe },
+            } as AuthUser;
+            setAuthUser(nextUser);
+            saveAuthSession(getAuthToken(), nextUser);
+          }
           Te(
             "Profile updated",
             "Your circle will see the new details right away.",
           );
         }}
       />
+      {incomingCall ? (
+        <IncomingCallBanner
+          call={incomingCall}
+          people={c}
+          onAccept={(call: any) => {
+            const other = c.find((p: any) => p.id === call.fromUserId);
+            setCallLog((prev: any[]) => [...prev, { ...call, type: "accept" }]);
+            apiSendCallSignal({ ...call, type: "accept" });
+            if (other) {
+              Ee(other.id);
+              ye("messages");
+            }
+            Te(
+              call.kind === "video" ? "Video call joined" : "Call joined",
+              `${other?.name ?? "Your friend"} is on the line.`,
+            );
+            setIncomingCall(null);
+          }}
+          onDecline={(call: any) => {
+            apiSendCallSignal({ ...call, type: "decline" });
+            setIncomingCall(null);
+            Te("Call declined");
+          }}
+        />
+      ) : null}
       <BackToTopButton />
       {qe ? (
         <ToastBanner
@@ -1557,6 +1925,7 @@ export function App() {
         />
       ) : null}
     </div>
+    </PostActionsContext.Provider>
   );
 }
 
